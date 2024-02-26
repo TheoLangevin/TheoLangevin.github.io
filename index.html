@@ -63,7 +63,7 @@
 					</div>
 					<p class="about__content-signature">Théo Langevin</p>
 				</div>
-				<img class="about__visual" src="assets/img/id2.png" alt="James Martin">
+				<img class="about__visual" src="assets/img/id2.png" alt="Théo Langevin">
 			</div>
 		</section>
 		<!-- END SECTION: About -->
@@ -87,7 +87,7 @@
 		<section class="web-design">
 			<div class="web-design__wrapper wrapper--small">
 				<div class="web-design__content blurb">
-					<h2 class="blurb__heading">Skills and  <br> Experiences</h2>
+					<h2 class="blurb__heading">Skills and Experiences <br> </h2>
 					<p class="blurb__copy blurb__copy--tight">C,C++,Java,Python, HTML,CSS</p>
 					<a class="transform-link" href="#0">Check it out</a>
 				</div>
@@ -111,7 +111,7 @@
 							<a class="transform-link" href="#0">See full project</a>
 						</div>
 						<div class="work__visual">
-							<img src="assets/img/work-strategik.jpg" alt="Strategik INC">
+							<img src="assets/img/GreenShare.png" alt="Strategik INC">
 						</div>
 					</li>
 					<li class="work__list-el">
@@ -200,15 +200,31 @@
 			<h2 class="contact__heading title">Contact Me</h2>
 			<div class="contact__wrapper wrapper--large">
 				<div class="contact__visual">
-					<img src="assets/img/contact-visual.png" alt="James Martin's location">
+					<img src="assets/img/map.png" alt="Theo Langevin's location">
 				</div>
 				<!-- Simple form setup: formspree.io -->
-				<form class="contact__form">
-					<input class="contact__form-el contact__form-el--name" type="text" placeholder="Your Name" spellcheck="false">
-					<input class="contact__form-el contact__form-el--email" type="email" placeholder="Your Email" spellcheck="false">
-					<textarea class="contact__form-el contact__form-el--message" placeholder="Your Message"></textarea>
-					<input class="contact__form-el contact__form-el--submit" type="submit" value="Send">
+				<form class="contact__form" method="post" enctype="text/plain">
+					<input class="contact__form-el contact__form-el--name" name="name" type="text" placeholder="Your Name" spellcheck="false">
+					<input class="contact__form-el contact__form-el--email" name="email" type="email" placeholder="Your Email" spellcheck="false">
+					<textarea class="contact__form-el contact__form-el--message" name="message" placeholder="Your Message"></textarea>
+					<input class="contact__form-el contact__form-el--submit" type="submit" value="Send" onclick="generateMailToLink()">
 				</form>
+
+				<script>
+					function generateMailToLink() {
+						var name = document.querySelector('.contact__form-el--name').value;
+						var email = document.querySelector('.contact__form-el--email').value;
+						var message = document.querySelector('.contact__form-el--message').value;
+
+						var mailtoLink = "mailto:theolangevin3@gmail.com" +
+								"?subject=Contact Form" +
+								"&body=De: " + name + " " + email + "%0A" +
+								"Message: " + message;
+
+						window.location.href = mailtoLink;
+					}
+				</script>
+
 			</div>
 		</section>
 		<!-- END SECTION: Contact -->

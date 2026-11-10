@@ -2,69 +2,62 @@ import greenShare from './assets/Green.png'
 import bugCastle from './assets/BugCastle.png'
 import abalone from './assets/abalone.jpg'
 import connect4 from './assets/connect4.png'
-import centreon from './assets/Centreon.png'
-import cats from './assets/CATS.png'
-import youth from './assets/Youth.png'
 
 export const CONTACT_EMAIL = 'theolangevin3@gmail.com'
 
 export const navLinks = [
-  { label: 'Home', href: '#top' },
-  { label: 'Portfolio', href: '#work' },
-  { label: 'Experiences', href: '#experiences' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Projects', href: '#projects' },
+  { label: 'Experience', href: '#experience' },
 ]
+
+export const stack = ['C', 'C++', 'Java', 'Python', 'Kotlin', 'HTML', 'CSS', 'Spring', 'JUnit', 'Selenium']
 
 export const projects = [
   {
-    title: ['GreenShare', 'Application'],
-    description:
-      'Project manager and developer in the creation of a blog mobile application: "GreenShare" in Kotlin',
+    title: 'GreenShare',
+    tags: 'Kotlin · Mobile',
+    description: 'Project manager and developer of a blog mobile application.',
     image: greenShare,
-    alt: 'GreenShare',
+    alt: 'GreenShare app on a phone',
   },
   {
-    title: ['BugCastle', 'Web Java App'],
-    description:
-      'Development in a team of a test application in Java using Maven, Spring and others plugins. Testing the application with JUnit and Selenium.',
+    title: 'BugCastle',
+    tags: 'Java · Spring · Selenium',
+    description: 'Team-built Java web application, tested with JUnit and Selenium.',
     image: bugCastle,
-    alt: 'BugCastle',
+    alt: 'BugCastle web application',
   },
   {
-    title: ['Abalone', 'Application'],
-    description:
-      'Development of the Abalone game in C language with an HMI and artificial intelligence in a team of 9 people.',
+    title: 'Abalone',
+    tags: 'C · Game AI',
+    description: 'The board game with a graphical interface and an AI, in a team of 9.',
     image: abalone,
-    alt: 'Abalone game',
+    alt: 'Abalone board game',
   },
   {
-    title: ['Connect 4', 'Application'],
-    description:
-      'Development of the Connect4 in Java language with an HMI and artificial intelligence in a team of 2 people.',
+    title: 'Connect 4',
+    tags: 'Java · Game AI',
+    description: 'The game with a graphical interface and an AI, in a team of 2.',
     image: connect4,
-    alt: 'Connect 4',
+    alt: 'Connect 4 game screen',
   },
 ]
 
 export const experiences = [
   {
     title: 'IT Trainee',
+    place: 'Angers Loire Habitat',
     description:
-      'Trainee at Angers Loire Habitat : Implementation of a Centreon supervision and alert system on the company’s servers, VMs and boxes.',
-    image: centreon,
-    alt: 'Centreon logo',
+      'Set up a Centreon supervision and alert system on the company’s servers, VMs and boxes.',
   },
   {
     title: 'Service desk agent',
-    description:
-      'CATS hotline operator (Helpline Angers), Handling calls from bankers and solving their software and technical problems',
-    image: cats,
-    alt: 'CATS logo',
+    place: 'CATS · Helpline Angers',
+    description: 'Handled calls from bankers and solved their software and technical problems.',
   },
   {
-    title: 'Youth Worker',
-    description: 'Summer camp leader, in charge of activities and planning.',
-    image: youth,
-    alt: 'Youth worker',
+    title: 'Youth worker',
+    place: 'Summer camp',
+    description: 'Camp leader in charge of activities and planning.',
   },
 ]

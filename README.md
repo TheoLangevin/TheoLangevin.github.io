@@ -13,6 +13,10 @@ npm run preview  # serve the production build locally
 
 Content (projects, experiences, skills, navigation) lives in `src/data.js`; each page section is a component in `src/components/`.
 
+## Mini game
+
+`/game.html` is a small 3D runner ("Gem Dash") built with [three.js](https://threejs.org). It is a separate Vite entry point (`game.html` + `src/game/`), so three.js is only loaded on that page and never slows down the portfolio.
+
 ## Deployment
 
 Every push to `main` builds the site and publishes it to GitHub Pages through `.github/workflows/deploy.yml`.

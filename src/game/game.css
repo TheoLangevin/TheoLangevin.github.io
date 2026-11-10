@@ -1,0 +1,288 @@
+:root {
+  --night: #0e1020;
+  --ink: #12131a;
+  --muted: #4a4e5e;
+  --ground: #eceef3;
+  --accent: #5b3df5;
+  --yellow: #ffd84d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--night);
+  color: #fff;
+  font-family: Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+/* Canvas */
+
+#stage {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* HUD */
+
+.hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.hud__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chip b {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip--link {
+  min-height: 44px;
+  pointer-events: auto;
+}
+
+.chip--link:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.life {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--yellow);
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.life--lost {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.7);
+}
+
+/* Touch controls */
+
+.controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  display: none;
+  gap: 12px;
+}
+
+@media (pointer: coarse) {
+  .controls {
+    display: flex;
+  }
+}
+
+.controls button {
+  flex: 1;
+  min-height: 64px;
+  border: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+
+.controls button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Overlays */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 16, 32, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.card {
+  width: 100%;
+  max-width: 460px;
+  padding: 36px;
+  border-radius: 28px;
+  background: #fff;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: flex-start;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+.card h1,
+.card h2 {
+  font-size: clamp(36px, 8vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+}
+
+.card__lead {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pill {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 26px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.button {
+  display: inline-block;
+  padding: 15px 26px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(18, 19, 26, 0.18);
+}
+
+.button--accent {
+  background: var(--accent);
+  color: #fff;
+}
+
+.button--soft {
+  background: var(--ground);
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 28px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .life {
+    transition: none;
+  }
+}

@@ -1,0 +1,139 @@
+/* Additions on top of the original stylesheet (main.css):
+   behaviours that used to be driven by jQuery / GSAP / ScrollMagic. */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body.nav-open {
+  overflow: hidden;
+}
+
+.section-title {
+  margin-top: 60px;
+}
+
+.contact__form-el--submit {
+  /* main.css sets a left-only padding on every form element */
+  padding: 10px 50px;
+}
+
+/* Intro: name and job slide in once the splashscreen is gone */
+.introduction__content-el--name,
+.introduction__content-el--job {
+  transition:
+    transform 0.8s ease-out,
+    opacity 0.8s ease-out;
+}
+
+.introduction--is-ready .introduction__content-el--name,
+.introduction--is-ready .introduction__content-el--job {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Scroll reveal animations (large screens only, like the original) */
+@media (min-width: 992px) and (prefers-reduced-motion: no-preference) {
+  .reveal .about__content-blurb,
+  .reveal .about__visual,
+  .reveal .about__content-signature,
+  .reveal .about__wrapper::before,
+  .reveal .app-design__visual,
+  .reveal .web-design__visual,
+  .reveal .work__content,
+  .reveal .work__visual,
+  .reveal .work__list::before,
+  .reveal .blog__post,
+  .reveal .contact__form,
+  .reveal .contact__visual,
+  .reveal .contact__wrapper::before {
+    opacity: 0;
+    transition:
+      opacity 0.8s ease-out,
+      translate 0.8s ease-out;
+  }
+
+  .reveal .about__content-blurb,
+  .reveal .work__visual,
+  .reveal .contact__form {
+    translate: 50px 0;
+  }
+
+  .reveal .about__visual,
+  .reveal .work__content,
+  .reveal .contact__visual {
+    translate: -50px 0;
+  }
+
+  .reveal .app-design__visual {
+    translate: 100px 0;
+  }
+
+  .reveal .web-design__visual {
+    translate: -100px 0;
+  }
+
+  /* Frames and signature fade in after the content has settled */
+  .reveal .about__wrapper::before,
+  .reveal .work__list::before,
+  .reveal .contact__wrapper::before {
+    transition-delay: 0.8s;
+  }
+
+  .reveal .about__content-signature {
+    transition-delay: 1.2s;
+  }
+
+  .reveal .blog__post:nth-child(2) {
+    transition-delay: 0.4s;
+  }
+
+  .reveal .blog__post:nth-child(3) {
+    transition-delay: 0.8s;
+  }
+
+  .reveal.reveal--visible .about__content-blurb,
+  .reveal.reveal--visible .about__visual,
+  .reveal.reveal--visible .about__content-signature,
+  .reveal.reveal--visible .about__wrapper::before,
+  .reveal.reveal--visible .app-design__visual,
+  .reveal.reveal--visible .web-design__visual,
+  .reveal.reveal--visible .work__content,
+  .reveal.reveal--visible .work__visual,
+  .reveal.reveal--visible .work__list::before,
+  .reveal.reveal--visible .blog__post,
+  .reveal.reveal--visible .contact__form,
+  .reveal.reveal--visible .contact__visual,
+  .reveal.reveal--visible .contact__wrapper::before {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Keep aspect ratio for images that declare intrinsic width/height */
+img {
+  height: auto;
+}
+
+/* The ENSISA logo is much wider than the template visual it replaced:
+   keep it fully visible on tablets and phones instead of cropping it. */
+@media (max-width: 991px) {
+  .app-design__visual {
+    width: 50vw;
+    height: 400px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-design__visual {
+    bottom: 50px;
+    width: min(86vw, 520px);
+    height: 120px;
+  }
+}

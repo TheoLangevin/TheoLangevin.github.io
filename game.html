@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gem Dash — Théo Langevin</title>
+    <meta name="description" content="Gem Dash, a small 3D runner built with three.js." />
+    <meta name="theme-color" content="#0e1020" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap"
+    />
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <div class="hud">
+      <a class="chip chip--link" href="/">← Portfolio</a>
+      <div class="hud__group">
+        <span class="chip">Score <b id="score">0</b></span>
+        <span class="chip">Gems <b id="gems">0</b></span>
+        <span class="chip">Best <b id="best">0</b></span>
+        <span class="chip" role="img" aria-label="Lives">
+          <span class="life" id="life-0"></span>
+          <span class="life" id="life-1"></span>
+          <span class="life" id="life-2"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="controls" aria-label="Touch controls">
+      <button type="button" id="btn-left" aria-label="Move left">←</button>
+      <button type="button" id="btn-jump" aria-label="Jump">↑</button>
+      <button type="button" id="btn-right" aria-label="Move right">→</button>
+    </div>
+
+    <section id="menu" class="overlay" aria-labelledby="menu-title">
+      <div class="card">
+        <span class="pill">Mini game</span>
+        <h1 id="menu-title">Gem Dash</h1>
+        <p class="card__lead">
+          Dodge the red blocks, grab the golden gems and run as far as you can. You have three lives.
+        </p>
+        <ul class="keys">
+          <li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> switch lane</li>
+          <li><kbd>↑</kbd> <kbd>W</kbd> <kbd>Space</kbd> jump over low blocks</li>
+          <li>On a phone: swipe, or use the buttons</li>
+        </ul>
+        <div class="card__actions">
+          <button type="button" id="start-btn" class="button button--accent">Play</button>
+          <a class="button button--soft" href="/">Back to portfolio</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="over" class="overlay" aria-labelledby="over-title" hidden>
+      <div class="card">
+        <span class="pill">Game over</span>
+        <h2 id="over-title">Score <span id="final-score">0</span></h2>
+        <p class="card__lead">
+          Best: <strong id="final-best">0</strong>
+          <span id="new-best" hidden> · New record!</span>
+        </p>
+        <div class="card__actions">
+          <button type="button" id="retry-btn" class="button button--accent">Play again</button>
+          <a class="button button--soft" href="/">Back to portfolio</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="no-webgl" class="overlay" hidden>
+      <div class="card">
+        <h2>WebGL is not available</h2>
+        <p class="card__lead">Your browser cannot run 3D graphics, so the game cannot start.</p>
+        <div class="card__actions">
+          <a class="button button--accent" href="/">Back to portfolio</a>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="/src/game/main.js"></script>
+  </body>
+</html>

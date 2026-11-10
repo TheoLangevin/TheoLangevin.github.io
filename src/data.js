@@ -8,6 +8,7 @@ export const CONTACT_EMAIL = 'theolangevin3@gmail.com'
 export const navLinks = [
   { label: 'Projects', href: '#projects' },
   { label: 'Experience', href: '#experience' },
+  { label: 'Mini game', href: '/game.html' },
 ]
 
 export const stack = ['C', 'C++', 'Java', 'Python', 'Kotlin', 'HTML', 'CSS', 'Spring', 'JUnit', 'Selenium']

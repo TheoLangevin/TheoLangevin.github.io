@@ -11,7 +11,7 @@ npm run build    # production build in dist/
 npm run preview  # serve the production build locally
 ```
 
-Content (projects, experiences, navigation) lives in `src/data.js`; each page section is a component in `src/components/`.
+Content (projects, experiences, skills, navigation) lives in `src/data.js`; each page section is a component in `src/components/`.
 
 ## Deployment
 

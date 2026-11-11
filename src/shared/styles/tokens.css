@@ -1,0 +1,16 @@
+/* Design tokens shared by the portfolio and the game UI. */
+:root {
+  --ground: #eceef3;
+  --tile: #ffffff;
+  --ink: #12131a;
+  --muted: #4a4e5e;
+  --muted-on-dark: #b9bdcc;
+  --line: #e1e4ec;
+  --accent: #5b3df5;
+  --yellow: #ffd84d;
+  --night: #0b0d1a;
+
+  --radius: 28px;
+  --gap: 20px;
+  --font: Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}

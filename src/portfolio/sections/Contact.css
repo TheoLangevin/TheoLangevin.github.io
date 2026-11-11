@@ -1,0 +1,16 @@
+.contact {
+  flex: 1 1 320px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.contact__title {
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}

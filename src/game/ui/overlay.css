@@ -1,0 +1,176 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: rgba(7, 8, 20, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 36px;
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: flex-start;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+
+.card--wide {
+  max-width: 860px;
+}
+
+.card__tag {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.card__title {
+  font-size: clamp(34px, 8vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+}
+
+.card__lead {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.card__section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card__heading {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* How to play */
+
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.keys kbd {
+  display: inline-block;
+  min-width: 26px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* Settings switches */
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toggle {
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Stats grid (pause / game over) */
+
+.stats {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--ground);
+}
+
+.stat__value {
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.build {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.build__item {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--ground);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.build__item b {
+  color: var(--accent);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 26px 22px;
+  }
+}

@@ -1,0 +1,42 @@
+.button {
+  display: inline-block;
+  padding: 15px 26px;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(18, 19, 26, 0.16);
+}
+
+.button--accent {
+  background: var(--accent);
+  color: #fff;
+}
+
+.button--soft {
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.button--light {
+  background: #fff;
+  color: var(--ink);
+}
+
+.button--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

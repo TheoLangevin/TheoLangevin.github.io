@@ -1,0 +1,25 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #070814;
+  color: #fff;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.game-canvas {
+  position: fixed !important;
+  inset: 0;
+  touch-action: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}

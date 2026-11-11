@@ -1,0 +1,57 @@
+.touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .touch {
+    display: block;
+  }
+}
+
+.touch__zone {
+  position: fixed;
+  inset: 120px 35% 0 0;
+  z-index: 11;
+  touch-action: none;
+}
+
+.stick {
+  position: fixed;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stick__knob {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.touch__dash {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  z-index: 11;
+  width: 84px;
+  height: 84px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(91, 61, 245, 0.55);
+  color: #fff;
+  font-size: 26px;
+  display: grid;
+  place-items: center;
+  touch-action: manipulation;
+}
+
+.touch__dash:active {
+  background: rgba(91, 61, 245, 0.9);
+}

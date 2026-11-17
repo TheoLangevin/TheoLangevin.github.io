@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Théo Langevin // Enter the Matrix</title>
+    <meta
+      name="description"
+      content="An immersive 3D version of Théo Langevin's portfolio: wake the machine, connect, and explore the site as a world."
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=VT323&display=swap"
+    />
+    <style>
+      /* Painted before any script runs, so the page never flashes white. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        color: #9dffb5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <p style="font-family: monospace; padding: 24px">
+        This experience needs JavaScript. <a href="/" style="color: #9dffb5">Open the classic site</a>.
+      </p>
+    </noscript>
+    <script type="module" src="/src/matrix/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,525 @@
+/* The old machine: a full-screen cathode-ray tube. */
+
+.crt {
+  --crt-ink: #c5c9c2;
+  --crt-bright: #ffffff;
+  --crt-glow: rgba(197, 201, 194, 0.4);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #020302;
+  color: var(--crt-ink);
+  font-family: var(--m-term);
+  font-size: clamp(17px, 2.2vw, 28px);
+  line-height: 1.12;
+  cursor: default;
+}
+
+.crt--link {
+  --crt-ink: #35e868;
+  --crt-bright: #b4ffc6;
+  --crt-glow: rgba(0, 255, 65, 0.5);
+}
+
+.crt--standby {
+  cursor: pointer;
+}
+
+.crt__screen {
+  position: absolute;
+  inset: 0;
+  padding: clamp(22px, 5.2vw, 70px);
+  padding-bottom: clamp(64px, 9vw, 110px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Phosphor glow, plus a hint of misaligned red and cyan guns. */
+  text-shadow:
+    0 0 0.4em var(--crt-glow),
+    -0.05em 0 rgba(255, 40, 90, 0.3),
+    0.05em 0 rgba(0, 220, 255, 0.3);
+  animation: crt-flicker 3.7s steps(1) infinite;
+}
+
+/* Text */
+
+.crt__text {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.crt__line--bright {
+  color: var(--crt-bright);
+}
+
+.crt__line--ok {
+  color: #ffffff;
+}
+
+.crt__line--warn {
+  color: #ffd166;
+}
+
+.crt__cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.95em;
+  margin-left: 0.08em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  box-shadow: 0 0 0.5em var(--crt-glow);
+  animation: crt-blink 1s steps(1) infinite;
+}
+
+/* Standby */
+
+.crt__standby {
+  margin: auto;
+  text-align: center;
+  color: #7f8a80;
+}
+
+.crt__dormant {
+  font-size: 0.9em;
+  letter-spacing: 0.3em;
+  opacity: 0.6;
+}
+
+.crt__wake {
+  margin-top: 0.6em;
+  font-size: 1.35em;
+  letter-spacing: 0.08em;
+  color: #d8e4d8;
+  animation: crt-blink-soft 1.6s ease-in-out infinite;
+}
+
+.crt__wake-touch,
+.crt__hint-touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .crt__wake-keys,
+  .crt__hint-keys {
+    display: none;
+  }
+
+  .crt__wake-touch,
+  .crt__hint-touch {
+    display: inline;
+  }
+}
+
+/* The way in */
+
+.crt__outcome {
+  margin-top: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  align-items: flex-start;
+  animation: crt-appear 0.5s ease-out both;
+}
+
+.crt__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+}
+
+.crt__enter {
+  min-height: 48px;
+  padding: 0.22em 0.9em 0.26em;
+  border: 2px solid var(--crt-bright);
+  background: var(--crt-bright);
+  color: #021006;
+  font-family: inherit;
+  font-size: 1.5em;
+  letter-spacing: 0.06em;
+  text-shadow: none;
+  cursor: pointer;
+  box-shadow:
+    0 0 24px var(--crt-glow),
+    0 0 70px var(--crt-glow);
+  animation: crt-pulse 1.5s ease-in-out infinite;
+}
+
+.crt__enter::before {
+  content: '> ';
+}
+
+.crt__enter:hover,
+.crt__enter:focus-visible {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.crt__enter--quiet {
+  background: transparent;
+  color: var(--crt-bright);
+  animation: none;
+  box-shadow: none;
+}
+
+.crt__enter--quiet:hover,
+.crt__enter--quiet:focus-visible {
+  color: #021006;
+}
+
+.crt__hint {
+  font-size: 0.82em;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+/* Layers of the tube, bottom to top */
+
+.crt__rain,
+.crt__noise,
+.crt__flash,
+.crt__tear,
+.crt__roll,
+.crt__scanlines,
+.crt__vignette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.crt__rain {
+  opacity: 0.16;
+  transition: opacity 0.5s ease-in;
+}
+
+.crt__noise {
+  opacity: 0.07;
+  mix-blend-mode: screen;
+  image-rendering: pixelated;
+}
+
+.crt--standby .crt__noise {
+  opacity: 0.11;
+}
+
+.crt__scanlines {
+  background:
+    linear-gradient(90deg, rgba(255, 0, 0, 0.045), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.045)) 0 0 / 3px 100%,
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, 0.34) 2px 4px);
+}
+
+/* A soft band that drifts down the screen, like a camera filming a tube. */
+.crt__roll {
+  inset: auto 0 100% 0;
+  height: 26%;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.04), transparent);
+  animation: crt-roll 7.5s linear infinite;
+}
+
+.crt__vignette {
+  border-radius: clamp(12px, 3.2vw, 48px);
+  background: radial-gradient(ellipse 78% 74% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.72) 100%);
+  box-shadow: inset 0 0 clamp(40px, 9vw, 150px) rgba(0, 0, 0, 0.9);
+}
+
+/* Power-on: a dot, then a line, then the whole picture. */
+.crt__flash {
+  opacity: 0;
+  background: #eafff0;
+  box-shadow: 0 0 80px 30px rgba(234, 255, 240, 0.8);
+}
+
+.crt--power .crt__flash {
+  animation: crt-power-on 1s cubic-bezier(0.25, 0.8, 0.3, 1) both;
+}
+
+/* A torn, displaced band of picture when the signal is hijacked. */
+.crt__tear {
+  display: none;
+  inset: 38% 0 auto 0;
+  height: 13%;
+  background: linear-gradient(to bottom, transparent, rgba(180, 255, 198, 0.2) 45%, rgba(255, 255, 255, 0.5) 50%, transparent);
+  mix-blend-mode: screen;
+}
+
+.crt--glitch .crt__tear {
+  display: block;
+  animation: crt-tear 0.14s steps(2) infinite;
+}
+
+.crt--glitch .crt__screen {
+  animation: crt-shake 0.09s steps(2) infinite;
+  filter: contrast(1.5) hue-rotate(55deg) saturate(2);
+}
+
+.crt--glitch .crt__noise {
+  opacity: 0.5;
+}
+
+/* Diving into the screen: the text rushes past, the rain floods in, a flash,
+   then the whole tube fades to reveal the world behind it. Only transforms and
+   opacity are animated, so it stays smooth on any GPU. */
+
+.crt--entering {
+  pointer-events: none;
+  animation: crt-dissolve 1.75s ease-in forwards;
+}
+
+.crt--entering .crt__screen {
+  animation: crt-dive 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+}
+
+.crt--entering .crt__rain {
+  opacity: 1;
+  animation: crt-rain-rush 1.75s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+}
+
+.crt--entering .crt__flash {
+  animation: crt-enter-flash 1.75s ease-in forwards;
+}
+
+.crt--entering .crt__bar {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+/* Bottom bar */
+
+.crt__bar {
+  position: absolute;
+  left: clamp(18px, 4.2vw, 58px);
+  right: clamp(18px, 4.2vw, 58px);
+  bottom: clamp(14px, 2.6vw, 34px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78em;
+  letter-spacing: 0.08em;
+}
+
+.crt__tool {
+  min-height: 44px;
+  padding: 0 0.6em;
+  border: 0;
+  background: transparent;
+  color: var(--crt-ink);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.crt__tool:hover,
+.crt__tool:focus-visible {
+  opacity: 1;
+  color: var(--crt-bright);
+}
+
+.crt__led {
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #35e868;
+  box-shadow: 0 0 10px #35e868;
+}
+
+.crt--standby .crt__led {
+  background: #ffb020;
+  box-shadow: 0 0 10px #ffb020;
+  animation: crt-blink-soft 2.4s ease-in-out infinite;
+}
+
+/* Animations */
+
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  4% {
+    opacity: 0.94;
+  }
+  6% {
+    opacity: 1;
+  }
+  43% {
+    opacity: 0.97;
+  }
+  45% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.93;
+  }
+  73% {
+    opacity: 1;
+  }
+}
+
+@keyframes crt-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes crt-blink-soft {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes crt-appear {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+}
+
+@keyframes crt-pulse {
+  50% {
+    box-shadow:
+      0 0 34px var(--crt-glow),
+      0 0 110px var(--crt-glow);
+  }
+}
+
+@keyframes crt-roll {
+  to {
+    transform: translateY(520%);
+  }
+}
+
+@keyframes crt-power-on {
+  0% {
+    opacity: 1;
+    transform: scale(0.012, 0.004);
+  }
+  26% {
+    opacity: 1;
+    transform: scale(1, 0.004);
+  }
+  52% {
+    opacity: 0.85;
+    transform: scale(1, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes crt-tear {
+  0% {
+    transform: translate(-3%, -90%);
+  }
+  50% {
+    transform: translate(4%, 160%);
+  }
+  100% {
+    transform: translate(-2%, 40%);
+  }
+}
+
+@keyframes crt-shake {
+  0% {
+    transform: translate(7px, -2px) skewX(-2deg);
+  }
+  50% {
+    transform: translate(-9px, 3px) skewX(3deg);
+  }
+  100% {
+    transform: translate(4px, 0) skewX(-1deg);
+  }
+}
+
+@keyframes crt-dissolve {
+  0%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes crt-dive {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes crt-rain-rush {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(2.2);
+  }
+}
+
+@keyframes crt-enter-flash {
+  0%,
+  45% {
+    opacity: 0;
+    transform: none;
+  }
+  74% {
+    opacity: 0.92;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt__screen,
+  .crt__roll,
+  .crt__enter,
+  .crt__wake,
+  .crt--standby .crt__led,
+  .crt--glitch .crt__screen,
+  .crt--glitch .crt__tear {
+    animation: none;
+  }
+
+  .crt--glitch .crt__screen {
+    filter: none;
+  }
+
+  .crt--power .crt__flash {
+    animation: crt-fade-out 0.6s ease-out both;
+  }
+
+  .crt--entering,
+  .crt--entering .crt__screen,
+  .crt--entering .crt__rain,
+  .crt--entering .crt__flash {
+    animation: none;
+  }
+
+  .crt--entering {
+    animation: crt-fade-out 0.9s ease-in forwards;
+  }
+}
+
+@keyframes crt-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,274 @@
+.road {
+  position: relative;
+  height: 320px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--asphalt);
+}
+
+.road__track {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  transition: transform 0.45s ease;
+  will-change: transform;
+}
+
+.road__pavement {
+  flex: none;
+  position: relative;
+  background: repeating-linear-gradient(90deg, #8b8d96 0 2px, #a3a5ad 2px 64px), #a3a5ad;
+  border-right: 8px solid #d9dadf;
+}
+
+.road__finish {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 18px;
+  background: #3a7d3a;
+  border-left: 8px solid #d9dadf;
+  font: 400 20px var(--display);
+  color: #fff;
+}
+
+.road__threat {
+  position: absolute;
+  inset: 0 auto 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.road__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0007;
+  color: #fff;
+  font: 400 22px var(--display);
+  z-index: 6;
+}
+
+/* Lanes */
+
+.lane {
+  flex: none;
+  position: relative;
+  border-right: 3px dashed #ffffff55;
+  overflow: hidden;
+}
+
+.lane:nth-last-child(1 of .lane) {
+  border-right: 0;
+}
+
+.lane__cover {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 78px;
+  height: 78px;
+  margin: -39px 0 0 -39px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #5c5f6b, #3b3d46 70%);
+  box-shadow:
+    inset 0 0 0 5px #24252c,
+    inset 0 0 0 7px #5a5c66,
+    0 3px 0 #0006;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font: 800 15px var(--body);
+  transition: background 0.3s;
+}
+
+.lane--next .lane__cover {
+  box-shadow:
+    inset 0 0 0 5px #24252c,
+    inset 0 0 0 7px var(--gold),
+    0 0 18px #ffc21a88;
+}
+
+.lane--crossed .lane__cover {
+  background: radial-gradient(circle at 40% 35%, #ffe27a, #e0a400 70%);
+  color: #3a2a00;
+}
+
+.lane--dead .lane__cover {
+  background: radial-gradient(circle at 40% 35%, #ff8a7a, #b8261b 70%);
+}
+
+.lane__barrier {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 18px;
+  height: 16px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(45deg, var(--gold) 0 10px, #222 10px 20px);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+  box-shadow: 0 3px 0 #0006;
+  z-index: 3;
+}
+
+.lane--crossed .lane__barrier {
+  transform: none;
+}
+
+/* Cars */
+
+.car {
+  position: absolute;
+  left: 50%;
+  top: -120px;
+  margin-left: -27px;
+  width: 54px;
+  animation: drive linear both;
+  z-index: 2;
+}
+
+.car svg {
+  display: block;
+  width: 100%;
+}
+
+@keyframes drive {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(560px);
+  }
+}
+
+/* The hen */
+
+.hen {
+  position: absolute;
+  top: 50%;
+  width: 76px;
+  height: 76px;
+  margin: -52px 0 0 -38px;
+  z-index: 4;
+  transition: left 0.38s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.hen__body,
+.hen__body svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hen__body svg {
+  filter: drop-shadow(0 5px 0 #0007);
+  transition: transform 0.15s;
+}
+
+.hen__body--hop svg {
+  animation: hop 0.38s;
+}
+
+@keyframes hop {
+  50% {
+    transform: translateY(-26px) scale(1.06);
+  }
+}
+
+.hen--flat .hen__body svg {
+  animation: none;
+  transform: scale(1.3, 0.28) translateY(100px);
+}
+
+/* Result of a round */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  z-index: 5;
+  background: #fff;
+  color: #1d1a12;
+  border-radius: 18px;
+  padding: 14px 26px;
+  text-align: center;
+  font: 400 30px/1.1 var(--display);
+  box-shadow: 0 6px 0 #0006;
+  transition: 0.25s;
+  pointer-events: none;
+}
+
+.toast small {
+  display: block;
+  font: 700 14px var(--body);
+  color: #5b5135;
+}
+
+.toast--show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.toast--win {
+  background: var(--gold);
+}
+
+.toast--lose {
+  background: var(--red);
+  color: #fff;
+}
+
+.toast--lose small {
+  color: #ffe1dc;
+}
+
+/* Last rounds */
+
+.history {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 2px 2px;
+  min-height: 40px;
+}
+
+.history__empty,
+.history__chip {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  background: #ffffff1a;
+}
+
+.history__chip--won {
+  background: var(--green);
+}
+
+.history__chip--lost {
+  background: #ffffff14;
+  color: #ff8a7a;
+}
+
+@media (max-width: 600px) {
+  .road {
+    height: 280px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road__track,
+  .hen {
+    transition: none;
+  }
+
+  .hen__body--hop svg {
+    animation: none;
+  }
+}

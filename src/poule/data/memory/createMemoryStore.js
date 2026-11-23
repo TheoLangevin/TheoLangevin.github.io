@@ -6,7 +6,16 @@ import { STARTING_BALANCE } from '../../config/economy.js'
  * Row shapes match the SQLite queries.
  */
 export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
-  let state = { balance, rounds: [], settings: {}, nextId: 1 }
+  let state = {
+    balance,
+    rounds: [],
+    settings: {},
+    nextId: 1,
+    profile: { xp: 0, feathers: 0 },
+    upgrades: [],
+    equipped: {},
+    achievements: [],
+  }
 
   const finished = () => state.rounds.filter((row) => row.status !== 'active')
 
@@ -37,6 +46,9 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
         payout_cents: 0,
         started_at: row.startedAt,
         ended_at: null,
+        crossed: 0,
+        road_lanes: 0,
+        feathers: 0,
       })
       return id
     },
@@ -49,6 +61,9 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
         multiplier: row.multiplier,
         payout_cents: row.payoutCents,
         ended_at: row.endedAt,
+        crossed: row.crossed ?? 0,
+        road_lanes: row.roadLanes ?? 0,
+        feathers: row.feathers ?? 0,
       })
     },
     active: () => state.rounds.find((row) => row.status === 'active') ?? null,
@@ -56,7 +71,17 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
       finished()
         .slice(-limit)
         .reverse()
-        .map(({ started_at, ended_at, ...row }) => row),
+        .map(({ id, mode_id, status, multiplier, bet_cents, payout_cents, lane, seed, seed_hash }) => ({
+          id,
+          mode_id,
+          status,
+          multiplier,
+          bet_cents,
+          payout_cents,
+          lane,
+          seed,
+          seed_hash,
+        })),
     stats() {
       const rows = finished()
       const wins = rows.filter((row) => row.status === 'won')
@@ -78,6 +103,19 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
       }
       return [...byMode.values()]
     },
+    progressStats() {
+      const rows = finished()
+      const wins = rows.filter((row) => row.status === 'won')
+      return {
+        lanes_crossed: rows.reduce((sum, row) => sum + row.crossed, 0),
+        won: wins.length,
+        best_lanes: Math.max(0, ...rows.map((row) => row.crossed)),
+        modes_won: new Set(wins.map((row) => row.mode_id)).size,
+        hardcore_wins: wins.filter((row) => row.mode_id === 'hardcore').length,
+        best_multiplier: Math.max(0, ...wins.map((row) => row.multiplier)),
+        finished: wins.filter((row) => row.road_lanes > 0 && row.crossed === row.road_lanes).length,
+      }
+    },
     clearFinished: () => void (state.rounds = state.rounds.filter((row) => row.status === 'active')),
   }
 
@@ -86,11 +124,49 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
     set: (key, value) => void (state.settings[key] = String(value)),
   }
 
+  const profile = {
+    get: () => ({ ...state.profile }),
+    earn(amount) {
+      state.profile.xp += amount
+      state.profile.feathers += amount
+    },
+    spend(amount) {
+      if (state.profile.feathers < amount) return false
+      state.profile.feathers -= amount
+      return true
+    },
+  }
+
+  const upgrades = {
+    owned: () => [...state.upgrades],
+    add(id) {
+      if (state.upgrades.includes(id)) throw new Error(`Upgrade ${id} already owned`)
+      state.upgrades.push(id)
+    },
+    equipped: () => ({ ...state.equipped }),
+    equip(slot, upgradeId) {
+      if (!state.upgrades.includes(upgradeId)) throw new Error(`Upgrade ${upgradeId} not owned`)
+      state.equipped[slot] = upgradeId
+    },
+    unequip: (slot) => void delete state.equipped[slot],
+  }
+
+  const achievements = {
+    unlocked: () => [...state.achievements],
+    add(id) {
+      if (state.achievements.includes(id)) throw new Error(`Achievement ${id} already unlocked`)
+      state.achievements.push(id)
+    },
+  }
+
   return {
     kind: 'memory',
     wallet,
     rounds,
     settings,
+    profile,
+    upgrades,
+    achievements,
     /** All or nothing, like a SQL transaction. */
     transaction(work) {
       const snapshot = structuredClone(state)

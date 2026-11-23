@@ -171,6 +171,14 @@
   animation: hop 0.38s;
 }
 
+.hen--fast {
+  transition-duration: 0.19s;
+}
+
+.hen--fast .hen__body--hop svg {
+  animation-duration: 0.19s;
+}
+
 @keyframes hop {
   50% {
     transform: translateY(-26px) scale(1.06);
@@ -256,9 +264,90 @@
   color: #ff8a7a;
 }
 
+/* Trails left by a hop */
+
+.trail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.trail span {
+  position: absolute;
+  left: calc(-10px - var(--i) * 14px);
+  top: calc(58px + (var(--i) % 2) * 8px);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: puff 0.55s ease-out calc(var(--i) * 0.04s) forwards;
+}
+
+.trail--dust span {
+  background: #c9b9a0;
+}
+
+.trail--sparkles span {
+  top: calc(20px + var(--i) * 10px);
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  rotate: 45deg;
+}
+
+@keyframes puff {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-18px) scale(1.4);
+  }
+}
+
+/* Confetti on a win */
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  left: var(--x);
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti var(--duration) ease-in var(--delay) forwards;
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 340px) rotate(var(--spin));
+  }
+}
+
+.road--tappable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @media (max-width: 600px) {
   .road {
-    height: 280px;
+    height: 250px;
   }
 }
 
@@ -270,5 +359,10 @@
 
   .hen__body--hop svg {
     animation: none;
+  }
+
+  .trail,
+  .confetti {
+    display: none;
   }
 }

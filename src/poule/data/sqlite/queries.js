@@ -26,7 +26,8 @@ export const SQL = Object.freeze({
   roundUpdate: `
     UPDATE rounds
     SET lane = :lane, status = :status, multiplier = :multiplier,
-        payout_cents = :payoutCents, ended_at = :endedAt
+        payout_cents = :payoutCents, ended_at = :endedAt,
+        crossed = :crossed, road_lanes = :roadLanes, feathers = :feathers
     WHERE id = :id`,
 
   roundActive: `
@@ -55,6 +56,39 @@ export const SQL = Object.freeze({
     GROUP BY mode_id`,
 
   roundClearFinished: `DELETE FROM rounds WHERE status <> 'active'`,
+
+  progressStats: `
+    SELECT
+      COALESCE(SUM(crossed), 0)                                              AS lanes_crossed,
+      COALESCE(SUM(status = 'won'), 0)                                       AS won,
+      COALESCE(MAX(crossed), 0)                                              AS best_lanes,
+      COUNT(DISTINCT CASE WHEN status = 'won' THEN mode_id END)              AS modes_won,
+      COALESCE(SUM(status = 'won' AND mode_id = 'hardcore'), 0)              AS hardcore_wins,
+      COALESCE(MAX(CASE WHEN status = 'won' THEN multiplier END), 0)         AS best_multiplier,
+      COALESCE(SUM(status = 'won' AND road_lanes > 0 AND crossed = road_lanes), 0) AS finished
+    FROM rounds WHERE status <> 'active'`,
+
+  profileGet: `SELECT xp, feathers FROM profile WHERE id = 1`,
+
+  profileEarn: `UPDATE profile SET xp = xp + :amount, feathers = feathers + :amount WHERE id = 1`,
+
+  profileSpend: `UPDATE profile SET feathers = feathers - :amount WHERE id = 1 AND feathers >= :amount`,
+
+  upgradesOwned: `SELECT id FROM upgrades ORDER BY bought_at, id`,
+
+  upgradeInsert: `INSERT INTO upgrades (id, bought_at) VALUES (:id, :now)`,
+
+  equippedAll: `SELECT slot, upgrade_id FROM equipped`,
+
+  equip: `
+    INSERT INTO equipped (slot, upgrade_id) VALUES (:slot, :upgradeId)
+    ON CONFLICT (slot) DO UPDATE SET upgrade_id = excluded.upgrade_id`,
+
+  unequip: `DELETE FROM equipped WHERE slot = :slot`,
+
+  achievementsUnlocked: `SELECT id, unlocked_at FROM achievements ORDER BY unlocked_at, id`,
+
+  achievementInsert: `INSERT INTO achievements (id, unlocked_at) VALUES (:id, :now)`,
 
   settingGet: `SELECT value FROM settings WHERE key = :key`,
 

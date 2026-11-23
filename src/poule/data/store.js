@@ -19,13 +19,27 @@
  * @property {(limit: number) => object[]} rounds.history  finished rounds, newest first
  * @property {() => object} rounds.stats  totals over finished rounds
  * @property {() => object[]} rounds.statsByMode
+ * @property {() => object} rounds.progressStats  totals the achievements are checked against
  * @property {() => void} rounds.clearFinished
+ * @property {object} profile  experience and feathers
+ * @property {() => { xp: number, feathers: number }} profile.get
+ * @property {(amount: number) => void} profile.earn  adds to both xp and feathers
+ * @property {(amount: number) => boolean} profile.spend  false if not enough feathers
+ * @property {object} upgrades
+ * @property {() => string[]} upgrades.owned
+ * @property {(id: string) => void} upgrades.add
+ * @property {() => Record<string, string>} upgrades.equipped  slot → upgrade id
+ * @property {(slot: string, id: string) => void} upgrades.equip
+ * @property {(slot: string) => void} upgrades.unequip
+ * @property {object} achievements
+ * @property {() => string[]} achievements.unlocked
+ * @property {(id: string) => void} achievements.add
  * @property {object} settings
  * @property {(key: string, fallback?: string) => string | null} settings.get
  * @property {(key: string, value: unknown) => void} settings.set
  *
  * @typedef {{ modeId: string, betCents: number, seed: string, seedHash: string, lane: number, status: string, startedAt: string }} RoundInsert
- * @typedef {{ id: number, lane: number, status: string, multiplier: number | null, payoutCents: number, endedAt: string | null }} RoundUpdate
+ * @typedef {{ id: number, lane: number, status: string, multiplier: number | null, payoutCents: number, endedAt: string | null, crossed: number, roadLanes: number, feathers: number }} RoundUpdate
  */
 
 export { createMemoryStore } from './memory/createMemoryStore.js'

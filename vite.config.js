@@ -24,11 +24,11 @@ function folderRedirect(paths) {
 }
 
 // User site (theolangevin.github.io) is served from the domain root.
-// Three pages: the portfolio (/), the 3D game (/game.html) and the immersive
-// version of the portfolio (/new).
+// Four pages: the portfolio (/), the 3D game (/game.html), the immersive
+// version of the portfolio (/new) and La Poule Traverse (/poule).
 export default defineConfig({
   base: '/',
-  plugins: [react(), folderRedirect(['/new'])],
+  plugins: [react(), folderRedirect(['/new', '/poule'])],
   build: {
     // three.js makes the 3D chunks big, but the portfolio never loads them.
     chunkSizeWarningLimit: 1200,
@@ -37,6 +37,7 @@ export default defineConfig({
         main: page('./index.html'),
         game: page('./game.html'),
         matrix: page('./new/index.html'),
+        poule: page('./poule/index.html'),
       },
     },
   },

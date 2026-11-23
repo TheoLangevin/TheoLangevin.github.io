@@ -1,0 +1,192 @@
+/* La Poule Traverse: design tokens and page layout.
+   An arcade cabinet in chick yellow around a night road. */
+
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffd23f, #16171d);
+  --ink: light-dark(#1d1a12, #f3efe4);
+  --card: light-dark(#fffaf0, #22242c);
+  --line: light-dark(#e8c552, #33353f);
+  --muted: light-dark(#5b5135, #a9a59a);
+  --soft: light-dark(#f1e3b4, #30323b);
+  --code: light-dark(#f4ecd2, #191a20);
+  --red: #e8392c;
+  --green: #1f9d55;
+  --gold: #ffc21a;
+  --asphalt: #2a2c35;
+  --cabinet: #1b1c22;
+  --display: 'Lilita One', system-ui, sans-serif;
+  --body: Nunito, system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 var(--body);
+  overflow-x: clip;
+}
+
+button {
+  font: 800 15px var(--body);
+  cursor: pointer;
+  border: 0;
+  border-radius: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--ink);
+  background: var(--soft);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(16px, 3vw, 32px) max(4vw, 14px) 48px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.header h1 {
+  font: 400 clamp(32px, 5vw, 48px) / 1.05 var(--display);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.header__back {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.header__back:hover {
+  text-decoration: underline;
+}
+
+.header__sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.balance {
+  background: var(--asphalt);
+  color: #fff;
+  border-radius: 16px;
+  padding: 10px 18px;
+  text-align: right;
+  box-shadow: 0 4px 0 #0005;
+}
+
+.balance small {
+  display: block;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.balance b {
+  font: 400 28px/1.1 var(--display);
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.notice {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 3px solid var(--red);
+  font-weight: 700;
+}
+
+.cabinet {
+  background: var(--cabinet);
+  border-radius: 26px;
+  padding: 14px;
+  box-shadow:
+    0 8px 0 #0006,
+    inset 0 0 0 4px #ffffff10;
+}
+
+.box {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 0 #0002;
+}
+
+.box__label {
+  display: block;
+  font-weight: 800;
+  font-size: 14px;
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.box__note {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.controls,
+.panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .controls,
+  .panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actions,
+  .panel--warn {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .controls,
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .balance b {
+    font-size: 22px;
+  }
+}

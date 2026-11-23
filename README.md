@@ -6,21 +6,21 @@ Portfolio of Théo Langevin, an immersive 3D version of it, **Shardstorm**, a 3D
 
 ```bash
 npm install
-npm run dev      # local dev server (portfolio on /, game on /game.html, immersive site on /new)
-npm test         # unit tests (game engine, immersive world)
+npm run dev      # local dev server (portfolio on /, game on /game.html, immersive site on /new, La Poule Traverse on /poule)
+npm test         # unit tests (game engine, immersive world, La Poule Traverse)
 npm run build    # production build in dist/
 npm run preview  # serve the production build locally
 ```
 
 ## Project layout
 
-The site has three pages, each with its own entry point, so the 3D libraries are never loaded by the portfolio.
+The site has four pages, each with its own entry point, so the 3D libraries are never loaded by the portfolio.
 
 ```
 index.html              portfolio page
 game.html               game page
 new/index.html          immersive version of the portfolio (/new)
-public/poule/index.html La Poule Traverse (/poule/): one self-contained page, copied as-is by Vite
+poule/index.html        La Poule Traverse (/poule)
 src/
 ├── shared/styles/      design tokens, reset and buttons used by both pages
 ├── portfolio/
@@ -61,6 +61,19 @@ src/
     ├── audio/          sounds synthesised with Web Audio (no audio files)
     ├── input/          keyboard, mouse capture and touch state
     └── state/          zustand store and the visitor's body (rig)
+└── poule/              La Poule Traverse (/poule)
+    ├── main.jsx        entry point
+    ├── PouleApp.jsx    page layout
+    ├── config/         economy, modes, timings, sizes (data only)
+    ├── domain/         the rules: multipliers, provably fair draws, a round (pure, tested)
+    ├── data/           storage: SQLite (sql.js) in the browser, saved in IndexedDB
+    │   ├── store.js      the store contract the service talks to
+    │   ├── sqlite/       loader, migrations, every SQL query, SqlDatabase wrapper
+    │   ├── memory/       same contract in memory (tests, and fallback without SQLite)
+    │   └── persistence/  IndexedDB file and debounced saver
+    ├── services/       use cases: start, step, cash out, reset (the only writer)
+    ├── state/          zustand store: UI state and animation timing
+    └── ui/             road, controls, panels, hooks, formatting
 ```
 
 ### How the game is wired
@@ -84,3 +97,13 @@ src/
 Every push to `main` runs the tests, builds the site and publishes it to GitHub Pages through `.github/workflows/deploy.yml`.
 
 The repository's Pages source must be set to **GitHub Actions** (Settings → Pages → Build and deployment → Source).
+
+### La Poule Traverse (/poule)
+
+A road-crossing game played with fake tokens: pick a bet and a difficulty, the hen crosses lane by lane, each lane raises the multiplier, cash out before a car gets her. It returns 95.5 % of the bets on average, and the page says so, with the visitor's own observed return.
+
+- **Layers, one direction.** `ui → state → services → domain`, and `services → data`. The domain knows nothing about React or storage; the service is the only code that writes to the database; the UI only calls the zustand store.
+- **SQLite in the browser.** The database is a real SQLite file run by [sql.js](https://sql.js.org) (WebAssembly), kept in IndexedDB and saved a moment after each write. Its schema is versioned (`data/sqlite/migrations.js`, `PRAGMA user_version`): change it by adding a migration, never by editing one. All SQL lives in `data/sqlite/queries.js`. Money is stored in integer cents, and every bet or payout is written in the same transaction as its round, so a reload cannot lose a bet or pay twice; a round left in progress is resumed on the same road.
+- **sql.js comes from cdnjs**, pinned in `data/sqlite/loadSqlJs.js`, so it is not an npm dependency. If it cannot load, the game runs on the in-memory store and says it will not be saved.
+- **Provably fair.** The road is drawn from a secret seed whose SHA-256 is shown before the round and revealed after it (`domain/fairness.js`).
+- **Tests** cover the rules, the draws and the service (`domain/__tests__`, `services/__tests__`), on the in-memory store.

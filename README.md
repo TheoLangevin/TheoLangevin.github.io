@@ -64,16 +64,16 @@ src/
 └── poule/              La Poule Traverse (/poule)
     ├── main.jsx        entry point
     ├── PouleApp.jsx    page layout
-    ├── config/         economy, modes, timings, sizes (data only)
-    ├── domain/         the rules: multipliers, provably fair draws, a round (pure, tested)
+    ├── config/         economy, modes, upgrades, achievements, levels, timings (data only)
+    ├── domain/         the rules: multipliers, provably fair draws, a round, progression (pure, tested)
     ├── data/           storage: SQLite (sql.js) in the browser, saved in IndexedDB
     │   ├── store.js      the store contract the service talks to
     │   ├── sqlite/       loader, migrations, every SQL query, SqlDatabase wrapper
     │   ├── memory/       same contract in memory (tests, and fallback without SQLite)
     │   └── persistence/  IndexedDB file and debounced saver
-    ├── services/       use cases: start, step, cash out, reset (the only writer)
+    ├── services/       use cases: play, cash out, buy, equip, reset (the only writer)
     ├── state/          zustand store: UI state and animation timing
-    └── ui/             road, controls, panels, hooks, formatting
+    └── ui/             road, controls, shop, panels, sounds, hooks, formatting
 ```
 
 ### How the game is wired
@@ -105,5 +105,7 @@ A road-crossing game played with fake tokens: pick a bet and a difficulty, the h
 - **Layers, one direction.** `ui → state → services → domain`, and `services → data`. The domain knows nothing about React or storage; the service is the only code that writes to the database; the UI only calls the zustand store.
 - **SQLite in the browser.** The database is a real SQLite file run by [sql.js](https://sql.js.org) (WebAssembly), kept in IndexedDB and saved a moment after each write. Its schema is versioned (`data/sqlite/migrations.js`, `PRAGMA user_version`): change it by adding a migration, never by editing one. All SQL lives in `data/sqlite/queries.js`. Money is stored in integer cents, and every bet or payout is written in the same transaction as its round, so a reload cannot lose a bet or pay twice; a round left in progress is resumed on the same road.
 - **sql.js comes from cdnjs**, pinned in `data/sqlite/loadSqlJs.js`, so it is not an npm dependency. If it cannot load, the game runs on the in-memory store and says it will not be saved.
+- **Progression.** Every lane crossed earns feathers (more per lane in harder modes, never more for a bigger bet), which are also experience for the level. Feathers buy upgrades in the hen house: hats, plumage, trails, and two perks (faster hops, auto cash-out at a chosen multiplier). Upgrades change looks and handling, never the odds. Achievements pay feathers once. A break reminder shows after 30 minutes of play. Migration 2 adds the tables and gives existing players the feathers their past rounds earned.
+- **On a phone** the Play and Cash out buttons sit in a bar fixed at the bottom of the screen, and a tap on the road moves the hen.
 - **Provably fair.** The road is drawn from a secret seed whose SHA-256 is shown before the round and revealed after it (`domain/fairness.js`).
 - **Tests** cover the rules, the draws and the service (`domain/__tests__`, `services/__tests__`), on the in-memory store.

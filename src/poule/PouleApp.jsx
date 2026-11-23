@@ -1,20 +1,24 @@
 import { useEffect } from 'react'
 import { usePoule } from './state/usePoule.js'
+import { useGameSounds } from './ui/audio/useGameSounds.js'
 import ActionButtons from './ui/controls/ActionButtons.jsx'
 import BetControl from './ui/controls/BetControl.jsx'
 import ModePicker from './ui/controls/ModePicker.jsx'
 import { useKeyboard } from './ui/hooks/useKeyboard.js'
 import Header from './ui/layout/Header.jsx'
+import Notices from './ui/layout/Notices.jsx'
 import StorageNotice from './ui/layout/StorageNotice.jsx'
 import FairnessPanel from './ui/panels/FairnessPanel.jsx'
 import SafetyPanel from './ui/panels/SafetyPanel.jsx'
 import StatsPanel from './ui/panels/StatsPanel.jsx'
 import HistoryStrip from './ui/road/HistoryStrip.jsx'
 import Road from './ui/road/Road.jsx'
+import AchievementsPanel from './ui/shop/AchievementsPanel.jsx'
+import ShopPanel from './ui/shop/ShopPanel.jsx'
 import './ui/controls/controls.css'
 import './ui/panels/panels.css'
 
-/** Page layout: header, the arcade cabinet with the road, controls, then panels. */
+/** Page layout: header, the arcade cabinet with the road, controls, the hen house, then panels. */
 export default function PouleApp() {
   const init = usePoule((state) => state.init)
 
@@ -22,10 +26,12 @@ export default function PouleApp() {
     init()
   }, [init])
   useKeyboard()
+  useGameSounds()
 
   return (
     <div className="page">
       <Header />
+      <Notices />
       <StorageNotice />
       <div className="cabinet">
         <Road />
@@ -36,6 +42,8 @@ export default function PouleApp() {
         <ModePicker />
         <ActionButtons />
       </div>
+      <ShopPanel />
+      <AchievementsPanel />
       <div className="panels">
         <StatsPanel />
         <FairnessPanel />

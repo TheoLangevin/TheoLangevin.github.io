@@ -64,3 +64,33 @@
   background: var(--gold);
   color: #2b1f00;
 }
+
+/* On a phone the two big buttons sit at the bottom of the screen, under the
+   thumb, whatever is scrolled into view. */
+@media (max-width: 600px) {
+  .actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -6px 20px #0003;
+  }
+
+  .actions .box__note {
+    display: none;
+  }
+
+  .big {
+    min-height: 64px;
+    font-size: 22px;
+  }
+
+  .big small {
+    font-size: 13px;
+  }
+}

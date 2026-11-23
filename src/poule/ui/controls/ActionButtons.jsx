@@ -6,13 +6,14 @@ import { multiplierLabel, tokens } from '../format.js'
 
 /** Play / step forward, and cash out with the amount it would pay. */
 export default function ActionButtons() {
-  const { round, busy, ready, play, cashOut } = usePoule(
+  const { round, busy, ready, play, cashOut, autocash } = usePoule(
     useShallow((state) => ({
       round: state.round,
       busy: state.busy,
       ready: state.phase === 'ready',
       play: state.play,
       cashOut: state.cashOut,
+      autocash: state.progression?.owned.includes('autocash') ? state.autocashTarget : null,
     })),
   )
 
@@ -23,6 +24,7 @@ export default function ActionButtons() {
   } else if (round) {
     cashLabel = 'après la 1re voie'
   }
+  if (round && autocash) cashLabel += ` · auto à ${multiplierLabel(autocash)}`
 
   return (
     <div className="box actions">

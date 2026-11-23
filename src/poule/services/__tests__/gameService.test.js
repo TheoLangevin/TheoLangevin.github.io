@@ -84,7 +84,8 @@ describe('game service', () => {
   it('remembers the chosen mode and bet', () => {
     const { service } = serviceWith('s')
     service.savePreferences({ modeId: 'hard', betCents: 5000 })
-    expect(service.preferences()).toEqual({ modeId: 'hard', betCents: 5000 })
+    expect(service.preferences().modeId).toBe('hard')
+    expect(service.preferences().betCents).toBe(5000)
   })
 
   it('resets the balance and the history', async () => {
@@ -107,5 +108,80 @@ describe('game service', () => {
       }),
     ).toThrow()
     expect(store.wallet.balance()).toBe(1000)
+  })
+})
+
+describe('progression', () => {
+  it('pays feathers and experience for the lanes crossed, even on a loss', async () => {
+    const { service } = serviceWith(await seedFatalAt(3))
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    service.step()
+    service.step()
+    const result = service.step()
+    expect(result.event).toBe('hit')
+    expect(result.progress.feathers).toBe(4)
+    expect(result.progress.achievements).toContain('first-steps')
+    const { progression } = service.summary()
+    expect(progression.feathers).toBe(4 + 10)
+    expect(progression.xp).toBe(progression.feathers)
+  })
+
+  it('unlocks an achievement only once', async () => {
+    const seed = await seedSafeFor(2)
+    const { service } = serviceWith(seed)
+    for (let i = 0; i < 2; i++) {
+      await service.start({ modeId: 'easy', betCents: 1000 })
+      service.step()
+      const { progress } = service.cashOut()
+      if (i === 0) expect(progress.achievements).toEqual(['first-steps', 'first-win'])
+      else expect(progress.achievements).toEqual([])
+    }
+    expect(service.summary().progression.achievements).toEqual(['first-steps', 'first-win'])
+  })
+
+  it('buys an upgrade with feathers and wears it', () => {
+    const store = createMemoryStore()
+    store.profile.earn(100)
+    const service = createGameService({ store })
+    expect(() => service.buy('crown')).toThrow()
+    service.buy('cap')
+    const { progression } = service.summary()
+    expect(progression.feathers).toBe(60)
+    expect(progression.owned).toEqual(['cap'])
+    expect(progression.equipped).toEqual({ hat: 'cap' })
+    expect(() => service.buy('cap')).toThrow()
+
+    service.toggleEquip('cap')
+    expect(service.summary().progression.equipped).toEqual({})
+  })
+
+  it('does not take feathers for a purchase that fails', () => {
+    const store = createMemoryStore()
+    store.profile.earn(30)
+    const service = createGameService({ store })
+    expect(() => service.buy('cap')).toThrow()
+    expect(service.summary().progression.feathers).toBe(30)
+    expect(service.summary().progression.owned).toEqual([])
+  })
+
+  it('keeps progression when the balance is reset', async () => {
+    const { service } = serviceWith(await seedSafeFor(1))
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    service.step()
+    service.cashOut()
+    const before = service.summary().progression
+    service.reset()
+    expect(service.summary().progression.xp).toBe(before.xp)
+    expect(service.summary().progression.achievements).toEqual(before.achievements)
+  })
+
+  it('remembers the auto cash-out target and sound', () => {
+    const { service } = serviceWith('s')
+    expect(service.preferences().autocashTarget).toBeNull()
+    service.savePreferences({ autocashTarget: 3, sound: false })
+    expect(service.preferences().autocashTarget).toBe(3)
+    expect(service.preferences().sound).toBe(false)
+    service.savePreferences({ autocashTarget: null })
+    expect(service.preferences().autocashTarget).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import './Navigation.css'
-import { navLinks } from '../content.js'
+import { extraNavLinks, navLinks } from '../content.js'
 
 export default function Navigation() {
   return (
@@ -8,7 +8,7 @@ export default function Navigation() {
         Théo Langevin
       </a>
       <div className="nav__links">
-        {navLinks.map(({ label, href }) => (
+        {[...navLinks, ...extraNavLinks].map(({ label, href }) => (
           <a key={href} className="nav__link" href={href}>
             {label}
           </a>

@@ -1,6 +1,6 @@
 # TheoLangevin.github.io
 
-Portfolio of Théo Langevin, an immersive 3D version of it, and **Shardstorm**, a 3D arena survival game. Built with [React](https://react.dev), [Vite](https://vite.dev) and [React Three Fiber](https://r3f.docs.pmnd.rs).
+Portfolio of Théo Langevin, an immersive 3D version of it, **Shardstorm**, a 3D arena survival game, and **La Poule Traverse**, a small road-crossing game played with fake tokens (/poule/). Built with [React](https://react.dev), [Vite](https://vite.dev) and [React Three Fiber](https://r3f.docs.pmnd.rs).
 
 ## Development
 
@@ -20,6 +20,7 @@ The site has three pages, each with its own entry point, so the 3D libraries are
 index.html              portfolio page
 game.html               game page
 new/index.html          immersive version of the portfolio (/new)
+public/poule/index.html La Poule Traverse (/poule/): one self-contained page, copied as-is by Vite
 src/
 ├── shared/styles/      design tokens, reset and buttons used by both pages
 ├── portfolio/

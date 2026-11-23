@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Poule Traverse — Théo Langevin</title>
+<meta name="description" content="La Poule Traverse : mini-jeu de démonstration où une poule traverse la route voie par voie. Jetons fictifs, aucun argent réel.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: arcade de fête foraine, joyeux mais honnête sur les chiffres
+   IDEA: une borne d'arcade jaune poussin autour d'une route de nuit
+   PICTURE: la route vue du dessus, voies à plaques d'égout, poule et voitures
+   COLOUR and TYPE: jaune poussin, asphalte, rouge crête ; Lilita One + Nunito
+   LAYOUT: titre modeste, la route en grand, commandes dessous, bilan et règles en bas */
+:root{color-scheme:light dark;--bg:light-dark(#ffd23f,#16171d);--ink:light-dark(#1d1a12,#f3efe4);--card:light-dark(#fffaf0,#22242c);--line:light-dark(#e8c552,#33353f);--muted:light-dark(#5b5135,#a9a59a);--red:#e8392c;--green:#1f9d55;--gold:#ffc21a;--asph:#2a2c35}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Nunito,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:1240px;margin:0 auto;padding:clamp(16px,3vw,32px) max(4vw,14px) 48px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+h1{font:400 clamp(32px,5vw,48px)/1.05 'Lilita One',sans-serif;margin:0;text-wrap:balance}
+.sub{margin:4px 0 0;color:var(--muted);font-weight:700}
+.back{display:inline-block;margin-bottom:6px;color:var(--ink);font-weight:800;text-decoration:none}
+.back:hover{text-decoration:underline}
+.bal{background:var(--asph);color:#fff;border-radius:16px;padding:10px 18px;text-align:right;box-shadow:0 4px 0 #0005}
+.bal small{display:block;font-size:13px;opacity:.75}
+.bal b{font:400 28px/1.1 'Lilita One',sans-serif;color:var(--gold);white-space:nowrap}
+.cab{background:#1b1c22;border-radius:26px;padding:14px;box-shadow:0 8px 0 #0006,inset 0 0 0 4px #ffffff10}
+.road{position:relative;height:320px;overflow:hidden;border-radius:16px;background:var(--asph)}
+.track{position:absolute;inset:0 auto 0 0;display:flex;transition:transform .45s ease;will-change:transform}
+.walk{flex:none;width:130px;background:repeating-linear-gradient(90deg,#8b8d96 0 2px,#a3a5ad 2px 64px),#a3a5ad;position:relative;border-right:8px solid #d9dadf}
+.walk.end{border-right:0;border-left:8px solid #d9dadf;width:150px;background:#3a7d3a}
+.walk.end::after{content:"Arrivée";position:absolute;inset:auto 0 18px;text-align:center;font:400 20px 'Lilita One';color:#fff}
+.lane{flex:none;width:104px;position:relative;border-right:3px dashed #ffffff55;overflow:hidden}
+.lane:last-of-type{border-right:0}
+.cover{position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#5c5f6b,#3b3d46 70%);box-shadow:inset 0 0 0 5px #24252c,inset 0 0 0 7px #5a5c66,0 3px 0 #0006;display:grid;place-items:center;color:#fff;font:800 15px Nunito;transition:background .3s}
+.lane.next .cover{box-shadow:inset 0 0 0 5px #24252c,inset 0 0 0 7px var(--gold),0 0 18px #ffc21a88}
+.lane.done .cover{background:radial-gradient(circle at 40% 35%,#ffe27a,#e0a400 70%);color:#3a2a00}
+.lane.dead .cover{background:radial-gradient(circle at 40% 35%,#ff8a7a,#b8261b 70%)}
+.bar{position:absolute;left:6px;right:6px;top:18px;height:16px;border-radius:4px;background:repeating-linear-gradient(45deg,var(--gold) 0 10px,#222 10px 20px);transform:scaleX(0);transition:transform .3s;box-shadow:0 3px 0 #0006}
+.lane.done .bar{transform:none}
+.car{position:absolute;left:50%;top:-120px;margin-left:-27px;width:54px;animation:drive linear forwards;z-index:2}
+@keyframes drive{to{transform:translateY(560px)}}
+.hen{position:absolute;top:50%;left:65px;width:76px;height:76px;margin:-52px 0 0 -38px;z-index:3;transition:left .38s cubic-bezier(.3,.7,.4,1)}
+.hen svg{width:100%;height:100%;filter:drop-shadow(0 5px 0 #0007)}
+.hen.hop svg{animation:hop .38s}
+@keyframes hop{50%{transform:translateY(-26px) scale(1.06)}}
+.hen.flat svg{transform:scale(1.3,.28) translateY(100px);transition:transform .15s}
+.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;z-index:5;background:#fff;color:#1d1a12;border-radius:18px;padding:14px 26px;text-align:center;font:400 30px/1.1 'Lilita One';box-shadow:0 6px 0 #0006;transition:.25s;pointer-events:none}
+.toast small{display:block;font:700 14px Nunito;color:#5b5135}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast.win{background:var(--gold)}
+.toast.lose{background:var(--red);color:#fff}.toast.lose small{color:#ffe1dc}
+.hist{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 2px;min-height:40px}
+.hist span{flex:none;padding:3px 10px;border-radius:99px;font-weight:800;font-size:13px;color:#fff;background:#ffffff1a}
+.hist .w{background:var(--green)}.hist .l{background:#ffffff14;color:#ff8a7a}
+.ctrl{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.2fr);gap:14px;margin-top:16px}
+.box{background:var(--card);border-radius:18px;padding:14px 16px;box-shadow:0 4px 0 #0002}
+.lab{font-weight:800;font-size:14px;margin:0 0 8px;color:var(--muted)}
+.betrow{display:flex;gap:6px}
+.betrow input{flex:1;font:800 20px Nunito;text-align:center;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;height:48px;width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+button{font:800 15px Nunito;cursor:pointer;border:0;border-radius:12px;min-height:44px;padding:0 14px;color:var(--ink);background:light-dark(#f1e3b4,#30323b)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button[aria-pressed=true]{background:var(--asph);color:var(--gold)}
+.modeinfo{font-size:13px;color:var(--muted);margin:8px 0 0}
+.go{display:grid;gap:8px}
+.big{font:400 24px 'Lilita One';min-height:60px;border-radius:16px;box-shadow:0 5px 0 #0004}
+.big:active{transform:translateY(3px);box-shadow:0 2px 0 #0004}
+#play{background:var(--green);color:#fff}
+#cash{background:var(--gold);color:#2b1f00}
+#cash small{display:block;font:800 14px Nunito}
+.keys{font-size:13px;color:var(--muted);margin:0}
+.info{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px}
+.info h2{font:400 22px/1.1 'Lilita One';margin:0 0 10px}
+.info p{margin:0 0 8px;font-size:15px}
+dl{display:grid;grid-template-columns:auto auto;gap:4px 12px;margin:0}
+dt{color:var(--muted);font-size:15px}dd{margin:0;text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-size:12px;overflow-wrap:anywhere;display:block;background:light-dark(#f4ecd2,#191a20);padding:6px 8px;border-radius:8px;margin:2px 0 8px}
+.warn{border:3px solid var(--red)}
+.tel{font-weight:800;white-space:nowrap}
+@media(max-width:900px){.ctrl,.info{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.go,.warn{grid-column:1/-1}}
+@media(max-width:600px){.ctrl,.info{grid-template-columns:minmax(0,1fr)}.road{height:280px}.bal b{font-size:22px}}
+@media(prefers-reduced-motion:reduce){.track,.hen{transition:none}.hen.hop svg{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <div><a class="back" href="/">← Retour au portfolio</a><h1>La Poule Traverse</h1><p class="sub">Jeu de démonstration — jetons fictifs, aucun argent réel</p></div>
+ <div class="bal"><small>Solde</small><b id="bal">1 000 jetons</b></div>
+</header>
+
+<div class="cab">
+ <div class="road" id="road">
+  <div class="track" id="track"></div>
+  <div class="toast" id="toast"></div>
+ </div>
+ <div class="hist" id="hist" aria-label="Dernières parties"></div>
+</div>
+
+<div class="ctrl">
+ <div class="box">
+  <p class="lab">Mise (1 à 200 jetons)</p>
+  <div class="betrow"><button id="minus" aria-label="Diminuer la mise">−</button><input id="bet" type="number" min="1" max="200" step="1" value="10" inputmode="numeric"><button id="plus" aria-label="Augmenter la mise">+</button></div>
+  <div class="chips"><button data-b="1">1</button><button data-b="10">10</button><button data-b="50">50</button><button data-b="200">200</button><button data-h=".5">½</button><button data-h="2">×2</button></div>
+ </div>
+ <div class="box">
+  <p class="lab">Difficulté</p>
+  <div class="seg" id="seg"></div>
+  <p class="modeinfo" id="modeinfo"></p>
+ </div>
+ <div class="box go">
+  <button class="big" id="play">Jouer</button>
+  <button class="big" id="cash" disabled>Encaisser<small id="cashv">—</small></button>
+  <p class="keys">Clavier : Espace pour avancer, C pour encaisser.</p>
+ </div>
+</div>
+
+<div class="info">
+ <div class="box">
+  <h2>Votre bilan</h2>
+  <dl id="stats"></dl>
+  <p style="margin-top:10px"><button id="refill">Remettre le solde à 1 000</button></p>
+ </div>
+ <div class="box">
+  <h2>Équité vérifiable</h2>
+  <p>Avant chaque partie, le jeu tire une graine secrète et affiche son empreinte SHA-256. La voie est franchie si les 8 premiers caractères de SHA-256(graine:numéro de voie), lus comme un nombre et divisés par 2³², sont inférieurs à la chance de passage.</p>
+  <p class="lab" style="margin:0">Empreinte de la partie</p><code id="hash">—</code>
+  <p class="lab" style="margin:0">Graine révélée en fin de partie</p><code id="seed">—</code>
+ </div>
+ <div class="box warn">
+  <h2>À savoir</h2>
+  <p>Ce jeu reverse en moyenne 95,5 % des mises (RTP), quelle que soit la difficulté : sur la durée, le solde baisse. Le bilan ci-contre le montre.</p>
+  <p>Les casinos en ligne sont interdits en France. Besoin d'aide : Joueurs Info Service, <a class="tel" href="tel:0974751313">09 74 75 13 13</a> (appel non surtaxé, 7j/7, 8h–2h).</p>
+ </div>
+</div>
+</div>
+
+<script>
+{
+const RTP=0.955, CAP=20000, LW=104, START=130;
+const MODES=[
+ {k:'facile',n:'Facile',p:.92,lanes:24},
+ {k:'moyen',n:'Moyen',p:.84,lanes:22},
+ {k:'difficile',n:'Difficile',p:.72,lanes:20},
+ {k:'hardcore',n:'Hardcore',p:.60,lanes:15}];
+const CARS=['#e8392c','#2f7de1','#1f9d55','#f08a24','#8e44ad','#e6e6e6','#ffc21a'];
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.floor(n).toLocaleString('fr-FR');
+const fmtx=m=>'x'+(m>=100?Math.floor(m).toLocaleString('fr-FR'):m.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}));
+const mult=(mode,i)=>i<=0?1:Math.floor(RTP/Math.pow(mode.p,i)*100)/100;
+
+let save={};try{save=JSON.parse(localStorage.getItem('poule')||'{}')}catch(e){}
+let bal=save.bal??1000, mode=MODES[save.m??0], stats=save.s||{n:0,w:0,in:0,out:0,best:0}, hist=save.h||[];
+let R=null, busy=false, ambient=null;
+const persist=()=>{try{localStorage.setItem('poule',JSON.stringify({bal,m:MODES.indexOf(mode),s:stats,h:hist}))}catch(e){}};
+
+const henSVG=`<svg viewBox="0 0 80 80"><g><path d="M30 64v10M44 64v10M26 74h8M40 74h8" stroke="#f08a24" stroke-width="4" stroke-linecap="round"/><ellipse cx="38" cy="46" rx="24" ry="21" fill="#fff"/><path d="M18 40q-10-8-8 6q6 6 14 2z" fill="#f1efe8"/><path d="M28 46q10 14 22 2q-8 2-22-2z" fill="#e4e1d6"/><circle cx="52" cy="26" r="13" fill="#fff"/><path d="M46 14q2-8 6-2q3-7 6 0q4-4 3 4z" fill="#e8392c"/><path d="M64 26l9 3-9 4z" fill="#f08a24"/><path d="M60 34q2 7-3 7q-2-4 0-7z" fill="#e8392c"/><circle cx="56" cy="23" r="2.6" fill="#1d1a12"/><circle cx="57" cy="22" r=".9" fill="#fff"/></g></svg>`;
+const carSVG=c=>`<svg viewBox="0 0 54 92"><rect x="3" y="4" width="48" height="84" rx="14" fill="${c}"/><rect x="3" y="4" width="48" height="84" rx="14" fill="url(#sh)" opacity=".35"/><rect x="9" y="20" width="36" height="14" rx="5" fill="#1c2230"/><rect x="10" y="58" width="34" height="18" rx="5" fill="#1c2230"/><rect x="11" y="36" width="32" height="20" rx="4" fill="#ffffff30"/><rect x="7" y="82" width="10" height="5" rx="2" fill="#fff6b0"/><rect x="37" y="82" width="10" height="5" rx="2" fill="#fff6b0"/><rect x="7" y="5" width="10" height="4" rx="2" fill="#ff4d3d"/><rect x="37" y="5" width="10" height="4" rx="2" fill="#ff4d3d"/><defs><linearGradient id="sh"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000"/></linearGradient></defs></svg>`;
+
+function build(){
+ const lanes=Array.from({length:mode.lanes},(_,i)=>`<div class="lane" data-i="${i+1}"><div class="bar"></div><div class="cover">${fmtx(mult(mode,i+1))}</div></div>`).join('');
+ $('track').innerHTML=`<div class="walk"></div>${lanes}<div class="walk end"></div><div class="hen" id="hen">${henSVG}</div>`;
+ place(0,false);
+}
+const laneEl=i=>$('track').querySelector(`.lane[data-i="${i}"]`);
+function place(pos,anim=true){
+ const hen=$('hen'), x=pos===0?65:START+(pos-1)*LW+LW/2;
+ hen.style.left=x+'px';
+ if(anim){hen.classList.remove('hop');void hen.offsetWidth;hen.classList.add('hop')}
+ const W=$('road').clientWidth, total=START+mode.lanes*LW+150;
+ const off=Math.max(0,Math.min(x-W*.35,total-W));
+ $('track').style.transform=`translateX(${-off}px)`;
+ $('track').querySelectorAll('.lane').forEach(l=>l.classList.toggle('next',R&&R.on&&+l.dataset.i===pos+1));
+}
+function car(i,dur,killer){
+ const l=laneEl(i); if(!l)return;
+ const c=document.createElement('div'); c.className='car'; c.innerHTML=carSVG(killer?'#e8392c':CARS[Math.random()*CARS.length|0]);
+ c.style.animationDuration=dur+'s'; c.addEventListener('animationend',()=>c.remove()); l.appendChild(c);
+}
+function startAmbient(){
+ clearInterval(ambient);
+ ambient=setInterval(()=>{
+  if(document.hidden)return;
+  const from=R&&R.on?R.pos+2:1; if(from>mode.lanes)return;
+  const i=from+Math.floor(Math.random()*(mode.lanes-from+1));
+  if(!laneEl(i).classList.contains('done'))car(i,1.3+Math.random()*1.2);
+ },650);
+}
+
+async function sha(s){
+ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+ return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+const rndHex=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('');
+
+function toast(cls,big,small){
+ const t=$('toast'); t.className='toast '+cls; t.innerHTML=big+(small?`<small>${small}</small>`:'');
+ requestAnimationFrame(()=>t.classList.add('show'));
+}
+const hideToast=()=>$('toast').classList.remove('show');
+
+function getBet(){let v=Math.round(+$('bet').value||0);v=Math.max(1,Math.min(200,v));$('bet').value=v;return v}
+
+async function play(){
+ if(busy||(R&&R.on))return;
+ const bet=getBet();
+ if(bet>bal){toast('lose','Solde insuffisant','Baissez la mise ou remettez le solde à 1 000');return}
+ busy=true; hideToast();
+ bal-=bet; stats.n++; stats.in+=bet;
+ const seed=rndHex(), hash=await sha(seed), out=[null];
+ for(let i=1;i<=mode.lanes;i++){const h=await sha(seed+':'+i);out.push(parseInt(h.slice(0,8),16)/2**32<mode.p)}
+ R={on:true,bet,seed,out,pos:0};
+ $('hash').textContent=hash; $('seed').textContent='(secrète pendant la partie)';
+ build(); place(0,false); busy=false; render();
+}
+function step(){
+ if(busy||!R||!R.on)return;
+ busy=true; const nx=R.pos+1;
+ laneEl(nx).classList.remove('next');
+ place(nx);
+ if(R.out[nx]){
+  setTimeout(()=>{R.pos=nx;laneEl(nx).classList.add('done');place(nx,false);busy=false;
+   if(nx===mode.lanes||R.bet*mult(mode,nx)>=CAP)cash();else render()},400);
+ }else{
+  setTimeout(()=>car(nx,.6,true),120);
+  setTimeout(()=>{$('hen').classList.add('flat');laneEl(nx).classList.add('dead')},420);
+  setTimeout(()=>{end(0,nx);toast('lose','Écrasée !',`Voie ${nx} — mise de ${fmt(R.bet)} jetons perdue`)},700);
+ }
+ render();
+}
+function cash(){
+ if(!R||!R.on||R.pos===0||(busy&&R.pos<mode.lanes))return;
+ const m=mult(mode,R.pos), win=Math.min(R.bet*m,CAP);
+ bal+=win; end(win,null);
+ toast('win','+'+fmt(win)+' jetons',`${fmtx(m)} après ${R.pos} voie${R.pos>1?'s':''}`);
+}
+function end(win,deadAt){
+ R.on=false; busy=false;
+ stats.out+=win; if(win>0){stats.w++;stats.best=Math.max(stats.best,win/R.bet)}
+ hist.unshift(win>0?fmtx(win/R.bet):'x0'); hist=hist.slice(0,20);
+ const fatal=R.out.findIndex((v,i)=>i>0&&!v);
+ $('seed').textContent=R.seed+(fatal>0?` — première voie fatale : ${fatal}`:' — aucune voie fatale');
+ persist(); render();
+}
+
+function render(){
+ $('bal').textContent=fmt(bal)+' jetons';
+ const on=R&&R.on;
+ $('play').textContent=on?'Avancer':'Jouer';
+ $('play').disabled=busy;
+ const can=on&&R.pos>0&&!busy;
+ $('cash').disabled=!can;
+ $('cashv').textContent=on&&R.pos>0?`${fmt(Math.min(R.bet*mult(mode,R.pos),CAP))} jetons · ${fmtx(mult(mode,R.pos))}`:on?'après la 1re voie':'—';
+ $('seg').innerHTML=MODES.map((m,i)=>`<button data-m="${i}" aria-pressed="${m===mode}" ${on?'disabled':''}>${m.n}</button>`).join('');
+ $('modeinfo').textContent=`${Math.round(mode.p*100)} % de chance par voie · ${mode.lanes} voies · jusqu'à ${fmtx(mult(mode,mode.lanes))} · gain plafonné à ${fmt(CAP)}`;
+ ['bet','minus','plus'].forEach(id=>$(id).disabled=on);
+ document.querySelectorAll('.chips button').forEach(b=>b.disabled=on);
+ const rtp=stats.in?(stats.out/stats.in*100).toLocaleString('fr-FR',{maximumFractionDigits:1})+' %':'—';
+ const net=stats.out-stats.in;
+ $('stats').innerHTML=[['Parties jouées',fmt(stats.n)],['Parties gagnées',stats.n?`${fmt(stats.w)} (${Math.round(stats.w/stats.n*100)} %)`:'—'],['Total misé',fmt(stats.in)],['Total récupéré',fmt(stats.out)],['Résultat net',(net>0?'+':net<0?'−':'')+fmt(Math.abs(net))],['Taux de retour observé',rtp],['Meilleur multiplicateur',stats.best?fmtx(stats.best):'—']].map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
+ $('hist').innerHTML=hist.length?hist.map(h=>`<span class="${h==='x0'?'l':'w'}">${h}</span>`).join(''):'<span>Aucune partie pour l\'instant</span>';
+}
+
+$('play').addEventListener('click',()=>R&&R.on?step():play());
+$('cash').addEventListener('click',cash);
+$('seg').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b||(R&&R.on))return;mode=MODES[+b.dataset.m];R=null;hideToast();build();persist();render()});
+$('minus').addEventListener('click',()=>{$('bet').value=getBet()-1;getBet()});
+$('plus').addEventListener('click',()=>{$('bet').value=getBet()+1;getBet()});
+$('bet').addEventListener('change',getBet);
+document.querySelector('.chips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.b)$('bet').value=b.dataset.b;else $('bet').value=Math.round(getBet()*+b.dataset.h);getBet()});
+$('refill').addEventListener('click',()=>{if(R&&R.on)return;bal=1000;stats={n:0,w:0,in:0,out:0,best:0};hist=[];persist();render()});
+document.addEventListener('keydown',e=>{
+ if(e.target.tagName==='INPUT')return;
+ if(e.code==='Space'){e.preventDefault();R&&R.on?step():play()}
+ else if(e.key==='c'||e.key==='C')cash();
+});
+new ResizeObserver(()=>place(R?R.pos:0,false)).observe($('road'));
+
+build(); render(); startAmbient();
+}
+</script>
+</body>
+</html>

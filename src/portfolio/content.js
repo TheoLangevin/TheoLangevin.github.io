@@ -11,6 +11,11 @@ export const navLinks = [
   { label: 'Play Shardstorm', href: '/game.html' },
 ]
 
+// Links shown in the classic site's navigation only. The immersive version
+// (/new) gives every entry of navLinks a portal, so these stay out of it.
+// La Poule Traverse is a standalone page copied as-is from public/poule/.
+export const extraNavLinks = [{ label: 'La Poule Traverse', href: '/poule/' }]
+
 export const stack = ['C', 'C++', 'Java', 'Python', 'Kotlin', 'HTML', 'CSS', 'Spring', 'JUnit', 'Selenium']
 
 export const projects = [

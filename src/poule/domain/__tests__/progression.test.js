@@ -58,12 +58,15 @@ describe('progression', () => {
     expect(purchaseCheck('cap', { ...profile, feathers: 10 })).toBe('feathers')
     expect(purchaseCheck('cap', { ...profile, owned: ['cap'] })).toBe('owned')
     expect(purchaseCheck('nope', profile)).toBe('unknown')
+    expect(purchaseCheck('laurel', profile)).toBe('exclusive')
+    expect(purchaseCheck('beanie', { ...profile, balanceCents: 100 })).toBe('tokens')
+    expect(purchaseCheck('beanie', { ...profile, balanceCents: 80000 })).toBe('ok')
   })
 
   it('has unique ids and sane prices', () => {
     expect(new Set(UPGRADES.map((u) => u.id)).size).toBe(UPGRADES.length)
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length)
-    for (const upgrade of UPGRADES) expect(upgrade.cost).toBeGreaterThan(0)
+    for (const upgrade of UPGRADES) if (!upgrade.exclusive) expect(upgrade.cost).toBeGreaterThan(0)
   })
 
   it('unlocks each achievement once', () => {

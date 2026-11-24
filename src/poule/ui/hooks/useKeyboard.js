@@ -4,8 +4,9 @@ import { usePoule } from '../../state/usePoule.js'
 const typing = (target) => target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable]')
 
 /** Space plays or steps forward, C cashes out. */
-export function useKeyboard() {
+export function useKeyboard(active = true) {
   useEffect(() => {
+    if (!active) return undefined
     const onKey = (event) => {
       if (event.altKey || event.ctrlKey || event.metaKey || event.repeat || typing(event.target)) return
       const { play, cashOut } = usePoule.getState()
@@ -19,5 +20,5 @@ export function useKeyboard() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [active])
 }

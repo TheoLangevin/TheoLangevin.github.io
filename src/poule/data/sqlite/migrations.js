@@ -88,6 +88,20 @@ export const MIGRATIONS = Object.freeze([
       );
     `,
   },
+  {
+    version: 3,
+    name: 'season rewards claimed',
+    up: `
+      -- One line per weekly season whose reward the player has collected.
+      CREATE TABLE season_claims (
+        season     TEXT    PRIMARY KEY CHECK (season GLOB '[0-9][0-9][0-9][0-9]-W[0-9][0-9]'),
+        rank       INTEGER,
+        total      INTEGER,
+        score      INTEGER NOT NULL DEFAULT 0,
+        claimed_at TEXT    NOT NULL
+      );
+    `,
+  },
 ])
 
 export const LATEST_VERSION = MIGRATIONS.at(-1).version

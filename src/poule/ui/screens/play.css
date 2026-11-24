@@ -1,0 +1,301 @@
+/* The play screen never scrolls: figures, the road (which takes what is
+   left), the last rounds and the controls, all in one viewport. */
+
+.screen--play {
+  display: grid;
+  grid-template-rows: auto minmax(150px, 1fr) auto auto;
+  gap: 8px;
+  overflow: hidden;
+  padding: 8px 12px 10px;
+}
+
+.play__road {
+  min-height: 0;
+  border-radius: 22px;
+  padding: 5px;
+  background: var(--asphalt);
+  box-shadow: 0 4px 0 #0002;
+}
+
+/* Figures above the road */
+
+.hud {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.hud__figure {
+  display: grid;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 2px 0 #0001;
+}
+
+.hud__figure small {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud__figure b {
+  font: 400 20px/1.1 var(--display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud--live .hud__figure:first-child {
+  background: var(--asphalt);
+  color: var(--gold);
+}
+
+.hud--live .hud__figure:first-child small {
+  color: #ffffffaa;
+}
+
+.hud__auto {
+  position: absolute;
+  right: 6px;
+  top: -8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--green);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Controls */
+
+.controls {
+  display: grid;
+}
+
+.controls__panel {
+  grid-area: 1 / 1;
+  display: grid;
+  align-content: end;
+  gap: 8px;
+}
+
+/* Hidden panels keep their space so the road does not jump. */
+.controls__panel[hidden] {
+  display: grid;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.controls__hint {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.controls__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.bet {
+  display: grid;
+  gap: 6px;
+}
+
+.bet__row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  gap: 6px;
+}
+
+.bet__step {
+  min-height: 48px;
+  font-size: 24px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.bet__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.bet__field input {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 24px var(--display);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.bet__field input::-webkit-inner-spin-button,
+.bet__field input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.bet__field input:focus {
+  outline: none;
+}
+
+.bet__field:focus-within {
+  box-shadow: inset 0 0 0 3px var(--gold);
+}
+
+.refill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--asphalt);
+  color: var(--gold);
+}
+
+.big {
+  display: grid;
+  place-content: center;
+  gap: 0;
+  min-height: 64px;
+  border-radius: 18px;
+  font: 400 24px/1 var(--display);
+  box-shadow: 0 5px 0 #0003;
+}
+
+.big small {
+  font: 800 13px/1.3 var(--body);
+  opacity: 0.9;
+}
+
+.big:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #0003;
+}
+
+.big--play {
+  background: var(--green);
+  color: #fff;
+}
+
+.big--cash {
+  background: var(--gold);
+  color: #2b1f00;
+}
+
+.controls__panel--live .big {
+  min-height: 76px;
+}
+
+/* Short phones (iPhone SE, landscape): tighter. */
+@media (max-height: 700px) {
+  .screen--play {
+    gap: 6px;
+    padding-top: 6px;
+  }
+
+  .hud__figure {
+    padding: 4px 8px;
+  }
+
+  .hud__figure b {
+    font-size: 17px;
+  }
+
+  .big {
+    min-height: 54px;
+    font-size: 21px;
+  }
+
+  .controls__panel--live .big {
+    min-height: 64px;
+  }
+
+  .bet__step,
+  .bet__field input {
+    min-height: 44px;
+  }
+}
+
+.round-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 2px 0 #0001;
+}
+
+.round-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.round-card__row b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.round-card__row--small {
+  font-size: 12px;
+}
+
+.round-card__track {
+  height: 12px;
+  border-radius: 99px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.round-card__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: repeating-linear-gradient(45deg, var(--gold) 0 8px, #ffd84a 8px 16px);
+  transition: width 0.4s ease;
+}
+
+/* Very short screens (iPhone SE 1st gen, landscape phones): keep what is
+   needed to play, drop what only informs. */
+@media (max-height: 640px) {
+  .screen--play {
+    grid-template-rows: minmax(120px, 1fr) auto;
+  }
+
+  .hud,
+  .screen--play > .history,
+  .controls__hint,
+  .round-card__row--small,
+  .bet .chips {
+    display: none;
+  }
+
+  .round-card {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .controls__panel {
+    gap: 6px;
+  }
+}

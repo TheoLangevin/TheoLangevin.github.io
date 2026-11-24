@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { STARTING_BALANCE } from '../../config/economy.js'
-import { decideSync, describeSave, isPristine, isValidPseudo, leaderboardEntry, validateSave } from '../save.js'
+import {
+  decideSync,
+  describeSave,
+  isPristine,
+  isValidPseudo,
+  leaderboardEntry,
+  seasonEntry,
+  validateSave,
+} from '../save.js'
 
 const save = (extra = {}) => ({
-  v: 1,
+  v: 2,
   balanceCents: 90000,
   xp: 120,
   feathers: 40,
@@ -37,6 +45,8 @@ const save = (extra = {}) => ({
       endedAt: 't',
     },
   ],
+  claims: [{ season: '2026-W47', rank: 3, total: 20, score: 140 }],
+  lastRefillAt: 1764000000000,
   ...extra,
 })
 
@@ -47,7 +57,7 @@ describe('save format', () => {
 
   it('refuses wrong versions, types and negative amounts', () => {
     expect(validateSave(null)).toBeNull()
-    expect(validateSave(save({ v: 2 }))).toBeNull()
+    expect(validateSave(save({ v: 3 }))).toBeNull()
     expect(validateSave(save({ balanceCents: -1 }))).toBeNull()
     expect(validateSave(save({ xp: 'lots' }))).toBeNull()
   })
@@ -77,10 +87,35 @@ describe('save format', () => {
     expect(describeSave(save()).played).toBe(2)
     expect(leaderboardEntry(save(), 'Poulette')).toEqual({
       pseudo: 'Poulette',
+      title: null,
       level: 3,
       xp: 120,
+      tokens: 90000,
       bestMultiplier: 1.22,
       bestLanes: 3,
+    })
+  })
+
+  it('still reads v1 saves, without claims', () => {
+    const old = validateSave({ ...save(), v: 1, claims: undefined, lastRefillAt: undefined })
+    expect(old.claims).toEqual([])
+    expect(old.lastRefillAt).toBeNull()
+  })
+
+  it('builds the weekly season line from the rounds of the week', () => {
+    const rounds = [
+      { ...save().rounds[0], endedAt: '2026-11-24T10:00:00Z' },
+      { ...save().rounds[1], endedAt: '2026-11-25T10:00:00Z' },
+    ]
+    const entry = seasonEntry(save({ rounds }), 'Poulette', new Date('2026-11-26T00:00:00Z'))
+    expect(entry).toEqual({
+      season: '2026-W48',
+      pseudo: 'Poulette',
+      title: null,
+      level: 3,
+      score: 21,
+      bestMultiplier: 1.22,
+      league: 'bronze',
     })
   })
 

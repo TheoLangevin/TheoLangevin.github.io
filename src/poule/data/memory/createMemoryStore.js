@@ -15,6 +15,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
     upgrades: [],
     equipped: {},
     achievements: [],
+    claims: [],
   }
 
   const finished = () => state.rounds.filter((row) => row.status !== 'active')
@@ -214,8 +215,24 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
     replace: (ids) => void (state.achievements = [...ids]),
   }
 
+  const seasons = {
+    claimed: () => state.claims.map((claim) => ({ ...claim })),
+    add(claim) {
+      if (state.claims.some((entry) => entry.season === claim.season))
+        throw new Error(`Season ${claim.season} already claimed`)
+      state.claims.push({
+        season: claim.season,
+        rank: claim.rank ?? null,
+        total: claim.total ?? null,
+        score: claim.score,
+      })
+    },
+    replace: (claims) => void (state.claims = claims.map((claim) => ({ ...claim }))),
+  }
+
   return {
     kind: 'memory',
+    seasons,
     wallet,
     rounds,
     settings,

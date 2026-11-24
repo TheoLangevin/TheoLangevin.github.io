@@ -4,6 +4,7 @@ import { MODES, modeById } from '../config/modes.js'
 import { MAX_LEVEL } from '../config/progression.js'
 import { AUTOCASH_TARGETS, SLOTS, upgradeById } from '../config/upgrades.js'
 import { levelFromXp } from './progression.js'
+import { isSeasonId, leagueFor, seasonId, weeklyStats } from './seasons.js'
 
 /**
  * A save: everything that makes a player's progress, as one plain object that
@@ -11,7 +12,8 @@ import { levelFromXp } from './progression.js'
  * decides when to send or apply one.
  */
 
-export const SAVE_VERSION = 1
+/** v2 added season claims and the last refill. v1 saves are still read. */
+export const SAVE_VERSION = 2
 /** Finished rounds kept in a save, newest last. Older ones still count in XP. */
 export const SAVE_ROUNDS = 1000
 
@@ -68,7 +70,7 @@ function validRound(round) {
  * and rounds are dropped, so an older game can read a newer save.
  */
 export function validateSave(raw) {
-  if (!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return null
+  if (!raw || typeof raw !== 'object' || ![1, SAVE_VERSION].includes(raw.v)) return null
   const balanceCents = int(raw.balanceCents, 0, 1e12)
   const xp = int(raw.xp, 0, 1e9)
   const feathers = int(raw.feathers, 0, 1e9)
@@ -85,6 +87,15 @@ export function validateSave(raw) {
   )
   const prefs = raw.prefs ?? {}
   const rounds = (Array.isArray(raw.rounds) ? raw.rounds : []).slice(-SAVE_ROUNDS).map(validRound).filter(Boolean)
+  const seen = new Set()
+  const claims = (Array.isArray(raw.claims) ? raw.claims : [])
+    .filter((claim) => claim && isSeasonId(claim.season) && !seen.has(claim.season) && seen.add(claim.season))
+    .map((claim) => ({
+      season: claim.season,
+      rank: int(claim.rank, 1, 1e7),
+      total: int(claim.total, 1, 1e7),
+      score: int(claim.score, 0, 1e9) ?? 0,
+    }))
 
   return {
     v: SAVE_VERSION,
@@ -101,6 +112,8 @@ export function validateSave(raw) {
       sound: prefs.sound !== false,
     },
     rounds,
+    claims,
+    lastRefillAt: int(raw.lastRefillAt, 0, 1e14),
   }
 }
 
@@ -121,15 +134,31 @@ export function describeSave(save) {
   }
 }
 
-/** The public line of a player on the leaderboard. */
+/** The public all-time line of a player on the leaderboard. */
 export function leaderboardEntry(save, pseudo) {
   const won = save.rounds.filter((round) => round.status === 'won')
   return {
     pseudo,
+    title: save.equipped.title ?? null,
     level: Math.min(MAX_LEVEL, levelFromXp(save.xp)),
     xp: save.xp,
+    tokens: save.balanceCents,
     bestMultiplier: won.reduce((best, round) => Math.max(best, round.mult), 0),
     bestLanes: save.rounds.reduce((best, round) => Math.max(best, round.crossed), 0),
+  }
+}
+
+/** The player's line in this week's season board. */
+export function seasonEntry(save, pseudo, date = new Date()) {
+  const week = weeklyStats(save.rounds, date)
+  return {
+    season: seasonId(date),
+    pseudo,
+    title: save.equipped.title ?? null,
+    level: Math.min(MAX_LEVEL, levelFromXp(save.xp)),
+    score: week.xp,
+    bestMultiplier: week.bestMultiplier,
+    league: leagueFor(week.xp)?.id ?? null,
   }
 }
 

@@ -39,6 +39,10 @@
  * @property {() => string[]} achievements.unlocked
  * @property {(id: string) => void} achievements.add
  * @property {(ids: string[]) => void} achievements.replace
+ * @property {object} seasons  weekly season rewards collected
+ * @property {() => { season: string, rank: number | null, total: number | null, score: number }[]} seasons.claimed
+ * @property {(claim: object) => void} seasons.add  throws if that season was already claimed
+ * @property {(claims: object[]) => void} seasons.replace
  * @property {object} settings
  * @property {(key: string, fallback?: string) => string | null} settings.get
  * @property {(key: string, value: unknown) => void} settings.set

@@ -110,6 +110,14 @@ export const SQL = Object.freeze({
 
   achievementInsert: `INSERT INTO achievements (id, unlocked_at) VALUES (:id, :now)`,
 
+  claimsAll: `SELECT season, rank, total, score FROM season_claims ORDER BY season`,
+
+  claimInsert: `
+    INSERT INTO season_claims (season, rank, total, score, claimed_at)
+    VALUES (:season, :rank, :total, :score, :now)`,
+
+  claimsClear: `DELETE FROM season_claims`,
+
   settingGet: `SELECT value FROM settings WHERE key = :key`,
 
   settingSet: `

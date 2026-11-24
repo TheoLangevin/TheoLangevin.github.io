@@ -64,8 +64,8 @@ src/
 └── poule/              La Poule Traverse (/poule)
     ├── main.jsx        entry point
     ├── PouleApp.jsx    page layout
-    ├── config/         economy, modes, upgrades, achievements, levels, timings (data only)
-    ├── domain/         the rules: multipliers, provably fair draws, a round, progression (pure, tested)
+    ├── config/         economy, modes, shop catalog, seasons, achievements, levels, timings (data only)
+    ├── domain/         the rules: multipliers, fair draws, a round, progression, seasons, saves (pure, tested)
     ├── data/           storage: SQLite (sql.js) in the browser, saved in IndexedDB
     │   ├── store.js      the store contract the service talks to
     │   ├── sqlite/       loader, migrations, every SQL query, SqlDatabase wrapper
@@ -74,7 +74,7 @@ src/
     ├── services/       use cases: play, cash out, buy, equip, reset (the only writer)
     ├── account/        accounts: sync service, cloud contract, Firebase (auth + Firestore)
     ├── state/          zustand stores: the game's UI state, and the account's
-    └── ui/             road, controls, shop, panels, sounds, hooks, formatting
+    └── ui/             shell (top bar, tab bar, routes), screens (play, shop, ranking, profile), road, sounds
 ```
 
 ### How the game is wired
@@ -108,6 +108,8 @@ A road-crossing game played with fake tokens: pick a bet and a difficulty, the h
 - **sql.js comes from cdnjs**, pinned in `data/sqlite/loadSqlJs.js`, so it is not an npm dependency. If it cannot load, the game runs on the in-memory store and says it will not be saved.
 - **Progression.** Every lane crossed earns feathers (more per lane in harder modes, never more for a bigger bet), which are also experience for the level. Feathers buy upgrades in the hen house: hats, plumage, trails, and two perks (faster hops, auto cash-out at a chosen multiplier). Upgrades change looks and handling, never the odds. Achievements pay feathers once. A break reminder shows after 30 minutes of play. Migration 2 adds the tables and gives existing players the feathers their past rounds earned.
 - **Accounts (Firebase).** Players can sign in with Google to get their progress on every device, a public pseudo and a leaderboard (by level and by best multiplier). The device's SQLite database stays the one the game plays on; the account keeps a copy (a *save*, `domain/save.js`) in Firestore with a revision number. Changes go up a moment after they happen, never during a round; a newer save comes down on sign-in and when the page comes back into focus; when both sides moved since the last sync, the player chooses which to keep. `account/createSyncService.js` holds that logic and is tested against an in-memory cloud. The Firebase SDK is loaded from Google's CDN, pinned in `account/firebase/config.js` with the project's web config (public by design). What protects the data is `firestore.rules`: a save is readable and writable by its owner only, each write must be the next revision, pseudos are unique, and a leaderboard line must match its owner's pseudo and save. Publish the rules from the Firebase console or with `firebase deploy --only firestore:rules`. Without a config (`FIREBASE_CONFIG = null`) the game runs without accounts.
-- **On a phone** the Play and Cash out buttons sit in a bar fixed at the bottom of the screen, and a tap on the road moves the hen.
+- **Mobile first.** The page is an app: a top bar (level, tokens, feathers, account), one screen at a time (Jouer, Boutique, Classement, Profil, kept in the URL hash so the back button works) and a tab bar at thumb height. The play screen never scrolls: figures, the road (which takes the room left), the last rounds and the controls fit one viewport down to an iPhone SE, with safe areas for notches and the home indicator. It installs on the home screen (`public/poule/manifest.webmanifest`, icons) and vibrates on Android. On a computer the same app sits in a phone-width column.
+- **Shop.** 50 items: 39 bought with tokens (hats, neck items, plumages, trails, road themes, confetti palettes, titles shown on the leaderboard) and 11 with feathers, plus exclusive season rewards. Token purchases wait for the round to end. Every item is data in `config/upgrades.js`; the hen's accessories are drawn in `ui/road/sprites.jsx` and road themes are CSS variables in `ui/road/road.css`. A broke player gets a free refill of 1 000 tokens, once per 30 minutes.
+- **Seasons and leaderboards.** A season is an ISO week (Monday 00:00 UTC). Its score is the experience earned that week. Leagues (Bronze to Diamant) and rank tiers (1st, podium, top 10, top 25 %) pay tokens, feathers and exclusive items, collected on the next sign-in (`domain/seasons.js`, `config/seasons.js`). Four boards: the week, tokens, level and best multiplier. Weekly lines live in `seasons/{week}/entries/{uid}`; ranks come from Firestore count queries. Collected seasons are stored in SQLite (migration 3) and travel in the save (v2).
 - **Provably fair.** The road is drawn from a secret seed whose SHA-256 is shown before the round and revealed after it (`domain/fairness.js`).
 - **Tests** cover the rules, the draws and the service (`domain/__tests__`, `services/__tests__`), on the in-memory store.

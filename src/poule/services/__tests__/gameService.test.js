@@ -88,15 +88,31 @@ describe('game service', () => {
     expect(service.preferences().betCents).toBe(5000)
   })
 
-  it('resets the balance and the history', async () => {
+  it('clears the history but keeps the balance', async () => {
     const { service } = serviceWith(await seedSafeFor(1))
     await service.start({ modeId: 'easy', betCents: 1000 })
     service.step()
     service.cashOut()
-    service.reset()
+    const balance = service.summary().balanceCents
+    service.clearStats()
     const summary = service.summary()
-    expect(summary.balanceCents).toBe(STARTING_BALANCE)
+    expect(summary.balanceCents).toBe(balance)
     expect(summary.stats.played).toBe(0)
+  })
+
+  it('refills a broke player once per cooldown', () => {
+    let now = Date.parse('2026-11-24T10:00:00Z')
+    const store = createMemoryStore({ balance: 1000 })
+    const service = createGameService({ store, clock: () => new Date(now).toISOString() })
+    expect(service.refill()).toBe(100000)
+    expect(store.wallet.balance()).toBe(101000)
+    store.wallet.set(0)
+    expect(() => service.refill()).toThrow()
+    expect(service.refillStatus().verdict).toBe('wait')
+    now += 31 * 60_000
+    service.refill()
+    expect(store.wallet.balance()).toBe(100000)
+    expect(() => service.refill()).toThrow()
   })
 
   it('rolls back the whole transaction when a write fails', () => {
@@ -164,13 +180,13 @@ describe('progression', () => {
     expect(service.summary().progression.owned).toEqual([])
   })
 
-  it('keeps progression when the balance is reset', async () => {
+  it('keeps progression when the history is cleared', async () => {
     const { service } = serviceWith(await seedSafeFor(1))
     await service.start({ modeId: 'easy', betCents: 1000 })
     service.step()
     service.cashOut()
     const before = service.summary().progression
-    service.reset()
+    service.clearStats()
     expect(service.summary().progression.xp).toBe(before.xp)
     expect(service.summary().progression.achievements).toEqual(before.achievements)
   })
@@ -230,5 +246,43 @@ describe('saves', () => {
     service.step()
     service.markSynced('u1', 5, { clean: false })
     expect(service.syncState().dirty).toBe(true)
+  })
+})
+
+describe('token shop and seasons', () => {
+  it('buys goodies with tokens, not during a round', async () => {
+    const { service, store } = serviceWith(await seedSafeFor(1))
+    service.buy('beanie')
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE - 80000)
+    expect(service.summary().progression.equipped.hat).toBe('beanie')
+    expect(() => service.buy('halo')).toThrow()
+    expect(() => service.buy('laurel')).toThrow()
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    expect(() => service.buy('bow-tie')).toThrow()
+  })
+
+  it('pays a season reward once, with its exclusive items', () => {
+    const { service, store } = serviceWith('s')
+    const reward = service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE + reward.tokens)
+    const { progression } = service.summary()
+    expect(progression.owned).toContain('title-champion')
+    expect(progression.equipped.title).toBe('title-champion')
+    expect(progression.feathers).toBeGreaterThanOrEqual(reward.feathers)
+    expect(() => service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })).toThrow()
+    expect(() => service.claimSeason({ season: '2026-W46', score: 0 })).toThrow()
+    expect(service.claimedSeasons()).toEqual(['2026-W47'])
+  })
+
+  it('carries claims and the last refill in the save', () => {
+    const first = serviceWith('s')
+    first.service.claimSeason({ season: '2026-W47', score: 30 })
+    first.store.wallet.set(0)
+    first.service.refill()
+    const exported = first.service.exportSave()
+    const second = serviceWith('t')
+    second.service.importSave(exported)
+    expect(second.service.claimedSeasons()).toEqual(['2026-W47'])
+    expect(second.service.exportSave()).toEqual(exported)
   })
 })

@@ -19,3 +19,10 @@ export const MAX_PAYOUT = 20000 * CENTS
 
 /** Quick bet buttons, in tokens. */
 export const BET_PRESETS = [1, 10, 50, 200]
+
+/** A player with less than this can ask for a refill... */
+export const REFILL_BELOW = 50 * CENTS
+/** ...of this much... */
+export const REFILL_AMOUNT = 1000 * CENTS
+/** ...once in this many minutes. */
+export const REFILL_COOLDOWN_MINUTES = 30

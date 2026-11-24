@@ -10,7 +10,8 @@ export default function Dialog({ title, onClose, locked = false, children, wide 
 
   useEffect(() => {
     const previous = document.activeElement
-    panel.current?.querySelector('input, button:not([data-close]), [href]')?.focus()
+    // Focus the dialog itself (not its first button), so a tap does not leave a focus ring on an action.
+    panel.current?.focus({ preventScroll: true })
     const onKey = (event) => {
       if (event.key === 'Escape' && !locked) onClose?.()
     }
@@ -30,6 +31,7 @@ export default function Dialog({ title, onClose, locked = false, children, wide 
         className={`dialog__panel${wide ? ' dialog__panel--wide' : ''}`}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-labelledby={titleId}
       >
         <div className="dialog__head">

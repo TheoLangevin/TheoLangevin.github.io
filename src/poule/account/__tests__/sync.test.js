@@ -129,6 +129,55 @@ describe('account sync', () => {
     await other.sync.choosePseudo('Poulette')
     expect((await phone.sync.leaderboard('xp')).map((entry) => entry.pseudo)).toEqual(['Cocotte', 'Poulette'])
   })
+
+  it("publishes the tokens board and this week's season line", async () => {
+    const cloud = createMemoryCloud()
+    const phone = await device(cloud)
+    await phone.sync.connect(user)
+    await phone.sync.choosePseudo('Poulette')
+    await playAndWin(phone.game)
+    await phone.sync.syncNow()
+    expect(cloud.entries.get('u1').tokens).toBe(phone.game.exportSave().balanceCents)
+    const week = await phone.sync.season()
+    expect(week.entries[0].pseudo).toBe('Poulette')
+    expect(week.mine.score).toBeGreaterThan(0)
+    expect(week.standing).toEqual({ rank: 1, total: 1 })
+  })
+})
+
+describe('season rewards', () => {
+  it("pays last week's reward once, by rank", async () => {
+    const cloud = createMemoryCloud()
+    const lastWeek = '2026-W47'
+    cloud.seasons.set(
+      lastWeek,
+      new Map([
+        ['u1', { pseudo: 'Poulette', score: 300 }],
+        ['u2', { pseudo: 'Autre', score: 120 }],
+        ['u3', { pseudo: 'Troisième', score: 0 }],
+      ]),
+    )
+    const game = createGameService({ store: createMemoryStore(), clock: () => '2026-11-24T10:00:00Z' })
+    const sync = createSyncService({ game, cloud, delay: 0, now: () => new Date('2026-11-24T10:00:00Z') })
+    await sync.connect(user)
+    const pending = await sync.pendingSeasonReward()
+    expect(pending.season).toBe(lastWeek)
+    expect(pending.rank).toBe(1)
+    expect(pending.total).toBe(2)
+    expect(pending.reward.tier).toBe('first')
+    sync.claimSeasonReward(pending)
+    expect(game.summary().progression.owned).toContain('title-champion')
+    expect(await sync.pendingSeasonReward()).toBeNull()
+
+    const other = createSyncService({
+      game: createGameService({ store: createMemoryStore() }),
+      cloud,
+      delay: 0,
+      now: () => new Date('2026-11-24T10:00:00Z'),
+    })
+    await other.connect({ uid: 'u3', name: 'Sans score' })
+    expect(await other.pendingSeasonReward()).toBeNull()
+  })
 })
 
 describe('refresh', () => {

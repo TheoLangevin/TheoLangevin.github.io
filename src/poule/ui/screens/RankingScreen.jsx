@@ -108,9 +108,16 @@ function Podium({ kind, entries, uid, open }) {
             key={entry.uid}
             className={`podium__step podium__step--${[2, 1, 3][index]}${entry.uid === uid ? ' is-me' : ''}`}
           >
-            <span className="podium__avatar">{entry.pseudo.charAt(0).toUpperCase()}</span>
-            <b className="podium__name">{entry.pseudo}</b>
-            <span className="podium__value">{valueOf(kind, entry)}</span>
+            <button
+              type="button"
+              className="podium__who"
+              onClick={() => open(entry.uid, entry)}
+              aria-label={`Profil de ${entry.pseudo}`}
+            >
+              <span className="podium__avatar">{entry.pseudo.charAt(0).toUpperCase()}</span>
+              <b className="podium__name">{entry.pseudo}</b>
+              <span className="podium__value">{valueOf(kind, entry)}</span>
+            </button>
             <span className="podium__block">{[2, 1, 3][index]}</span>
           </li>
         ) : (

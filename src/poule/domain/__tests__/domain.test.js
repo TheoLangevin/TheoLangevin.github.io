@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MAX_BET, MAX_PAYOUT, MIN_BET, RTP } from '../../config/economy.js'
 import { MODES, modeById } from '../../config/modes.js'
 import { drawOutcomes, firstFatalLane, rollFromHash, sha256Hex, verifyRound } from '../fairness.js'
-import { clampBet } from '../money.js'
+import { clampBet, refillCheck } from '../money.js'
 import { laneMultipliers, multiplierAt, payoutCents } from '../multiplier.js'
 import { advance, canCashOut, cashOut, createRound, ROUND_STATUS } from '../round.js'
 
@@ -46,6 +46,15 @@ describe('modes and multipliers', () => {
     expect(clampBet(12.6)).toBe(1300)
     expect(clampBet(9999)).toBe(MAX_BET)
     expect(clampBet('abc')).toBe(MIN_BET)
+  })
+
+  it('refills a broke player, once per cooldown', () => {
+    expect(refillCheck({ balanceCents: 10000, lastRefillAt: null }).verdict).toBe('not-broke')
+    expect(refillCheck({ balanceCents: 100, lastRefillAt: null }).verdict).toBe('ok')
+    const now = 10_000_000
+    const wait = refillCheck({ balanceCents: 100, lastRefillAt: now - 60_000, now })
+    expect(wait.verdict).toBe('wait')
+    expect(wait.waitMs).toBe(29 * 60_000)
   })
 })
 

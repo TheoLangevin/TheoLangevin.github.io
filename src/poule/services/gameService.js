@@ -1,4 +1,4 @@
-import { DEFAULT_BET, STARTING_BALANCE } from '../config/economy.js'
+import { DEFAULT_BET, REFILL_AMOUNT } from '../config/economy.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
 import { HISTORY_SIZE } from '../config/ui.js'
 import { AUTOCASH_TARGETS, upgradeById } from '../config/upgrades.js'
@@ -12,7 +12,9 @@ import {
   purchaseCheck,
 } from '../domain/progression.js'
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
+import { refillCheck } from '../domain/money.js'
 import { roundToSave, SAVE_ROUNDS, SAVE_VERSION, validateSave } from '../domain/save.js'
+import { isSeasonId, seasonReward, weeklyStats } from '../domain/seasons.js'
 
 export class GameError extends Error {
   constructor(code, message) {
@@ -22,10 +24,12 @@ export class GameError extends Error {
 }
 
 const PURCHASE_ERRORS = {
-  unknown: 'Amélioration inconnue',
-  owned: 'Déjà achetée',
+  unknown: 'Objet inconnu',
+  exclusive: 'Récompense de saison : ne s’achète pas',
+  owned: 'Déjà acheté',
   level: 'Niveau trop bas',
   feathers: 'Pas assez de plumes',
+  tokens: 'Pas assez de jetons',
 }
 
 const toUpdate = (round, feathers = 0) => ({
@@ -150,15 +154,17 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         betCents: Number(store.settings.get('bet', DEFAULT_BET)) || DEFAULT_BET,
         autocashTarget: AUTOCASH_TARGETS.includes(target) ? target : null,
         sound: store.settings.get('sound', 'on') === 'on',
+        haptics: store.settings.get('haptics', 'on') === 'on',
       }
     },
 
-    savePreferences({ modeId, betCents, autocashTarget, sound }) {
+    savePreferences({ modeId, betCents, autocashTarget, sound, haptics }) {
       write(() => {
         if (modeId) store.settings.set('mode', modeId)
         if (betCents) store.settings.set('bet', betCents)
         if (autocashTarget !== undefined) store.settings.set('autocash', autocashTarget ?? '')
         if (sound !== undefined) store.settings.set('sound', sound ? 'on' : 'off')
+        if (haptics !== undefined) store.settings.set('haptics', haptics ? 'on' : 'off')
       })
     },
 
@@ -177,6 +183,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
           bestMultiplier: stats.best_multiplier,
         },
         byMode: store.rounds.statsByMode(),
+        week: weeklyStats(store.rounds.forSave(SAVE_ROUNDS).map(roundToSave), new Date(clock())),
+        claims: store.seasons.claimed(),
+        lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
         progression: {
           xp: profile.xp,
           feathers: profile.feathers,
@@ -236,18 +245,27 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       return { event: 'cashed', lane: round.lane, round, fatalLane: firstFatalLane(round.outcomes), progress }
     },
 
-    /** Buys an upgrade with feathers and puts it on. Returns achievements it unlocked. */
+    /**
+     * Buys an item with feathers or tokens and puts it on. Token purchases
+     * wait for the round in progress to end. Returns achievements it unlocked.
+     */
     buy(upgradeId) {
+      const upgrade = upgradeById(upgradeId)
+      if (upgrade?.currency === 'tokens' && current) {
+        throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      }
       return write(() => {
         const profile = store.profile.get()
         const verdict = purchaseCheck(upgradeId, {
           owned: store.upgrades.owned(),
           level: levelFromXp(profile.xp),
           feathers: profile.feathers,
+          balanceCents: store.wallet.balance(),
         })
         if (verdict !== 'ok') throw new GameError(`purchase-${verdict}`, PURCHASE_ERRORS[verdict])
-        const upgrade = upgradeById(upgradeId)
-        if (!store.profile.spend(upgrade.cost)) throw new GameError('purchase-feathers', PURCHASE_ERRORS.feathers)
+        const paid =
+          upgrade.currency === 'tokens' ? store.wallet.debit(upgrade.cost) : store.profile.spend(upgrade.cost)
+        if (!paid) throw new GameError(`purchase-${upgrade.currency}`, PURCHASE_ERRORS[upgrade.currency])
         store.upgrades.add(upgradeId)
         if (upgrade.slot !== 'perk') store.upgrades.equip(upgrade.slot, upgradeId)
         return { upgrade, achievements: unlockAchievements() }
@@ -267,13 +285,61 @@ export function createGameService({ store, clock = () => new Date().toISOString(
 
     owns: (upgradeId) => store.upgrades.owned().includes(upgradeId),
 
-    /** Back to the starting balance, history and totals cleared. Progression stays. */
-    reset() {
+    /** Clears the history and totals. Balance and progression stay. */
+    clearStats() {
       if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
-      write(() => {
-        store.rounds.clearFinished()
-        store.wallet.set(STARTING_BALANCE)
+      write(() => store.rounds.clearFinished())
+    },
+
+    /** Whether a refill is possible now: { verdict, waitMs } (domain/money.js). */
+    refillStatus() {
+      return refillCheck({
+        balanceCents: store.wallet.balance(),
+        lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
+        now: Date.parse(clock()),
       })
+    },
+
+    /** Gives a broke player REFILL_AMOUNT tokens, once per cooldown. */
+    refill() {
+      if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      const { verdict } = service.refillStatus()
+      if (verdict === 'not-broke') throw new GameError('refill-not-broke', 'Il vous reste des jetons')
+      if (verdict === 'wait') throw new GameError('refill-wait', 'Recharge pas encore disponible')
+      write(() => {
+        store.wallet.credit(REFILL_AMOUNT)
+        store.settings.set('last_refill_at', Date.parse(clock()))
+      })
+      return REFILL_AMOUNT
+    },
+
+    /** Seasons whose reward was already collected. */
+    claimedSeasons: () => store.seasons.claimed().map((claim) => claim.season),
+
+    /**
+     * Collects a finished season's reward, once: tokens, feathers (which also
+     * count as experience) and exclusive items. `rank` and `total` come from
+     * the season's board; without them only the league reward is paid.
+     */
+    claimSeason({ season, score, rank = null, total = null }) {
+      if (!isSeasonId(season)) throw new GameError('invalid-season', 'Saison inconnue')
+      if (service.claimedSeasons().includes(season)) throw new GameError('season-claimed', 'Récompense déjà récupérée')
+      const reward = seasonReward({ score, rank, total })
+      if (!reward) throw new GameError('season-no-reward', 'Pas de score cette saison')
+      const achievements = write(() => {
+        store.seasons.add({ season, rank, total, score })
+        store.wallet.credit(reward.tokens)
+        store.profile.earn(reward.feathers)
+        const owned = store.upgrades.owned()
+        for (const id of reward.items) {
+          if (owned.includes(id)) continue
+          store.upgrades.add(id)
+          const slot = upgradeById(id).slot
+          if (!store.upgrades.equipped()[slot]) store.upgrades.equip(slot, id)
+        }
+        return unlockAchievements()
+      })
+      return { ...reward, achievements }
     },
 
     /** Called after every change of progress (to sync it). Returns an unsubscribe function. */
@@ -296,6 +362,8 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         achievements: store.achievements.unlocked(),
         prefs: { mode: prefs.modeId, bet: prefs.betCents, autocash: prefs.autocashTarget, sound: prefs.sound },
         rounds: store.rounds.forSave(SAVE_ROUNDS).map(roundToSave),
+        claims: store.seasons.claimed(),
+        lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
       }
     },
 
@@ -313,6 +381,8 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         store.upgrades.replace(save.upgrades, save.equipped)
         store.achievements.replace(save.achievements)
         store.rounds.replaceFinished(save.rounds)
+        store.seasons.replace(save.claims)
+        store.settings.set('last_refill_at', save.lastRefillAt ?? 0)
         store.settings.set('mode', save.prefs.mode)
         if (save.prefs.bet) store.settings.set('bet', save.prefs.bet)
         store.settings.set('autocash', save.prefs.autocash ?? '')

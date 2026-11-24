@@ -1,56 +1,4 @@
-/* Header button */
-
-.account {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 14px 0 8px;
-  border-radius: 14px;
-  background: var(--asphalt);
-  color: #fff;
-}
-
-.account--signin {
-  padding: 0 14px;
-  background: #fff;
-  color: #1f1f1f;
-  box-shadow: 0 4px 0 #0003;
-}
-
-.account--loading {
-  width: 48px;
-  background: var(--asphalt);
-  opacity: 0.4;
-}
-
-.account__name {
-  max-width: 9em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffffff55;
-}
-
-.account__dot--synced {
-  background: #3ddc84;
-}
-
-.account__dot--syncing,
-.account__dot--pending {
-  background: var(--gold);
-}
-
-.account__dot--error {
-  background: var(--red);
-}
+/* Avatar */
 
 .avatar {
   flex: none;
@@ -81,6 +29,10 @@
   padding: 16px;
   background: #0009;
   animation: dialog-fade 0.2s ease;
+}
+
+.dialog__panel:focus {
+  outline: none;
 }
 
 .dialog__panel {
@@ -136,73 +88,6 @@
   min-height: 36px;
   color: var(--muted);
   text-decoration: underline;
-}
-
-/* Profile */
-
-.profile__who {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile__who b,
-.profile__who small {
-  display: block;
-}
-
-.profile__who small {
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-
-.profile__figures {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.profile__figures div {
-  background: var(--soft);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
-
-.profile__figures dt {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.profile__figures dd {
-  margin: 0;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.profile__sync {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 2px solid var(--line);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.profile__sync--synced {
-  border-color: var(--green);
-}
-
-.profile__sync--error {
-  border-color: var(--red);
-}
-
-.profile__signout {
-  background: var(--asphalt);
-  color: #fff;
 }
 
 /* Pseudo */
@@ -300,90 +185,7 @@
   color: #2b1f00;
 }
 
-/* Leaderboard */
-
-.leaderboard {
-  margin-top: 16px;
-  display: grid;
-  gap: 10px;
-}
-
-.leaderboard__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.leaderboard h2 {
-  font: 400 24px/1.1 var(--display);
-  margin: 0;
-}
-
-.leaderboard__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.leaderboard__list li {
-  display: grid;
-  grid-template-columns: 2.2em minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: var(--soft);
-}
-
-.leaderboard__list li:nth-child(-n + 3) .leaderboard__rank {
-  color: #2b1f00;
-  background: var(--gold);
-}
-
-.leaderboard__me {
-  outline: 3px solid var(--gold);
-}
-
-.leaderboard__rank {
-  display: grid;
-  place-items: center;
-  width: 2em;
-  height: 2em;
-  border-radius: 50%;
-  font-weight: 800;
-  background: var(--card);
-}
-
-.leaderboard__pseudo {
-  font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.leaderboard__value {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  font-size: 14px;
-}
-
-.leaderboard__cta {
-  justify-self: start;
-  background: var(--gold);
-  color: #2b1f00;
-}
-
 @media (max-width: 600px) {
-  .account {
-    flex: 0 0 auto;
-  }
-
-  .account__name {
-    max-width: 6em;
-  }
-
   .dialog {
     place-items: end stretch;
     padding: 0;
@@ -399,14 +201,45 @@
   .conflict {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .profile__figures {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dialog {
     animation: none;
   }
+}
+
+/* Season reward */
+
+.reward__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reward__hero p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.reward__hero b {
+  font: 400 26px/1.1 var(--display);
+}
+
+.reward__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.reward__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--soft);
+  font-weight: 700;
 }

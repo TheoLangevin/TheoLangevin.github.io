@@ -128,6 +128,7 @@ export const usePoule = create((set, get) => {
     betCents: DEFAULT_BET,
     autocashTarget: null,
     sound: true,
+    haptics: true,
     balanceCents: 0,
     history: [],
     stats: null,
@@ -152,11 +153,12 @@ export const usePoule = create((set, get) => {
         refresh({
           phase: 'ready',
           persistent: opened.persistent,
-          storageError: opened.persistent ? null : 'SQLite n’a pas pu se charger : la partie ne sera pas sauvegardée.',
+          storageError: opened.persistent ? null : 'Hors ligne : cette partie ne sera pas sauvegardée.',
           modeId: round?.mode.id ?? preferences.modeId,
           betCents: round?.betCents ?? preferences.betCents,
           autocashTarget: preferences.autocashTarget,
           sound: preferences.sound,
+          haptics: preferences.haptics,
           scene: { ...EMPTY_SCENE, lane: round?.lane ?? 0 },
         })
       })()
@@ -265,7 +267,12 @@ export const usePoule = create((set, get) => {
         const { upgrade, achievements } = runtime.service.buy(upgradeId)
         refresh(fx('buy'))
         notify([
-          { id: uid(), kind: 'buy', title: upgrade.label, detail: 'Achetée et équipée' },
+          {
+            id: uid(),
+            kind: 'buy',
+            title: upgrade.label,
+            detail: upgrade.slot === 'perk' ? 'Atout activé' : 'Acheté et équipé',
+          },
           ...progressNotices({ achievements, levelUp: null }),
         ])
       } catch (error) {
@@ -282,14 +289,41 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    reset() {
+    clearStats() {
       if (get().round || get().busy) return
       try {
-        runtime.service.reset()
+        runtime.service.clearStats()
         refresh({ reveal: null, toast: null, scene: EMPTY_SCENE })
       } catch (error) {
         fail(error)
       }
+    },
+
+    refill() {
+      if (get().round || get().busy) return
+      try {
+        const amount = runtime.service.refill()
+        refresh(fx('buy'))
+        notify([
+          { id: uid(), kind: 'buy', title: `+${tokens(amount)} jetons`, detail: 'Recharge offerte. Bonne route !' },
+        ])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    /** Collects a season reward (found by the account layer). */
+    applySeasonReward(claim) {
+      const reward = claim()
+      refresh(fx('win', { multiplier: 10 }))
+      notify(progressNotices({ achievements: reward.achievements, levelUp: null }))
+      return reward
+    },
+
+    toggleHaptics() {
+      const haptics = !get().haptics
+      runtime.service.savePreferences({ haptics })
+      set({ haptics })
     },
 
     dismissToast(id) {
@@ -305,6 +339,7 @@ export const usePoule = create((set, get) => {
         betCents: preferences.betCents,
         autocashTarget: preferences.autocashTarget,
         sound: preferences.sound,
+        haptics: preferences.haptics,
         scene: EMPTY_SCENE,
         reveal: null,
         toast: null,

@@ -1,84 +1,12 @@
 import { useShallow } from 'zustand/react/shallow'
+import { LEAGUES, RANK_REWARDS } from '../../config/seasons.js'
+import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
-import { usePoule } from '../../state/usePoule.js'
-import { count, multiplierLabel, tokens } from '../format.js'
-import Avatar from './Avatar.jsx'
+import { count, tokens } from '../format.js'
+import { CoinIcon, FeatherIcon, GiftIcon } from '../icons.jsx'
 import Dialog from './Dialog.jsx'
 import PseudoForm from './PseudoForm.jsx'
-import { syncLabel } from './syncLabel.js'
 import './account.css'
-
-function ProfileDialog({ onClose }) {
-  const { user, pseudo, sync, syncNow, signOut, leaveLeaderboard } = useAccount(
-    useShallow((state) => ({
-      user: state.user,
-      pseudo: state.pseudo,
-      sync: state.sync,
-      syncNow: state.syncNow,
-      signOut: state.signOut,
-      leaveLeaderboard: state.leaveLeaderboard,
-    })),
-  )
-  const { stats, progression, balance } = usePoule(
-    useShallow((state) => ({ stats: state.stats, progression: state.progression, balance: state.balanceCents })),
-  )
-
-  const figures = [
-    ['Niveau', progression ? count(progression.level) : '—'],
-    ['Solde', `${tokens(balance)} jetons`],
-    ['Plumes', progression ? count(progression.feathers) : '—'],
-    ['Parties', stats ? count(stats.played) : '—'],
-    ['Succès', progression ? count(progression.achievements.length) : '—'],
-    ['Meilleur', stats?.bestMultiplier ? multiplierLabel(stats.bestMultiplier) : '—'],
-  ]
-
-  return (
-    <Dialog title="Mon compte" onClose={onClose}>
-      <div className="profile__who">
-        <Avatar user={user} size={56} />
-        <div>
-          <b>{user.name}</b>
-          {user.email && <small>{user.email}</small>}
-        </div>
-      </div>
-
-      <dl className="profile__figures">
-        {figures.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <PseudoForm
-        key={pseudo ?? ''}
-        initial={pseudo ?? ''}
-        submitLabel={pseudo ? 'Changer' : 'Rejoindre le classement'}
-      />
-      {pseudo && (
-        <button type="button" className="link-button" onClick={leaveLeaderboard}>
-          Ne plus apparaître dans le classement
-        </button>
-      )}
-
-      <div className={`profile__sync profile__sync--${sync.state}`}>
-        <span>{syncLabel(sync)}</span>
-        <button type="button" onClick={syncNow} disabled={sync.state === 'syncing'}>
-          Synchroniser
-        </button>
-      </div>
-      <p className="box__note">
-        Votre progression est enregistrée sur cet appareil et dans votre compte : connectez-vous ailleurs pour la
-        retrouver.
-      </p>
-
-      <button type="button" className="profile__signout" onClick={signOut}>
-        Se déconnecter
-      </button>
-    </Dialog>
-  )
-}
 
 function SaveCard({ title, save, action, onChoose }) {
   return (
@@ -150,6 +78,50 @@ function PseudoDialog({ onClose }) {
   )
 }
 
+/** Last week's reward, waiting to be collected. */
+function RewardDialog({ onClose }) {
+  const { pending, claim } = useAccount(
+    useShallow((state) => ({ pending: state.pendingReward, claim: state.claimReward })),
+  )
+  if (!pending) return null
+  const { reward } = pending
+  const league = LEAGUES.find((entry) => entry.id === reward.league)
+  const tier = RANK_REWARDS.find((entry) => entry.id === reward.tier)
+  return (
+    <Dialog title={`Saison ${pending.season.slice(-2)} terminée !`} onClose={onClose}>
+      <div className="reward__hero">
+        <span className="league" style={{ '--league': league.color, width: 72, height: 72, fontSize: 32 }}>
+          {league.label.charAt(0)}
+        </span>
+        <p>
+          <b>
+            {pending.rank}
+            {pending.rank === 1 ? 're' : 'e'} sur {count(pending.total)}
+          </b>
+          <br />
+          Ligue {league.label} · {count(pending.score)} XP{tier ? ` · ${tier.label}` : ''}
+        </p>
+      </div>
+      <ul className="reward__list">
+        <li>
+          <CoinIcon size={22} /> <b>{tokens(reward.tokens)}</b> jetons
+        </li>
+        <li>
+          <FeatherIcon size={20} /> <b>{count(reward.feathers)}</b> plumes
+        </li>
+        {reward.items.map((id) => (
+          <li key={id}>
+            <GiftIcon size={20} /> <b>{upgradeById(id).label}</b> (exclusif)
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="big big--buy" onClick={claim}>
+        Récupérer
+      </button>
+    </Dialog>
+  )
+}
+
 /** Whichever account dialog is open. */
 export default function AccountDialogs() {
   const dialog = useAccount((state) => state.dialog)
@@ -158,5 +130,6 @@ export default function AccountDialogs() {
   if (!dialog || !user) return null
   if (dialog === 'conflict') return <ConflictDialog />
   if (dialog === 'pseudo') return <PseudoDialog onClose={close} />
-  return <ProfileDialog onClose={close} />
+  if (dialog === 'reward') return <RewardDialog onClose={close} />
+  return null
 }

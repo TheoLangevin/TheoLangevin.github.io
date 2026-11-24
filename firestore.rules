@@ -7,7 +7,8 @@ rules_version = '2';
 //   users/{uid}          a player's save. Only they can read or write it.
 //   pseudos/{lowercase}  unique public names. Anyone can read; claiming one
 //                        and freeing your own are the only writes.
-//   leaderboard/{uid}    public line of a player who chose a pseudo.
+//   leaderboard/{uid}    public all-time line of a player who chose a pseudo.
+//   seasons/{week}/entries/{uid}  public line of that player for one week.
 //
 // Saves are computed in the player's browser, so a determined player can
 // still fake their own numbers; these rules keep the data well formed, private
@@ -28,15 +29,30 @@ service cloud.firestore {
       return pseudo is string && pseudo.matches('^[A-Za-z0-9_-]{3,16}$');
     }
 
+    function validTitle(title) {
+      return title == null || (title is string && title.size() <= 40);
+    }
+
+    // The pseudo is this player's once the write is applied.
+    function ownsPseudo(pseudo) {
+      return validPseudo(pseudo)
+        && getAfter(/databases/$(database)/documents/pseudos/$(pseudo.lower())).data.uid == request.auth.uid;
+    }
+
+    function savedXp(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.save.xp;
+    }
+
     function validSave(save) {
       return save is map
-        && save.v == 1
+        && (save.v == 1 || save.v == 2)
         && save.balanceCents is int && save.balanceCents >= 0
         && save.xp is int && save.xp >= 0
         && save.feathers is int && save.feathers >= 0
         && save.upgrades is list && save.upgrades.size() <= 50
         && save.achievements is list && save.achievements.size() <= 100
-        && save.rounds is list && save.rounds.size() <= 1000;
+        && save.rounds is list && save.rounds.size() <= 1000
+        && (!('claims' in save) || (save.claims is list && save.claims.size() <= 600));
     }
 
     match /users/{uid} {
@@ -75,19 +91,40 @@ service cloud.firestore {
     match /leaderboard/{uid} {
       allow read: if true;
 
-      // The pseudo must belong to this player once the write is applied, and
-      // the experience must match their own save.
+      // The experience and tokens shown cannot exceed the player's own save.
       allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['pseudo', 'level', 'xp', 'bestMultiplier', 'bestLanes', 'updatedAt'])
-        && validPseudo(request.resource.data.pseudo)
-        && getAfter(/databases/$(database)/documents/pseudos/$(request.resource.data.pseudo.lower())).data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['pseudo', 'title', 'level', 'xp', 'tokens', 'bestMultiplier', 'bestLanes', 'updatedAt'])
+        && ownsPseudo(request.resource.data.pseudo)
+        && validTitle(request.resource.data.get('title', null))
         && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 50
         && request.resource.data.xp is int && request.resource.data.xp >= 0
-        && request.resource.data.xp <= get(/databases/$(database)/documents/users/$(uid)).data.save.xp
+        && request.resource.data.xp <= savedXp(uid)
+        && request.resource.data.get('tokens', 0) is int && request.resource.data.get('tokens', 0) >= 0
+        && request.resource.data.get('tokens', 0) <= get(/databases/$(database)/documents/users/$(uid)).data.save.balanceCents
         && request.resource.data.bestMultiplier is number
         && request.resource.data.bestMultiplier >= 0 && request.resource.data.bestMultiplier <= 5000
         && request.resource.data.bestLanes is int
         && request.resource.data.bestLanes >= 0 && request.resource.data.bestLanes <= 24
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isOwner(uid);
+    }
+
+    match /seasons/{season}/entries/{uid} {
+      allow read: if true;
+
+      // A week's score is experience earned that week: never more than the save's total.
+      allow create, update: if isOwner(uid)
+        && season.matches('^[0-9]{4}-W[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['pseudo', 'title', 'level', 'score', 'bestMultiplier', 'league', 'updatedAt'])
+        && ownsPseudo(request.resource.data.pseudo)
+        && validTitle(request.resource.data.get('title', null))
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 50
+        && request.resource.data.score is int && request.resource.data.score >= 0
+        && request.resource.data.score <= savedXp(uid)
+        && request.resource.data.bestMultiplier is number
+        && request.resource.data.bestMultiplier >= 0 && request.resource.data.bestMultiplier <= 5000
+        && (request.resource.data.league == null || request.resource.data.league in ['bronze', 'silver', 'gold', 'platinum', 'diamond'])
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if isOwner(uid);

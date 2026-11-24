@@ -25,16 +25,17 @@ export function levelProgress(xp) {
 }
 
 /**
- * Whether an upgrade can be bought: `ok`, or the reason it cannot
- * (`unknown`, `owned`, `level`, `feathers`).
+ * Whether an item can be bought: `ok`, or the reason it cannot (`unknown`,
+ * `exclusive`, `owned`, `level`, `feathers`, `tokens`).
  */
-export function purchaseCheck(upgradeId, { owned, level, feathers }) {
+export function purchaseCheck(upgradeId, { owned, level, feathers, balanceCents = 0 }) {
   const upgrade = upgradeById(upgradeId)
   if (!upgrade) return 'unknown'
+  if (upgrade.exclusive) return 'exclusive'
   if (owned.includes(upgradeId)) return 'owned'
   if (level < upgrade.level) return 'level'
-  if (feathers < upgrade.cost) return 'feathers'
-  return 'ok'
+  if (upgrade.currency === 'tokens') return balanceCents >= upgrade.cost ? 'ok' : 'tokens'
+  return feathers >= upgrade.cost ? 'ok' : 'feathers'
 }
 
 /** Achievements newly met by `stats`, among those not yet unlocked. */

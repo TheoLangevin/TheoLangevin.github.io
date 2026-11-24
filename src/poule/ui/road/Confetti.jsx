@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import { usePoule } from '../../state/usePoule.js'
-
-const COLORS = ['#ffc21a', '#e8392c', '#2f7de1', '#1f9d55', '#ffffff', '#f08a24']
+import { useHenLook } from './useHenLook.js'
 
 /** A burst of confetti over the road on every win, bigger for bigger wins. */
 export default function Confetti() {
   const fx = usePoule((state) => state.fx)
   const burst = fx?.type === 'win' ? fx : null
+  const colors = useHenLook().confetti
 
   const pieces = useMemo(() => {
     if (!burst) return []
@@ -19,10 +19,10 @@ export default function Confetti() {
         '--spin': `${(Math.random() - 0.5) * 1080}deg`,
         '--delay': `${Math.random() * 0.25}s`,
         '--duration': `${1.1 + Math.random() * 0.9}s`,
-        background: COLORS[index % COLORS.length],
+        background: colors[index % colors.length],
       },
     }))
-  }, [burst])
+  }, [burst, colors])
 
   if (!burst) return null
   return (

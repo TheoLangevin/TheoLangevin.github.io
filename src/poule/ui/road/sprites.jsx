@@ -30,25 +30,173 @@ const HATS = {
       strokeLinejoin="round"
     />
   ),
+  beanie: (
+    <g>
+      <path d="M38 21q0-15 14-15t14 15z" fill="#e8392c" />
+      <rect x="37" y="17" width="30" height="6" rx="3" fill="#b8261b" />
+      <circle cx="52" cy="5" r="4.5" fill="#fff" />
+    </g>
+  ),
+  beret: (
+    <g>
+      <ellipse cx="50" cy="13" rx="15" ry="6" fill="#1d2a5c" transform="rotate(-10 50 13)" />
+      <rect x="49" y="4" width="2.5" height="5" rx="1" fill="#1d2a5c" />
+    </g>
+  ),
+  'party-hat': (
+    <g>
+      <path d="M43 17l11-25 10 25z" fill="#8e44ad" />
+      <path d="M46 10l14 3M49 3l9 2" stroke="#ffc21a" strokeWidth="2.5" />
+      <circle cx="54" cy="-8" r="3.5" fill="#ffc21a" />
+    </g>
+  ),
+  chef: (
+    <g>
+      <circle cx="44" cy="6" r="7" fill="#fff" />
+      <circle cx="52" cy="2" r="8" fill="#fff" />
+      <circle cx="60" cy="6" r="7" fill="#fff" />
+      <rect x="41" y="7" width="22" height="11" rx="2" fill="#fff" stroke="#d9d4c7" strokeWidth="1" />
+    </g>
+  ),
+  cowboy: (
+    <g>
+      <path d="M42 16q0-14 10-13q10-1 10 13z" fill="#a0672f" />
+      <rect x="42" y="11" width="20" height="3.5" fill="#5a3a1a" />
+      <path d="M31 17q21 6 42 0q-3 4-21 5q-18-1-21-5z" fill="#8b5a2b" />
+    </g>
+  ),
+  pirate: (
+    <g>
+      <path d="M33 17q19-26 38 0q-19-6-38 0z" fill="#1d1d1d" />
+      <circle cx="52" cy="7" r="3" fill="#fff" />
+      <path d="M49.5 11l5 0" stroke="#fff" strokeWidth="1.5" />
+    </g>
+  ),
+  'top-hat': (
+    <g>
+      <rect x="43" y="-7" width="18" height="22" rx="1.5" fill="#1a1a1a" />
+      <rect x="43" y="9" width="18" height="3.5" fill="#e8392c" />
+      <ellipse cx="52" cy="15" rx="15" ry="3.5" fill="#111" />
+    </g>
+  ),
+  viking: (
+    <g>
+      <path d="M39 14q-10-4-9-15q4 9 11 11z" fill="#f2e6c9" stroke="#c9b98f" strokeWidth="1" />
+      <path d="M65 14q10-4 9-15q-4 9-11 11z" fill="#f2e6c9" stroke="#c9b98f" strokeWidth="1" />
+      <path d="M38 20q0-14 14-14t14 14z" fill="#9aa3ad" />
+      <rect x="37" y="17" width="30" height="5" rx="2" fill="#6b737c" />
+      <circle cx="44" cy="19.5" r="1.2" fill="#c9ced4" />
+      <circle cx="52" cy="19.5" r="1.2" fill="#c9ced4" />
+      <circle cx="60" cy="19.5" r="1.2" fill="#c9ced4" />
+    </g>
+  ),
+  wizard: (
+    <g>
+      <path d="M41 18l17-29 8 29z" fill="#3b2a7a" />
+      <ellipse cx="53" cy="18" rx="17" ry="3.5" fill="#2c1f5e" />
+      <circle cx="53" cy="4" r="1.6" fill="#ffd84a" />
+      <circle cx="57" cy="11" r="1.2" fill="#ffd84a" />
+      <circle cx="49" cy="12" r="1" fill="#ffd84a" />
+    </g>
+  ),
+  halo: <ellipse cx="52" cy="4" rx="12" ry="3.5" fill="none" stroke="#ffd84a" strokeWidth="3" />,
+  laurel: (
+    <g fill="#3c9a4a">
+      {[0, 1, 2, 3].map((i) => (
+        <ellipse
+          key={`l${i}`}
+          cx={42 + i * 2}
+          cy={19 - i * 4}
+          rx="4"
+          ry="2"
+          transform={`rotate(${-50 + i * 15} ${42 + i * 2} ${19 - i * 4})`}
+        />
+      ))}
+      {[0, 1, 2, 3].map((i) => (
+        <ellipse
+          key={`r${i}`}
+          cx={62 - i * 2}
+          cy={19 - i * 4}
+          rx="4"
+          ry="2"
+          transform={`rotate(${50 - i * 15} ${62 - i * 2} ${19 - i * 4})`}
+        />
+      ))}
+      <circle cx="52" cy="5" r="2" fill="#ffc21a" />
+    </g>
+  ),
 }
 
+const NECK = {
+  'bow-tie': (
+    <g>
+      <path d="M53 40l-8-5v10zM53 40l8-5v10z" fill="#e8392c" />
+      <circle cx="53" cy="40" r="2.2" fill="#b8261b" />
+    </g>
+  ),
+  scarf: (
+    <g>
+      <path d="M41 36q12 6 22-1l1 5q-11 8-23 1z" fill="#2f7de1" />
+      <path d="M46 41l-3 10 5 1 2-10z" fill="#1f5fb8" />
+    </g>
+  ),
+  bell: (
+    <g>
+      <path d="M42 37q11 6 21-1" stroke="#8b5a2b" strokeWidth="3" fill="none" />
+      <path d="M49 45q0-5 4-5t4 5l1 2h-10z" fill="#ffc21a" />
+      <circle cx="53" cy="48" r="1.3" fill="#b88600" />
+    </g>
+  ),
+  'gold-chain': (
+    <g>
+      <path d="M41 37q12 10 23-1" stroke="#ffcf33" strokeWidth="2.6" strokeDasharray="2.2 1.4" fill="none" />
+      <circle cx="53" cy="45" r="3.2" fill="#ffcf33" stroke="#e0a400" strokeWidth="1" />
+    </g>
+  ),
+  medal: (
+    <g>
+      <path d="M47 35l6 9 6-9" stroke="#2f7de1" strokeWidth="4" fill="none" />
+      <circle cx="53" cy="47" r="5" fill="#ffc21a" stroke="#b88600" strokeWidth="1.2" />
+      <path d="M53 44.5l.8 1.7 1.9.2-1.4 1.3.4 1.9-1.7-1-1.7 1 .4-1.9-1.4-1.3 1.9-.2z" fill="#fff6c4" />
+    </g>
+  ),
+}
+
+/** Hats that leave the comb visible. */
+const COMB_SHOWS = new Set([null, 'shades', 'crown', 'halo', 'laurel'])
+
 /**
- * The hen, seen from the side, facing the road. `plumage` colours her
- * feathers ({ color, shade }); `hat` is the id of an upgrade from the shop.
+ * The hen, seen from the side, facing the road. `colors` are her feathers:
+ * two colours (body, shade) or more for a gradient. `hat` and `neck` are ids
+ * of shop items.
  */
-export function HenSprite({ plumage = { color: '#ffffff', shade: '#e4e1d6' }, hat = null }) {
+export function HenSprite({ colors = ['#ffffff', '#e4e1d6'], hat = null, neck = null }) {
+  const gradient = useId()
+  const gradientFill = colors.length > 2
+  const body = gradientFill ? `url(#${gradient})` : colors[0]
+  const shade = gradientFill ? '#00000030' : colors[1]
   return (
-    <svg viewBox="0 0 80 80" aria-hidden="true">
+    <svg viewBox="0 -14 88 94" aria-hidden="true">
+      {gradientFill && (
+        <defs>
+          <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
+            {colors.map((color, index) => (
+              <stop key={color} offset={index / (colors.length - 1)} stopColor={color} />
+            ))}
+          </linearGradient>
+        </defs>
+      )}
       <path d="M30 64v10M44 64v10M26 74h8M40 74h8" stroke="#f08a24" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <ellipse cx="38" cy="46" rx="24" ry="21" fill={plumage.color} />
-      <path d="M18 40q-10-8-8 6q6 6 14 2z" fill={plumage.shade} />
-      <path d="M28 46q10 14 22 2q-8 2-22-2z" fill={plumage.shade} />
-      <circle cx="52" cy="26" r="13" fill={plumage.color} />
-      {hat !== 'helmet' && hat !== 'cap' && <path d="M46 14q2-8 6-2q3-7 6 0q4-4 3 4z" fill="#e8392c" />}
+      <ellipse cx="38" cy="46" rx="24" ry="21" fill={body} />
+      <path d="M18 40q-10-8-8 6q6 6 14 2z" fill={shade} />
+      <path d="M28 46q10 14 22 2q-8 2-22-2z" fill={shade} />
+      <circle cx="52" cy="26" r="13" fill={body} />
+      {COMB_SHOWS.has(hat) && <path d="M46 14q2-8 6-2q3-7 6 0q4-4 3 4z" fill="#e8392c" />}
       <path d="M64 26l9 3-9 4z" fill="#f08a24" />
       <path d="M60 34q2 7-3 7q-2-4 0-7z" fill="#e8392c" />
       <circle cx="56" cy="23" r="2.6" fill="#1d1a12" />
       <circle cx="57" cy="22" r=".9" fill="#fff" />
+      {neck && NECK[neck]}
       {hat && HATS[hat]}
     </svg>
   )

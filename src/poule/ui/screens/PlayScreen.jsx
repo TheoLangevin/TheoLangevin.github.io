@@ -1,0 +1,256 @@
+import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import { BET_PRESETS, CENTS, MAX_BET, MAX_PAYOUT, REFILL_AMOUNT } from '../../config/economy.js'
+import { MODES, modeById } from '../../config/modes.js'
+import { clampBet, refillCheck } from '../../domain/money.js'
+import { multiplierAt, payoutCents } from '../../domain/multiplier.js'
+import { usePoule } from '../../state/usePoule.js'
+import { multiplierLabel, tokens } from '../format.js'
+import { BoltIcon, CoinIcon } from '../icons.jsx'
+import HistoryStrip from '../road/HistoryStrip.jsx'
+import Road from '../road/Road.jsx'
+import './play.css'
+
+/** Three figures above the road: before a round, what it offers; during it, where it stands. */
+function RoundHud() {
+  const { round, modeId, betCents, autocash } = usePoule(
+    useShallow((state) => ({
+      round: state.round,
+      modeId: state.round?.modeId ?? state.modeId,
+      betCents: state.round?.betCents ?? state.betCents,
+      autocash: state.progression?.owned.includes('autocash') ? state.autocashTarget : null,
+    })),
+  )
+  const mode = modeById(modeId)
+  const lane = round?.lane ?? 0
+  const figures = round
+    ? [
+        ['Multiplicateur', lane ? multiplierLabel(multiplierAt(mode, lane)) : 'x1,00'],
+        ['Gain', lane ? tokens(payoutCents(betCents, mode, lane)) : '—'],
+        ['Voie suivante', lane < mode.lanes ? multiplierLabel(multiplierAt(mode, lane + 1)) : '—'],
+      ]
+    : [
+        ['Chance par voie', `${Math.round(mode.survival * 100)} %`],
+        ['Voies', String(mode.lanes)],
+        ['Jusqu’à', multiplierLabel(multiplierAt(mode, mode.lanes))],
+      ]
+
+  return (
+    <div className={`hud${round ? ' hud--live' : ''}`}>
+      {figures.map(([label, value]) => (
+        <div key={label} className="hud__figure">
+          <small>{label}</small>
+          <b>{value}</b>
+        </div>
+      ))}
+      {round && autocash && (
+        <span className="hud__auto">
+          <BoltIcon size={12} /> auto {multiplierLabel(autocash)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function BetPicker({ betCents, setBet, locked }) {
+  const [draft, setDraft] = useState(String(betCents / CENTS))
+  useEffect(() => setDraft(String(betCents / CENTS)), [betCents])
+  const commit = (value) => {
+    const next = clampBet(value)
+    setDraft(String(next / CENTS))
+    if (next !== betCents) setBet(next)
+  }
+  const bet = betCents / CENTS
+
+  return (
+    <div className="bet">
+      <div className="bet__row">
+        <button
+          type="button"
+          className="bet__step"
+          onClick={() => commit(bet - 1)}
+          disabled={locked}
+          aria-label="Diminuer la mise"
+        >
+          −
+        </button>
+        <label className="bet__field">
+          <span className="visually-hidden">Mise en jetons</span>
+          <CoinIcon size={20} />
+          <input
+            type="number"
+            inputMode="numeric"
+            enterKeyHint="done"
+            min="1"
+            max={MAX_BET / CENTS}
+            value={draft}
+            disabled={locked}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => commit(draft)}
+            onKeyDown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
+          />
+        </label>
+        <button
+          type="button"
+          className="bet__step"
+          onClick={() => commit(bet + 1)}
+          disabled={locked}
+          aria-label="Augmenter la mise"
+        >
+          +
+        </button>
+      </div>
+      <div className="chips" role="group" aria-label="Mises rapides">
+        {BET_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            aria-pressed={bet === preset}
+            onClick={() => commit(preset)}
+            disabled={locked}
+          >
+            {preset}
+          </button>
+        ))}
+        <button type="button" onClick={() => commit(bet / 2)} disabled={locked} aria-label="Moitié de la mise">
+          ½
+        </button>
+        <button type="button" onClick={() => commit(bet * 2)} disabled={locked} aria-label="Doubler la mise">
+          ×2
+        </button>
+        <button type="button" onClick={() => commit(MAX_BET / CENTS)} disabled={locked}>
+          Max
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Refill({ balanceCents, lastRefillAt, refill }) {
+  const [now, setNow] = useState(Date.now)
+  const check = refillCheck({ balanceCents, lastRefillAt, now })
+  useEffect(() => {
+    if (check.verdict !== 'wait') return undefined
+    const timer = setInterval(() => setNow(Date.now()), 15_000)
+    return () => clearInterval(timer)
+  }, [check.verdict])
+  if (check.verdict === 'not-broke') return null
+  const minutes = Math.ceil(check.waitMs / 60_000)
+  return (
+    <button type="button" className="refill" onClick={refill} disabled={check.verdict !== 'ok'}>
+      <CoinIcon size={20} />
+      {check.verdict === 'ok'
+        ? `Plus de jetons ? Recharge gratuite de ${tokens(REFILL_AMOUNT)}`
+        : `Recharge gratuite dans ${minutes} min`}
+    </button>
+  )
+}
+
+/** During a round: the bet, the risk of the next lane and how far the hen got. */
+function RoundCard({ round, mode }) {
+  const done = round.lane / mode.lanes
+  return (
+    <div className="round-card">
+      <div className="round-card__row">
+        <span>
+          Mise <b>{tokens(round.betCents)}</b>
+        </span>
+        <span>
+          Prochaine voie <b>{Math.round(mode.survival * 100)} %</b> de réussite
+        </span>
+      </div>
+      <div className="round-card__track" aria-label={`${round.lane} voies sur ${mode.lanes}`}>
+        <span style={{ width: `${Math.round(done * 100)}%` }} />
+      </div>
+      <div className="round-card__row round-card__row--small">
+        <span>
+          {round.lane} / {mode.lanes} voies
+        </span>
+        <span>Arrivée {multiplierLabel(multiplierAt(mode, mode.lanes))}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Mode, bet and play before a round; cash out and step during it. */
+function PlayControls() {
+  const s = usePoule(
+    useShallow((state) => ({
+      ready: state.phase === 'ready',
+      busy: state.busy,
+      round: state.round,
+      modeId: state.modeId,
+      betCents: state.betCents,
+      balanceCents: state.balanceCents,
+      lastRefillAt: state.lastRefillAt,
+      setMode: state.setMode,
+      setBet: state.setBet,
+      play: state.play,
+      cashOut: state.cashOut,
+      refill: state.refill,
+    })),
+  )
+  const round = s.round
+  const mode = modeById(round?.modeId ?? s.modeId)
+  const cash = round?.canCashOut ? Math.min(payoutCents(round.betCents, mode, round.lane), MAX_PAYOUT) : 0
+  const locked = Boolean(round) || s.busy || !s.ready
+
+  return (
+    <div className="controls">
+      {/* Both panels share one grid cell, so the road keeps its size between them. */}
+      <div className="controls__panel" hidden={Boolean(round)} aria-hidden={Boolean(round)}>
+        <div className="segmented" role="group" aria-label="Difficulté">
+          {MODES.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              aria-pressed={entry.id === s.modeId}
+              disabled={locked}
+              onClick={() => s.setMode(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+        <BetPicker betCents={s.betCents} setBet={s.setBet} locked={locked} />
+        <Refill balanceCents={s.balanceCents} lastRefillAt={s.lastRefillAt} refill={s.refill} />
+        <button
+          type="button"
+          className="big big--play"
+          onClick={s.play}
+          disabled={locked || s.balanceCents < s.betCents}
+        >
+          Jouer <small>{tokens(s.betCents)} jetons</small>
+        </button>
+      </div>
+
+      <div className="controls__panel controls__panel--live" hidden={!round} aria-hidden={!round}>
+        {round && <RoundCard round={round} mode={mode} />}
+        <p className="controls__hint">Touchez la route ou « Avancer ». Encaissez avant la voiture.</p>
+        <div className="controls__pair">
+          <button type="button" className="big big--cash" onClick={s.cashOut} disabled={s.busy || !round?.canCashOut}>
+            Encaisser
+            <small>{round?.canCashOut ? `${tokens(cash)} jetons` : 'après une voie'}</small>
+          </button>
+          <button type="button" className="big big--play" onClick={s.play} disabled={s.busy || !round}>
+            Avancer
+            <small>{round && round.lane < mode.lanes ? multiplierLabel(multiplierAt(mode, round.lane + 1)) : ''}</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function PlayScreen({ hidden }) {
+  return (
+    <main className="screen screen--play" hidden={hidden}>
+      <RoundHud />
+      <div className="play__road">
+        <Road />
+      </div>
+      <HistoryStrip />
+      <PlayControls />
+    </main>
+  )
+}

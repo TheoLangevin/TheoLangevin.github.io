@@ -73,6 +73,7 @@ export default function Road() {
   return (
     <div
       className={`road${onRoadTap ? ' road--tappable' : ''}`}
+      data-road={look.road ?? undefined}
       ref={viewport}
       onClick={onRoadTap}
       aria-label={`Route de ${mode.lanes} voies, mode ${mode.label}`}
@@ -96,7 +97,7 @@ export default function Road() {
             <Car key={scene.hop} id={-1} {...KILLER_CAR} delay={TIMING.crashCarDelay / 1000} />
           </div>
         )}
-        <Hen x={x} hop={scene.hop} flat={Boolean(scene.deadLane)} fast={look.fast} look={look} />
+        <Hen x={x} hop={scene.hop} flat={Boolean(scene.deadLane)} look={look} />
       </div>
       {phase === 'loading' && <div className="road__loading">Ouverture de la base SQLite…</div>}
       <Confetti />

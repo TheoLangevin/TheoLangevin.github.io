@@ -1,4 +1,13 @@
-import { decideSync, describeSave, isPristine, isValidPseudo, leaderboardEntry, validateSave } from '../domain/save.js'
+import {
+  decideSync,
+  describeSave,
+  isPristine,
+  isValidPseudo,
+  leaderboardEntry,
+  seasonEntry,
+  validateSave,
+} from '../domain/save.js'
+import { previousSeasonId, seasonId, seasonReward } from '../domain/seasons.js'
 import { CloudConflictError } from './cloud.js'
 
 /**
@@ -16,8 +25,16 @@ import { CloudConflictError } from './cloud.js'
  * @param {(status: object) => void} [deps.onStatus]  { state: 'idle' | 'syncing' | 'synced' | 'pending' | 'error', at?, error? }
  * @param {() => void} [deps.onImported]  the device's progress was replaced
  * @param {number} [deps.delay]  ms to wait after a change before pushing
+ * @param {() => Date} [deps.now]
  */
-export function createSyncService({ game, cloud, onStatus = () => {}, onImported = () => {}, delay = 2500 }) {
+export function createSyncService({
+  game,
+  cloud,
+  onStatus = () => {},
+  onImported = () => {},
+  delay = 2500,
+  now = () => new Date(),
+}) {
   let uid = null
   let pseudo = null
   let queue = Promise.resolve()
@@ -35,7 +52,7 @@ export function createSyncService({ game, cloud, onStatus = () => {}, onImported
 
   async function publish(save) {
     if (!uid || !pseudo) return
-    await cloud.publishEntry(uid, leaderboardEntry(save, pseudo))
+    await cloud.publishEntry(uid, leaderboardEntry(save, pseudo), seasonEntry(save, pseudo, now()))
   }
 
   async function upload(expectedRev) {
@@ -206,7 +223,8 @@ export function createSyncService({ game, cloud, onStatus = () => {}, onImported
         // The leaderboard line may not claim more than the account's save holds.
         const { dirty, syncedRev, linkedUid } = game.syncState()
         if (dirty && !game.round && linkedUid === uid) await upload(syncedRev)
-        await cloud.claimPseudo(uid, wanted, leaderboardEntry(game.exportSave(), wanted))
+        const save = game.exportSave()
+        await cloud.claimPseudo(uid, wanted, leaderboardEntry(save, wanted), seasonEntry(save, wanted, now()))
         pseudo = wanted
         return pseudo
       })
@@ -216,12 +234,46 @@ export function createSyncService({ game, cloud, onStatus = () => {}, onImported
     leaveLeaderboard() {
       if (!pseudo) return Promise.resolve()
       return enqueue(async () => {
-        await cloud.removeEntry(uid, pseudo)
+        await cloud.removeEntry(uid, pseudo, seasonId(now()))
         pseudo = null
       })
     },
 
-    leaderboard: (by) => cloud.leaderboard(by),
+    /** All-time board: by 'xp', 'tokens' or 'bestMultiplier'. */
+    leaderboard: (by, size) => cloud.leaderboard(by, size),
+
+    /** This week's board, and where the player stands in it. */
+    async season(size) {
+      const id = seasonId(now())
+      const entries = await cloud.seasonBoard(id, size)
+      const mine = uid ? await cloud.seasonEntryOf(id, uid) : null
+      const standing = mine?.score > 0 ? await cloud.seasonRank(id, mine.score) : null
+      return { id, entries, mine, standing }
+    },
+
+    /**
+     * Last week's reward, if the player scored and has not collected it:
+     * { season, score, rank, total, reward } or null.
+     */
+    async pendingSeasonReward() {
+      if (!uid) return null
+      const id = previousSeasonId(now())
+      if (game.claimedSeasons().includes(id)) return null
+      const line = await cloud.seasonEntryOf(id, uid)
+      if (!line?.score) return null
+      const { rank, total } = await cloud.seasonRank(id, line.score)
+      return { season: id, score: line.score, rank, total, reward: seasonReward({ score: line.score, rank, total }) }
+    },
+
+    /** Collects a reward found by pendingSeasonReward; it syncs like any change. */
+    claimSeasonReward(pending) {
+      return game.claimSeason({
+        season: pending.season,
+        score: pending.score,
+        rank: pending.rank,
+        total: pending.total,
+      })
+    },
   }
   return service
 }

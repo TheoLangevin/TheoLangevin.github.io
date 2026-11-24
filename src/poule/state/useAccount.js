@@ -4,6 +4,7 @@ import { createSyncService } from '../account/createSyncService.js'
 import { createFirebaseAuth, describeAuthError } from '../account/firebase/createFirebaseAuth.js'
 import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.js'
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
+import { BOARD_SIZE } from '../config/seasons.js'
 import { gameService, pushNotice, usePoule } from './usePoule.js'
 
 /** Account services, outside React state. */
@@ -21,7 +22,8 @@ export const useAccount = create((set, get) => {
   async function onUser(user) {
     if (!user) {
       runtime.sync.disconnect()
-      set({ status: 'signedOut', user: null, pseudo: null, conflict: null, dialog: null })
+      set({ status: 'signedOut', user: null, pseudo: null, conflict: null, dialog: null, pendingReward: null })
+      get().loadBoard()
       return
     }
     set({ status: 'signedIn', user })
@@ -30,6 +32,8 @@ export const useAccount = create((set, get) => {
       set({ pseudo: runtime.sync.pseudo })
       if (result.action === 'ask') set({ conflict: result.conflict, dialog: 'conflict' })
       else if (!runtime.sync.pseudo) set({ dialog: 'pseudo' })
+      get().checkReward()
+      get().loadBoard(get().board.kind)
     } catch (error) {
       console.error('[poule] sync failed', error)
     }
@@ -42,7 +46,8 @@ export const useAccount = create((set, get) => {
     sync: { state: 'idle', at: null, error: null },
     conflict: null,
     dialog: null,
-    leaderboard: { by: 'xp', entries: [], loading: false, error: null },
+    board: { kind: 'season', entries: [], loading: false, error: null, season: null },
+    pendingReward: null,
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -123,6 +128,7 @@ export const useAccount = create((set, get) => {
       try {
         await runtime.sync.resolve(choice, conflict)
         set({ conflict: null, dialog: runtime.sync.pseudo ? null : 'pseudo' })
+        get().checkReward()
       } catch {
         sayError('La synchronisation a échoué. Réessayez.')
       }
@@ -133,7 +139,7 @@ export const useAccount = create((set, get) => {
       try {
         const pseudo = await runtime.sync.choosePseudo(name)
         set({ pseudo, dialog: null })
-        get().loadLeaderboard(get().leaderboard.by)
+        get().loadBoard()
         return null
       } catch (error) {
         if (error instanceof PseudoTakenError) return 'Ce pseudo est déjà pris.'
@@ -147,25 +153,58 @@ export const useAccount = create((set, get) => {
       try {
         await runtime.sync.leaveLeaderboard()
         set({ pseudo: null })
-        get().loadLeaderboard(get().leaderboard.by)
+        get().loadBoard()
       } catch {
         sayError('Impossible de quitter le classement pour le moment.')
       }
     },
 
-    async loadLeaderboard(by = 'xp') {
+    /** Loads a board: 'season' (this week), 'tokens', 'xp' or 'bestMultiplier' (all time). */
+    async loadBoard(kind = get().board.kind) {
       if (!runtime.sync) return
-      set({ leaderboard: { ...get().leaderboard, by, loading: true, error: null } })
+      set({ board: { ...get().board, kind, loading: true, error: null } })
       try {
-        const entries = await runtime.sync.leaderboard(by)
-        set({ leaderboard: { by, entries, loading: false, error: null } })
+        if (kind === 'season') {
+          const season = await runtime.sync.season(BOARD_SIZE)
+          set({ board: { kind, entries: season.entries, loading: false, error: null, season } })
+        } else {
+          const entries = await runtime.sync.leaderboard(kind, BOARD_SIZE)
+          set({ board: { kind, entries, loading: false, error: null, season: get().board.season } })
+        }
       } catch (error) {
         console.error(error)
-        set({ leaderboard: { by, entries: [], loading: false, error: 'Classement indisponible.' } })
+        set({ board: { ...get().board, kind, entries: [], loading: false, error: 'Classement indisponible.' } })
+      }
+    },
+
+    /** Looks for last week's reward; opens its dialog when there is one. */
+    async checkReward() {
+      if (!runtime.sync?.uid) return
+      try {
+        const pending = await runtime.sync.pendingSeasonReward()
+        set({ pendingReward: pending })
+        if (pending && !get().conflict) set({ dialog: 'reward' })
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+    claimReward() {
+      const pending = get().pendingReward
+      if (!pending) return
+      try {
+        usePoule.getState().applySeasonReward(() => runtime.sync.claimSeasonReward(pending))
+        set({ pendingReward: null, dialog: null })
+      } catch (error) {
+        console.error(error)
+        sayError('Impossible de récupérer la récompense. Terminez la partie en cours puis réessayez.')
       }
     },
 
     openDialog: (dialog) => set({ dialog }),
     closeDialog: () => set((state) => ({ dialog: state.dialog === 'conflict' ? 'conflict' : null })),
+
+    /** Board for signed-out visitors too: loads once Firebase is ready. */
+    ready: () => runtime.sync !== null,
   }
 })

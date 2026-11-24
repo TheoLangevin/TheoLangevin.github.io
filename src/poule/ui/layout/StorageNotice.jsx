@@ -5,7 +5,7 @@ export default function StorageNotice() {
   const message = usePoule((state) => state.storageError)
   if (!message) return null
   return (
-    <p className="notice" role="alert">
+    <p className="storage-notice" role="alert">
       {message}
     </p>
   )

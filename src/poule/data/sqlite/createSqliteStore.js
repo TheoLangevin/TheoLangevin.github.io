@@ -80,8 +80,18 @@ export function createSqliteStore(database) {
     },
   }
 
+  const seasons = {
+    claimed: () => database.all(SQL.claimsAll),
+    add: (claim) => void database.run(SQL.claimInsert, { ...claim, now: now() }),
+    replace(claims) {
+      database.run(SQL.claimsClear)
+      for (const claim of claims) database.run(SQL.claimInsert, { ...claim, now: now() })
+    },
+  }
+
   return {
     kind: 'sqlite',
+    seasons,
     wallet,
     rounds,
     settings,

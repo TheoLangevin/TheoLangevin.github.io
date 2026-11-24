@@ -134,11 +134,25 @@ export function describeSave(save) {
   }
 }
 
-/** The public all-time line of a player on the leaderboard. */
+/** Slots shown on a public profile (what the hen wears), never perks. */
+export const LOOK_SLOTS = Object.freeze(['hat', 'neck', 'plumage', 'trail', 'road', 'party', 'title'])
+
+/** What the hen wears, as public data: slot → item id, known items only. */
+export function publicLook(equipped = {}) {
+  const look = {}
+  for (const slot of LOOK_SLOTS) {
+    const item = upgradeById(equipped[slot])
+    if (item && item.slot === slot) look[slot] = item.id
+  }
+  return look
+}
+
+/** The public all-time line of a player on the leaderboard (and their public profile). */
 export function leaderboardEntry(save, pseudo) {
   const won = save.rounds.filter((round) => round.status === 'won')
   return {
     pseudo,
+    look: publicLook(save.equipped),
     title: save.equipped.title ?? null,
     level: Math.min(MAX_LEVEL, levelFromXp(save.xp)),
     xp: save.xp,

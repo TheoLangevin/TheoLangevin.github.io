@@ -98,7 +98,7 @@ function Title({ id }) {
   return label ? <span className="row__title">{label}</span> : null
 }
 
-function Podium({ kind, entries, uid }) {
+function Podium({ kind, entries, uid, open }) {
   const order = [entries[1], entries[0], entries[2]]
   return (
     <ol className="podium" aria-label="Podium">
@@ -176,6 +176,7 @@ export default function RankingScreen({ hidden, go }) {
       loadBoard: state.loadBoard,
       signIn: state.signIn,
       openDialog: state.openDialog,
+      openPlayer: state.openPlayer,
     })),
   )
   const ready = a.status === 'signedIn' || a.status === 'signedOut'
@@ -231,16 +232,18 @@ export default function RankingScreen({ hidden, go }) {
 
       {entries.length > 0 && (
         <div aria-busy={loading}>
-          <Podium kind={kind} entries={entries} uid={a.uid} />
+          <Podium kind={kind} entries={entries} uid={a.uid} open={a.openPlayer} />
           <ol className="board" start={4}>
             {entries.slice(3).map((entry, index) => (
               <li key={entry.uid} className={entry.uid === a.uid ? 'is-me' : undefined}>
-                <span className="board__rank">{index + 4}</span>
-                <span className="board__who">
-                  <b>{entry.pseudo}</b>
-                  <Title id={entry.title} />
-                </span>
-                <span className="board__value">{valueOf(kind, entry)}</span>
+                <button type="button" className="board__row" onClick={() => a.openPlayer(entry.uid, entry)}>
+                  <span className="board__rank">{index + 4}</span>
+                  <span className="board__who">
+                    <b>{entry.pseudo}</b>
+                    <Title id={entry.title} />
+                  </span>
+                  <span className="board__value">{valueOf(kind, entry)}</span>
+                </button>
               </li>
             ))}
           </ol>
@@ -250,12 +253,14 @@ export default function RankingScreen({ hidden, go }) {
       {mine && !inList && season?.standing && (
         <ol className="board board--me" aria-label="Votre place">
           <li className="is-me">
-            <span className="board__rank">{season.standing.rank}</span>
-            <span className="board__who">
-              <b>{mine.pseudo}</b>
-              <small className="muted">Vous</small>
-            </span>
-            <span className="board__value">{valueOf('season', mine)}</span>
+            <button type="button" className="board__row" onClick={() => a.openPlayer(a.uid, mine)}>
+              <span className="board__rank">{season.standing.rank}</span>
+              <span className="board__who">
+                <b>{mine.pseudo}</b>
+                <small className="muted">Vous</small>
+              </span>
+              <span className="board__value">{valueOf('season', mine)}</span>
+            </button>
           </li>
         </ol>
       )}

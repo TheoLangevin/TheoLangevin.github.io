@@ -48,6 +48,7 @@ export const useAccount = create((set, get) => {
     dialog: null,
     board: { kind: 'season', entries: [], loading: false, error: null, season: null },
     pendingReward: null,
+    player: null,
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -200,6 +201,30 @@ export const useAccount = create((set, get) => {
         sayError('Impossible de récupérer la récompense. Terminez la partie en cours puis réessayez.')
       }
     },
+
+    /** Opens another player's public profile (from a leaderboard row). */
+    async openPlayer(uid, preview = {}) {
+      set({ player: { uid, loading: Boolean(runtime.sync), error: null, profile: { uid, ...preview } } })
+      if (!runtime.sync) return
+      try {
+        const profile = await runtime.sync.profileOf(uid)
+        if (get().player?.uid !== uid) return
+        set({
+          player: {
+            uid,
+            loading: false,
+            error: profile ? null : 'Profil introuvable.',
+            profile: profile ?? { uid, ...preview },
+          },
+        })
+      } catch (error) {
+        console.error(error)
+        if (get().player?.uid === uid)
+          set({ player: { ...get().player, loading: false, error: 'Profil indisponible.' } })
+      }
+    },
+
+    closePlayer: () => set({ player: null }),
 
     openDialog: (dialog) => set({ dialog }),
     closeDialog: () => set((state) => ({ dialog: state.dialog === 'conflict' ? 'conflict' : null })),

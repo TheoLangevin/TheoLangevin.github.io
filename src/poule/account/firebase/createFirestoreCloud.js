@@ -5,7 +5,8 @@ import { CloudConflictError, PseudoTakenError } from '../cloud.js'
  *
  *   users/{uid}          { save, rev, createdAt, updatedAt }       private
  *   pseudos/{lowercase}  { uid, pseudo }                           public, unique names
- *   leaderboard/{uid}    { pseudo, title, level, xp, tokens, bestMultiplier, bestLanes, updatedAt }  public
+ *   leaderboard/{uid}    { pseudo, look, title, level, xp, tokens, bestMultiplier, bestLanes, updatedAt }  public,
+ *                        also a player's public profile (look = what their hen wears)
  *   seasons/{week}/entries/{uid}  { pseudo, title, level, score, bestMultiplier, league, updatedAt }  public
  *
  * firestore.rules enforces who may write what.
@@ -100,6 +101,11 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
     async seasonBoard(season, size = 20) {
       const entries = collection(db, 'seasons', season, 'entries')
       return rows(await getDocs(query(entries, where('score', '>', 0), orderBy('score', 'desc'), limit(size))))
+    },
+
+    async profileOf(uid) {
+      const snap = await getDoc(entryRef(uid))
+      return snap.exists() ? { ...snap.data(), uid, updatedAt: undefined } : null
     },
 
     async seasonEntryOf(season, uid) {

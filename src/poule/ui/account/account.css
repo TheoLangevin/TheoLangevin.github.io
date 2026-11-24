@@ -283,3 +283,39 @@
   background: var(--soft);
   font-weight: 700;
 }
+
+/* A player's public profile */
+
+.player {
+  display: grid;
+  gap: 12px;
+}
+
+.player .mannequin--large {
+  width: min(200px, 55%, 30dvh);
+  justify-self: center;
+}
+
+.player__me {
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+  color: var(--green);
+}
+
+.player__worn {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.player__worn li {
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--soft);
+  font-size: 13px;
+  font-weight: 800;
+}

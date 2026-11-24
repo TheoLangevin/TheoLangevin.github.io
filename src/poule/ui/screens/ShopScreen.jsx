@@ -6,9 +6,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { BoltIcon, CoinIcon, FeatherIcon, GiftIcon, LockIcon } from '../icons.jsx'
-import { Trail } from '../road/Hen.jsx'
-import { HenSprite } from '../road/sprites.jsx'
-import { lookFrom } from '../road/useHenLook.js'
+import Mannequin from '../road/Mannequin.jsx'
 import './shop.css'
 
 const NOTHING = {}
@@ -30,18 +28,6 @@ export function Price({ item }) {
     <span className="price">
       <FeatherIcon size={14} /> {count(item.cost)}
     </span>
-  )
-}
-
-/** The hen wearing `equipped`, on a bit of pavement in the road theme. */
-function Mannequin({ equipped, size = 'small' }) {
-  const look = lookFrom(equipped)
-  return (
-    <div className={`mannequin mannequin--${size} road-swatch`} data-road={look.road ?? undefined}>
-      {look.trail && <Trail trail={look.trail} className="trail--static" />}
-      <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
-      {look.title && <span className="mannequin__title">{look.title}</span>}
-    </div>
   )
 }
 

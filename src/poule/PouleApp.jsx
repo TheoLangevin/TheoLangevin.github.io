@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
+import { useAccount } from './state/useAccount.js'
 import { usePoule } from './state/usePoule.js'
+import AccountDialogs from './ui/account/AccountDialogs.jsx'
+import LeaderboardPanel from './ui/account/LeaderboardPanel.jsx'
 import { useGameSounds } from './ui/audio/useGameSounds.js'
 import ActionButtons from './ui/controls/ActionButtons.jsx'
 import BetControl from './ui/controls/BetControl.jsx'
@@ -21,10 +24,11 @@ import './ui/panels/panels.css'
 /** Page layout: header, the arcade cabinet with the road, controls, the hen house, then panels. */
 export default function PouleApp() {
   const init = usePoule((state) => state.init)
+  const initAccount = useAccount((state) => state.init)
 
   useEffect(() => {
-    init()
-  }, [init])
+    init().then(initAccount)
+  }, [init, initAccount])
   useKeyboard()
   useGameSounds()
 
@@ -32,6 +36,7 @@ export default function PouleApp() {
     <div className="page">
       <Header />
       <Notices />
+      <AccountDialogs />
       <StorageNotice />
       <div className="cabinet">
         <Road />
@@ -44,6 +49,7 @@ export default function PouleApp() {
       </div>
       <ShopPanel />
       <AchievementsPanel />
+      <LeaderboardPanel />
       <div className="panels">
         <StatsPanel />
         <FairnessPanel />

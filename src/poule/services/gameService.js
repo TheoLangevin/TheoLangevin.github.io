@@ -12,6 +12,7 @@ import {
   purchaseCheck,
 } from '../domain/progression.js'
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
+import { roundToSave, SAVE_ROUNDS, SAVE_VERSION, validateSave } from '../domain/save.js'
 
 export class GameError extends Error {
   constructor(code, message) {
@@ -48,6 +49,26 @@ const toUpdate = (round, feathers = 0) => ({
  */
 export function createGameService({ store, clock = () => new Date().toISOString(), seeds = randomSeed }) {
   let current = null
+  let changes = 0
+  const listeners = new Set()
+
+  /**
+   * A write that changes the player's progress: one transaction, flagged as
+   * not yet synced with the account, then listeners are told.
+   */
+  function write(work) {
+    const result = store.transaction(() => {
+      const value = work()
+      store.settings.set('sync_dirty', '1')
+      return value
+    })
+    changes++
+    // After the caller has updated the round in progress, so listeners see it.
+    queueMicrotask(() => {
+      for (const listener of listeners) listener()
+    })
+    return result
+  }
 
   async function restore(row) {
     const mode = modeById(row.mode_id)
@@ -133,7 +154,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     },
 
     savePreferences({ modeId, betCents, autocashTarget, sound }) {
-      store.transaction(() => {
+      write(() => {
         if (modeId) store.settings.set('mode', modeId)
         if (betCents) store.settings.set('bet', betCents)
         if (autocashTarget !== undefined) store.settings.set('autocash', autocashTarget ?? '')
@@ -174,7 +195,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       const [seedHash, outcomes] = await Promise.all([sha256Hex(seed), drawOutcomes(seed, mode)])
       const startedAt = clock()
 
-      const id = store.transaction(() => {
+      const id = write(() => {
         if (!store.wallet.debit(betCents)) throw new GameError('insufficient-funds', 'Solde insuffisant')
         return store.rounds.insert({
           modeId: mode.id,
@@ -198,11 +219,11 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       if (!current) throw new GameError('no-round', 'Aucune partie en cours')
       const result = advance(current, clock())
       if (result.event === 'crossed') {
-        store.transaction(() => store.rounds.update(toUpdate(result.round)))
+        write(() => store.rounds.update(toUpdate(result.round)))
         current = result.round
         return { ...result, fatalLane: null, progress: null }
       }
-      const progress = store.transaction(() => settle(result.round))
+      const progress = write(() => settle(result.round))
       current = null
       return { ...result, fatalLane: firstFatalLane(result.round.outcomes), progress }
     },
@@ -210,14 +231,14 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     cashOut() {
       if (!current) throw new GameError('no-round', 'Aucune partie en cours')
       const round = cashOut(current, clock())
-      const progress = store.transaction(() => settle(round))
+      const progress = write(() => settle(round))
       current = null
       return { event: 'cashed', lane: round.lane, round, fatalLane: firstFatalLane(round.outcomes), progress }
     },
 
     /** Buys an upgrade with feathers and puts it on. Returns achievements it unlocked. */
     buy(upgradeId) {
-      return store.transaction(() => {
+      return write(() => {
         const profile = store.profile.get()
         const verdict = purchaseCheck(upgradeId, {
           owned: store.upgrades.owned(),
@@ -237,7 +258,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     toggleEquip(upgradeId) {
       const upgrade = upgradeById(upgradeId)
       if (!upgrade || upgrade.slot === 'perk') return
-      store.transaction(() => {
+      write(() => {
         if (!store.upgrades.owned().includes(upgradeId)) throw new GameError('not-owned', 'Pas encore achetée')
         if (store.upgrades.equipped()[upgrade.slot] === upgradeId) store.upgrades.unequip(upgrade.slot)
         else store.upgrades.equip(upgrade.slot, upgradeId)
@@ -249,9 +270,79 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     /** Back to the starting balance, history and totals cleared. Progression stays. */
     reset() {
       if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
-      store.transaction(() => {
+      write(() => {
         store.rounds.clearFinished()
         store.wallet.set(STARTING_BALANCE)
+      })
+    },
+
+    /** Called after every change of progress (to sync it). Returns an unsubscribe function. */
+    onChange(listener) {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+
+    /** The player's whole progress as a save (domain/save.js). */
+    exportSave() {
+      const profile = store.profile.get()
+      const prefs = service.preferences()
+      return {
+        v: SAVE_VERSION,
+        balanceCents: store.wallet.balance(),
+        xp: profile.xp,
+        feathers: profile.feathers,
+        upgrades: store.upgrades.owned(),
+        equipped: store.upgrades.equipped(),
+        achievements: store.achievements.unlocked(),
+        prefs: { mode: prefs.modeId, bet: prefs.betCents, autocash: prefs.autocashTarget, sound: prefs.sound },
+        rounds: store.rounds.forSave(SAVE_ROUNDS).map(roundToSave),
+      }
+    },
+
+    /**
+     * Replaces this device's progress with a save (from the account). Refused
+     * during a round. Does not mark the device as changed.
+     */
+    importSave(raw) {
+      if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      const save = validateSave(raw)
+      if (!save) throw new GameError('invalid-save', 'Sauvegarde du compte illisible')
+      store.transaction(() => {
+        store.wallet.set(save.balanceCents)
+        store.profile.set({ xp: save.xp, feathers: save.feathers })
+        store.upgrades.replace(save.upgrades, save.equipped)
+        store.achievements.replace(save.achievements)
+        store.rounds.replaceFinished(save.rounds)
+        store.settings.set('mode', save.prefs.mode)
+        if (save.prefs.bet) store.settings.set('bet', save.prefs.bet)
+        store.settings.set('autocash', save.prefs.autocash ?? '')
+        store.settings.set('sound', save.prefs.sound ? 'on' : 'off')
+      })
+      return save
+    },
+
+    /** Which account this device last synced with, and how far. */
+    syncState() {
+      return {
+        linkedUid: store.settings.get('sync_uid', null) || null,
+        syncedRev: Number(store.settings.get('sync_rev', 0)) || 0,
+        dirty: store.settings.get('sync_dirty', '0') === '1',
+      }
+    },
+
+    /** Counts changes of progress in this session, to spot one made during a sync. */
+    changeCount: () => changes,
+
+    /**
+     * Records a successful sync: this device now matches `rev` of `uid`'s
+     * save. `clean` is false when the player changed something meanwhile, so
+     * the device stays flagged for the next sync.
+     */
+    markSynced(uid, rev, { clean = true } = {}) {
+      store.transaction(() => {
+        store.settings.set('sync_uid', uid)
+        store.settings.set('sync_rev', rev)
+        if (clean) store.settings.set('sync_dirty', '0')
       })
     },
   }

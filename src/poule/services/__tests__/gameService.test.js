@@ -185,3 +185,50 @@ describe('progression', () => {
     expect(service.preferences().autocashTarget).toBeNull()
   })
 })
+
+describe('saves', () => {
+  it('exports progress and imports it on another device', async () => {
+    const seed = await seedSafeFor(2)
+    const first = serviceWith(seed)
+    await first.service.start({ modeId: 'easy', betCents: 1000 })
+    first.service.step()
+    first.service.step()
+    first.service.cashOut()
+    first.store.profile.earn(100)
+    first.service.buy('cap')
+    first.service.savePreferences({ modeId: 'hard', sound: false })
+    const exported = first.service.exportSave()
+
+    const second = serviceWith('other')
+    second.service.importSave(exported)
+    expect(second.service.exportSave()).toEqual(exported)
+    const summary = second.service.summary()
+    expect(summary.stats.played).toBe(1)
+    expect(summary.progression.equipped).toEqual({ hat: 'cap' })
+    expect(second.service.preferences().modeId).toBe('hard')
+  })
+
+  it('refuses to import during a round or from a broken save', async () => {
+    const { service } = serviceWith(await seedSafeFor(1))
+    expect(() => service.importSave({ v: 1 })).toThrow()
+    const good = service.exportSave()
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    expect(() => service.importSave(good)).toThrow()
+  })
+
+  it('flags changes for sync and clears the flag once synced', async () => {
+    const { service } = serviceWith(await seedSafeFor(1))
+    let calls = 0
+    service.onChange(() => calls++)
+    expect(service.syncState().dirty).toBe(false)
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    expect(service.syncState().dirty).toBe(true)
+    await Promise.resolve()
+    expect(calls).toBe(1)
+    service.markSynced('u1', 4)
+    expect(service.syncState()).toEqual({ linkedUid: 'u1', syncedRev: 4, dirty: false })
+    service.step()
+    service.markSynced('u1', 5, { clean: false })
+    expect(service.syncState().dirty).toBe(true)
+  })
+})

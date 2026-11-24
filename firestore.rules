@@ -1,0 +1,96 @@
+rules_version = '2';
+
+// Security rules of the Firestore database behind La Poule Traverse
+// (Firebase project la-poule-traverse). Published from the Firebase console,
+// or with `firebase deploy --only firestore:rules` (see firebase.json).
+//
+//   users/{uid}          a player's save. Only they can read or write it.
+//   pseudos/{lowercase}  unique public names. Anyone can read; claiming one
+//                        and freeing your own are the only writes.
+//   leaderboard/{uid}    public line of a player who chose a pseudo.
+//
+// Saves are computed in the player's browser, so a determined player can
+// still fake their own numbers; these rules keep the data well formed, private
+// where it should be, and every player in charge of their own documents only.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validPseudo(pseudo) {
+      return pseudo is string && pseudo.matches('^[A-Za-z0-9_-]{3,16}$');
+    }
+
+    function validSave(save) {
+      return save is map
+        && save.v == 1
+        && save.balanceCents is int && save.balanceCents >= 0
+        && save.xp is int && save.xp >= 0
+        && save.feathers is int && save.feathers >= 0
+        && save.upgrades is list && save.upgrades.size() <= 50
+        && save.achievements is list && save.achievements.size() <= 100
+        && save.rounds is list && save.rounds.size() <= 1000;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])
+        && validSave(request.resource.data.save)
+        && request.resource.data.rev == 1
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Each write is the next revision, so two devices cannot silently
+      // overwrite each other.
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])
+        && validSave(request.resource.data.save)
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /pseudos/{name} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'pseudo'])
+        && request.resource.data.uid == request.auth.uid
+        && validPseudo(request.resource.data.pseudo)
+        && request.resource.data.pseudo.lower() == name;
+
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if true;
+
+      // The pseudo must belong to this player once the write is applied, and
+      // the experience must match their own save.
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['pseudo', 'level', 'xp', 'bestMultiplier', 'bestLanes', 'updatedAt'])
+        && validPseudo(request.resource.data.pseudo)
+        && getAfter(/databases/$(database)/documents/pseudos/$(request.resource.data.pseudo.lower())).data.uid == request.auth.uid
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 50
+        && request.resource.data.xp is int && request.resource.data.xp >= 0
+        && request.resource.data.xp <= get(/databases/$(database)/documents/users/$(uid)).data.save.xp
+        && request.resource.data.bestMultiplier is number
+        && request.resource.data.bestMultiplier >= 0 && request.resource.data.bestMultiplier <= 5000
+        && request.resource.data.bestLanes is int
+        && request.resource.data.bestLanes >= 0 && request.resource.data.bestLanes <= 24
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isOwner(uid);
+    }
+  }
+}

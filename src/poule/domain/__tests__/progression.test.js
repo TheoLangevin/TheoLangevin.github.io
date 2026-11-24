@@ -4,7 +4,8 @@ import { modeById } from '../../config/modes.js'
 import { xpForLevel } from '../../config/progression.js'
 import { UPGRADES } from '../../config/upgrades.js'
 import {
-  feathersFor,
+  levelUpPay,
+  xpFor,
   lanesCrossed,
   levelFromXp,
   levelProgress,
@@ -33,10 +34,10 @@ describe('progression', () => {
     expect(lanesCrossed(finished('lost', 1))).toBe(0)
   })
 
-  it('pays feathers per lane crossed, more in harder modes, whatever the bet', () => {
-    expect(feathersFor(finished('won', 3))).toBe(6)
-    expect(feathersFor(finished('lost', 3, 'hardcore'))).toBe(16)
-    expect(feathersFor(finished('lost', 1))).toBe(0)
+  it('pays XP per lane crossed, more in harder modes, whatever the bet', () => {
+    expect(xpFor(finished('won', 3))).toBe(6)
+    expect(xpFor(finished('lost', 3, 'hardcore'))).toBe(16)
+    expect(xpFor(finished('lost', 1))).toBe(0)
   })
 
   it('derives the level from experience', () => {
@@ -51,11 +52,18 @@ describe('progression', () => {
     expect(progress.ratio).toBeLessThan(1)
   })
 
-  it('checks a purchase: level, feathers, already owned', () => {
-    const profile = { owned: [], level: 1, feathers: 1000 }
+  it('pays tokens for each level reached', () => {
+    expect(levelUpPay(1, 1)).toBe(0)
+    expect(levelUpPay(1, 2)).toBe(2000)
+    expect(levelUpPay(1, 4)).toBe(2000 + 3000 + 4000)
+    expect(levelUpPay(5, 3)).toBe(0)
+  })
+
+  it('checks a purchase: level, tokens, already owned', () => {
+    const profile = { owned: [], level: 1, balanceCents: 1_000_000 }
     expect(purchaseCheck('cap', profile)).toBe('ok')
     expect(purchaseCheck('crown', profile)).toBe('level')
-    expect(purchaseCheck('cap', { ...profile, feathers: 10 })).toBe('feathers')
+    expect(purchaseCheck('cap', { ...profile, balanceCents: 10 })).toBe('tokens')
     expect(purchaseCheck('cap', { ...profile, owned: ['cap'] })).toBe('owned')
     expect(purchaseCheck('nope', profile)).toBe('unknown')
     expect(purchaseCheck('laurel', profile)).toBe('exclusive')

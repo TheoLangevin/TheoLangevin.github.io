@@ -27,7 +27,7 @@ export const SQL = Object.freeze({
     UPDATE rounds
     SET lane = :lane, status = :status, multiplier = :multiplier,
         payout_cents = :payoutCents, ended_at = :endedAt,
-        crossed = :crossed, road_lanes = :roadLanes, feathers = :feathers
+        crossed = :crossed, road_lanes = :roadLanes, feathers = :xp
     WHERE id = :id`,
 
   roundActive: `
@@ -56,7 +56,7 @@ export const SQL = Object.freeze({
     GROUP BY mode_id`,
 
   roundsForSave: `
-    SELECT mode_id, bet_cents, payout_cents, multiplier, lane, crossed, road_lanes, feathers, status, ended_at
+    SELECT mode_id, bet_cents, payout_cents, multiplier, lane, crossed, road_lanes, feathers AS xp, status, ended_at
     FROM rounds WHERE status <> 'active'
     ORDER BY id DESC
     LIMIT :limit`,
@@ -65,7 +65,7 @@ export const SQL = Object.freeze({
     INSERT INTO rounds (mode_id, bet_cents, seed, seed_hash, lane, status, multiplier, payout_cents,
                         started_at, ended_at, crossed, road_lanes, feathers)
     VALUES (:modeId, :betCents, '', '', :lane, :status, :multiplier, :payoutCents,
-            :endedAt, :endedAt, :crossed, :roadLanes, :feathers)`,
+            :endedAt, :endedAt, :crossed, :roadLanes, :xp)`,
 
   roundClearFinished: `DELETE FROM rounds WHERE status <> 'active'`,
 
@@ -80,13 +80,11 @@ export const SQL = Object.freeze({
       COALESCE(SUM(status = 'won' AND road_lanes > 0 AND crossed = road_lanes), 0) AS finished
     FROM rounds WHERE status <> 'active'`,
 
-  profileGet: `SELECT xp, feathers FROM profile WHERE id = 1`,
+  profileGet: `SELECT xp FROM profile WHERE id = 1`,
 
-  profileEarn: `UPDATE profile SET xp = xp + :amount, feathers = feathers + :amount WHERE id = 1`,
+  profileEarn: `UPDATE profile SET xp = xp + :amount WHERE id = 1`,
 
-  profileSet: `UPDATE profile SET xp = :xp, feathers = :feathers WHERE id = 1`,
-
-  profileSpend: `UPDATE profile SET feathers = feathers - :amount WHERE id = 1 AND feathers >= :amount`,
+  profileSet: `UPDATE profile SET xp = :xp WHERE id = 1`,
 
   upgradesOwned: `SELECT id FROM upgrades ORDER BY bought_at, id`,
 

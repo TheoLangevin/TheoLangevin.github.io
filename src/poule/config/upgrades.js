@@ -3,9 +3,8 @@
  * or how the game handles, never the chance of crossing a lane: the odds stay
  * the ones the mode shows.
  *
- * Every item is paid in one currency: `feathers` (earned by crossing lanes)
- * or `tokens` (the game's chips, in cents like every amount). `level` is the
- * level needed to buy it. `exclusive` items cannot be bought: they are season
+Every item is paid in tokens (the game's chips, in cents like every amount).
+ * `level` is the level needed to buy it. `exclusive` items cannot be bought: they are season
  * rewards (domain/seasons.js). `secret` items are not listed: the shop
  * reveals them to players who look for them. One item per slot can be worn at a time, except
  * perks, which are always on once owned.
@@ -27,10 +26,10 @@ export const SLOTS = Object.freeze([
 export const UPGRADES = Object.freeze(
   [
     // Hats
-    { id: 'cap', slot: 'hat', label: 'Casquette', currency: 'feathers', cost: 40, level: 1 },
-    { id: 'shades', slot: 'hat', label: 'Lunettes de soleil', currency: 'feathers', cost: 90, level: 2 },
-    { id: 'helmet', slot: 'hat', label: 'Casque de chantier', currency: 'feathers', cost: 160, level: 4 },
-    { id: 'crown', slot: 'hat', label: 'Couronne', currency: 'feathers', cost: 400, level: 8 },
+    { id: 'cap', slot: 'hat', label: 'Casquette', currency: 'tokens', cost: t(400), level: 1 },
+    { id: 'shades', slot: 'hat', label: 'Lunettes de soleil', currency: 'tokens', cost: t(900), level: 2 },
+    { id: 'helmet', slot: 'hat', label: 'Casque de chantier', currency: 'tokens', cost: t(1600), level: 4 },
+    { id: 'crown', slot: 'hat', label: 'Couronne', currency: 'tokens', cost: t(4000), level: 8 },
     { id: 'beanie', slot: 'hat', label: 'Bonnet', currency: 'tokens', cost: t(800), level: 1 },
     { id: 'beret', slot: 'hat', label: 'Béret', currency: 'tokens', cost: t(1200), level: 1 },
     { id: 'party-hat', slot: 'hat', label: 'Chapeau de fête', currency: 'tokens', cost: t(1500), level: 1 },
@@ -66,8 +65,8 @@ export const UPGRADES = Object.freeze(
       id: 'russet',
       slot: 'plumage',
       label: 'Roux',
-      currency: 'feathers',
-      cost: 60,
+      currency: 'tokens',
+      cost: t(600),
       level: 1,
       colors: ['#d9793b', '#b85f27'],
     },
@@ -75,8 +74,8 @@ export const UPGRADES = Object.freeze(
       id: 'ink',
       slot: 'plumage',
       label: 'Noir',
-      currency: 'feathers',
-      cost: 140,
+      currency: 'tokens',
+      cost: t(1400),
       level: 3,
       colors: ['#2e2f36', '#1d1e24'],
     },
@@ -84,8 +83,8 @@ export const UPGRADES = Object.freeze(
       id: 'gold',
       slot: 'plumage',
       label: 'Doré',
-      currency: 'feathers',
-      cost: 500,
+      currency: 'tokens',
+      cost: t(5000),
       level: 10,
       colors: ['#ffcf33', '#e0a400'],
     },
@@ -149,8 +148,8 @@ export const UPGRADES = Object.freeze(
       id: 'dust',
       slot: 'trail',
       label: 'Poussière',
-      currency: 'feathers',
-      cost: 80,
+      currency: 'tokens',
+      cost: t(800),
       level: 2,
       trail: { shape: 'round', colors: ['#c9b9a0'] },
     },
@@ -158,8 +157,8 @@ export const UPGRADES = Object.freeze(
       id: 'sparkles',
       slot: 'trail',
       label: 'Étincelles',
-      currency: 'feathers',
-      cost: 260,
+      currency: 'tokens',
+      cost: t(2600),
       level: 6,
       trail: { shape: 'diamond', colors: ['#ffc21a'] },
     },
@@ -269,8 +268,8 @@ export const UPGRADES = Object.freeze(
       slot: 'perk',
       label: 'Pas rapide',
       description: 'La poule saute deux fois plus vite.',
-      currency: 'feathers',
-      cost: 70,
+      currency: 'tokens',
+      cost: t(700),
       level: 1,
     },
     {
@@ -278,8 +277,8 @@ export const UPGRADES = Object.freeze(
       slot: 'perk',
       label: 'Encaissement auto',
       description: 'Encaisse tout seul au multiplicateur que vous fixez.',
-      currency: 'feathers',
-      cost: 150,
+      currency: 'tokens',
+      cost: t(1500),
       level: 3,
     },
   ].map((item) => Object.freeze(item)),

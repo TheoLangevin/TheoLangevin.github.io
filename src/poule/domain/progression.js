@@ -1,13 +1,20 @@
 import { ACHIEVEMENTS } from '../config/achievements.js'
-import { FEATHERS_PER_LANE, MAX_LEVEL, xpForLevel } from '../config/progression.js'
+import { MAX_LEVEL, XP_PER_LANE, levelUpBonus, xpForLevel } from '../config/progression.js'
 import { upgradeById } from '../config/upgrades.js'
 import { ROUND_STATUS } from './round.js'
 
 /** Lanes the hen actually got across in a finished round. */
 export const lanesCrossed = (round) => (round.status === ROUND_STATUS.lost ? round.lane - 1 : round.lane)
 
-/** Feathers earned by a finished round: per lane crossed, by mode. */
-export const feathersFor = (round) => lanesCrossed(round) * (FEATHERS_PER_LANE[round.mode.id] ?? 1)
+/** XP earned by a finished round: per lane crossed, by mode. */
+export const xpFor = (round) => lanesCrossed(round) * (XP_PER_LANE[round.mode.id] ?? 1)
+
+/** Tokens (cents) owed for the levels from `paidLevel` (excluded) up to `level`. */
+export function levelUpPay(paidLevel, level) {
+  let cents = 0
+  for (let next = paidLevel + 1; next <= level; next++) cents += levelUpBonus(next)
+  return cents
+}
 
 export function levelFromXp(xp) {
   let level = 1
@@ -26,16 +33,15 @@ export function levelProgress(xp) {
 
 /**
  * Whether an item can be bought: `ok`, or the reason it cannot (`unknown`,
- * `exclusive`, `owned`, `level`, `feathers`, `tokens`).
+ * `exclusive`, `owned`, `level`, `tokens`).
  */
-export function purchaseCheck(upgradeId, { owned, level, feathers, balanceCents = 0 }) {
+export function purchaseCheck(upgradeId, { owned, level, balanceCents = 0 }) {
   const upgrade = upgradeById(upgradeId)
   if (!upgrade) return 'unknown'
   if (upgrade.exclusive) return 'exclusive'
   if (owned.includes(upgradeId)) return 'owned'
   if (level < upgrade.level) return 'level'
-  if (upgrade.currency === 'tokens') return balanceCents >= upgrade.cost ? 'ok' : 'tokens'
-  return feathers >= upgrade.cost ? 'ok' : 'feathers'
+  return balanceCents >= upgrade.cost ? 'ok' : 'tokens'
 }
 
 /** Achievements newly met by `stats`, among those not yet unlocked. */

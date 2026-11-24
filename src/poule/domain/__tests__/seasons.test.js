@@ -33,9 +33,9 @@ describe('season calendar', () => {
 
   it('scores the rounds of the week only', () => {
     const rounds = [
-      { endedAt: '2026-11-22T23:00:00Z', feathers: 50, status: 'won', mult: 9 },
-      { endedAt: '2026-11-23T08:00:00Z', feathers: 6, status: 'won', mult: 1.22 },
-      { endedAt: '2026-11-25T08:00:00Z', feathers: 4, status: 'lost', mult: 0 },
+      { endedAt: '2026-11-22T23:00:00Z', xp: 50, status: 'won', mult: 9 },
+      { endedAt: '2026-11-23T08:00:00Z', xp: 6, status: 'won', mult: 1.22 },
+      { endedAt: '2026-11-25T08:00:00Z', xp: 4, status: 'lost', mult: 0 },
     ]
     expect(weeklyStats(rounds, new Date('2026-11-26T00:00:00Z'))).toEqual({ xp: 10, bestMultiplier: 1.22, played: 2 })
   })

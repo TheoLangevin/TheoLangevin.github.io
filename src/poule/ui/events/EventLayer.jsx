@@ -107,7 +107,7 @@ function Wheel({ resolve, dismiss }) {
   )
 }
 
-/** A tornado sweeps across the screen and blows a few feathers and tokens in. */
+/** A tornado sweeps across the screen and blows a few tokens in (and feathers fly for the show). */
 function Tornado({ resolve }) {
   useEffect(() => {
     playWind()
@@ -115,7 +115,7 @@ function Tornado({ resolve }) {
       () =>
         resolve(TORNADO_BONUS, {
           title: 'Tornade !',
-          detail: `Le vent a apporté ${TORNADO_BONUS.feathers} plumes et ${TORNADO_BONUS.tokens / 100} jetons`,
+          detail: `Le vent a apporté ${TORNADO_BONUS.tokens / 100} jetons`,
         }),
       2600,
     )
@@ -157,14 +157,14 @@ function Tornado({ resolve }) {
   )
 }
 
-/** Two hens: the next round's feathers count twice. */
+/** Two hens: the next round pays double XP and tokens per lane. */
 function DoubleHen({ resolve }) {
   const look = useHenLook()
   const actions = (
     <button
       type="button"
       className="big big--play"
-      onClick={() => resolve({ double: true }, { title: 'Double poule !', detail: 'Prochaine partie : plumes ×2' })}
+      onClick={() => resolve({ double: true }, { title: 'Double poule !', detail: 'Prochaine partie : XP ×2 et des jetons à chaque voie' })}
     >
       Cot cot !
     </button>
@@ -176,7 +176,7 @@ function DoubleHen({ resolve }) {
         <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
       </div>
       <p>
-        Une jumelle vous accompagne : à la prochaine partie, chaque voie franchie rapporte deux fois plus de plumes.
+        Une jumelle vous accompagne : à la prochaine partie, vous gagnez deux fois plus d’XP et chaque voie franchie rapporte des jetons en plus.
       </p>
     </Dialog>
   )

@@ -7,7 +7,7 @@ import { useAccount } from '../../state/useAccount.js'
 import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
-import { CoinIcon, FeatherIcon } from '../icons.jsx'
+import { CoinIcon } from '../icons.jsx'
 import './ranking.css'
 
 const BOARDS = [
@@ -146,7 +146,7 @@ function RewardsSheet({ onClose }) {
               <small className="muted"> dès {count(league.min)} XP</small>
             </span>
             <span className="rewards__gain">
-              <CoinIcon size={14} /> {tokens(league.reward.tokens)} <FeatherIcon size={13} /> {league.reward.feathers}
+              <CoinIcon size={14} /> {tokens(league.reward.tokens)}
             </span>
           </li>
         ))}
@@ -157,7 +157,7 @@ function RewardsSheet({ onClose }) {
           <li key={tier.id}>
             <b>{tier.label}</b>
             <span className="rewards__gain">
-              <CoinIcon size={14} /> {tokens(tier.reward.tokens)} <FeatherIcon size={13} /> {tier.reward.feathers}
+              <CoinIcon size={14} /> {tokens(tier.reward.tokens)}
             </span>
             {tier.reward.items.length > 0 && (
               <small className="rewards__items">

@@ -11,7 +11,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
     rounds: [],
     settings: {},
     nextId: 1,
-    profile: { xp: 0, feathers: 0 },
+    profile: { xp: 0 },
     upgrades: [],
     equipped: {},
     achievements: [],
@@ -49,7 +49,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
         ended_at: null,
         crossed: 0,
         road_lanes: 0,
-        feathers: 0,
+        xp: 0,
       })
       return id
     },
@@ -64,7 +64,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
         ended_at: row.endedAt,
         crossed: row.crossed ?? 0,
         road_lanes: row.roadLanes ?? 0,
-        feathers: row.feathers ?? 0,
+        xp: row.xp ?? 0,
       })
     },
     active: () => state.rounds.find((row) => row.status === 'active') ?? null,
@@ -129,7 +129,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
             lane,
             crossed,
             road_lanes,
-            feathers,
+            xp,
             status,
             ended_at,
           }) => ({
@@ -140,7 +140,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
             lane,
             crossed,
             road_lanes,
-            feathers,
+            xp,
             status,
             ended_at,
           }),
@@ -162,7 +162,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
           ended_at: round.endedAt,
           crossed: round.crossed,
           road_lanes: round.roadLanes,
-          feathers: round.feathers,
+          xp: round.xp,
         })
       }
     },
@@ -178,14 +178,8 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
     get: () => ({ ...state.profile }),
     earn(amount) {
       state.profile.xp += amount
-      state.profile.feathers += amount
     },
-    spend(amount) {
-      if (state.profile.feathers < amount) return false
-      state.profile.feathers -= amount
-      return true
-    },
-    set: ({ xp, feathers }) => void (state.profile = { xp, feathers }),
+    set: ({ xp }) => void (state.profile = { xp }),
   }
 
   const upgrades = {

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { achievementById } from '../../config/achievements.js'
 import { STARTING_BALANCE } from '../../config/economy.js'
+import { DOUBLE_LANE_BONUS } from '../../config/events.js'
 import { modeById } from '../../config/modes.js'
 import { createMemoryStore } from '../../data/memory/createMemoryStore.js'
 import { drawOutcomes, firstFatalLane } from '../../domain/fairness.js'
@@ -21,6 +23,10 @@ async function seedFatalAt(lane, mode = easy) {
     if (firstFatalLane(await drawOutcomes(`seed-${i}`, mode)) === lane) return `seed-${i}`
   }
 }
+
+/** Tokens (cents) the unlocked achievements paid. */
+const achievementPay = (service) =>
+  service.summary().progression.achievements.reduce((sum, id) => sum + achievementById(id).reward, 0)
 
 const serviceWith = (seed, store = createMemoryStore()) => ({
   store,
@@ -51,7 +57,7 @@ describe('game service', () => {
     expect(() => service.cashOut()).toThrow()
 
     const summary = service.summary()
-    expect(summary.balanceCents).toBe(STARTING_BALANCE - 1000 + payoutCents(1000, easy, 3))
+    expect(summary.balanceCents).toBe(STARTING_BALANCE - 1000 + payoutCents(1000, easy, 3) + achievementPay(service))
     expect(summary.stats.played).toBe(1)
     expect(summary.stats.won).toBe(1)
     expect(summary.history[0].status).toBe('won')
@@ -64,7 +70,7 @@ describe('game service', () => {
     const result = service.step()
     expect(result.event).toBe('hit')
     expect(result.fatalLane).toBe(2)
-    expect(service.summary().balanceCents).toBe(STARTING_BALANCE - 1000)
+    expect(service.summary().balanceCents).toBe(STARTING_BALANCE - 1000 + achievementPay(service))
     expect(service.summary().stats.returnedCents).toBe(0)
   })
 
@@ -129,18 +135,31 @@ describe('game service', () => {
 })
 
 describe('progression', () => {
-  it('pays feathers and experience for the lanes crossed, even on a loss', async () => {
+  it('pays experience for the lanes crossed, even on a loss, and achievements in tokens', async () => {
     const { service } = serviceWith(await seedFatalAt(3))
     await service.start({ modeId: 'easy', betCents: 1000 })
     service.step()
     service.step()
     const result = service.step()
     expect(result.event).toBe('hit')
-    expect(result.progress.feathers).toBe(4)
+    expect(result.progress.xp).toBe(4)
     expect(result.progress.achievements).toContain('first-steps')
     const { progression } = service.summary()
-    expect(progression.feathers).toBe(4 + 10)
-    expect(progression.xp).toBe(progression.feathers)
+    expect(progression.xp).toBe(4)
+    expect(service.summary().balanceCents).toBe(STARTING_BALANCE - 1000 + achievementPay(service))
+  })
+
+  it('pays tokens for a new level, once, and not for the level already reached', async () => {
+    const store = createMemoryStore()
+    store.profile.earn(88) // level 2, level 3 needs 90
+    const { service } = serviceWith(await seedSafeFor(2), store)
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    service.step()
+    service.step()
+    const progress = service.cashOut().progress
+    expect(progress.levelUp).toBe(3)
+    expect(progress.levelCents).toBe(3000)
+    expect(store.settings.get('level_paid')).toBe('3')
   })
 
   it('unlocks an achievement only once', async () => {
@@ -156,14 +175,13 @@ describe('progression', () => {
     expect(service.summary().progression.achievements).toEqual(['first-steps', 'first-win'])
   })
 
-  it('buys an upgrade with feathers and wears it', () => {
-    const store = createMemoryStore()
-    store.profile.earn(100)
+  it('buys an upgrade with tokens and wears it', () => {
+    const store = createMemoryStore({ balance: 50000 })
     const service = createGameService({ store })
     expect(() => service.buy('crown')).toThrow()
     service.buy('cap')
     const { progression } = service.summary()
-    expect(progression.feathers).toBe(60)
+    expect(store.wallet.balance()).toBe(10000)
     expect(progression.owned).toEqual(['cap'])
     expect(progression.equipped).toEqual({ hat: 'cap' })
     expect(() => service.buy('cap')).toThrow()
@@ -172,12 +190,11 @@ describe('progression', () => {
     expect(service.summary().progression.equipped).toEqual({})
   })
 
-  it('does not take feathers for a purchase that fails', () => {
-    const store = createMemoryStore()
-    store.profile.earn(30)
+  it('does not take tokens for a purchase that fails', () => {
+    const store = createMemoryStore({ balance: 30000 })
     const service = createGameService({ store })
     expect(() => service.buy('cap')).toThrow()
-    expect(service.summary().progression.feathers).toBe(30)
+    expect(store.wallet.balance()).toBe(30000)
     expect(service.summary().progression.owned).toEqual([])
   })
 
@@ -265,11 +282,10 @@ describe('token shop and seasons', () => {
   it('pays a season reward once, with its exclusive items', () => {
     const { service, store } = serviceWith('s')
     const reward = service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })
-    expect(store.wallet.balance()).toBe(STARTING_BALANCE + reward.tokens)
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE + reward.tokens + achievementPay(service))
     const { progression } = service.summary()
     expect(progression.owned).toContain('title-champion')
     expect(progression.equipped.title).toBe('title-champion')
-    expect(progression.feathers).toBeGreaterThanOrEqual(reward.feathers)
     expect(() => service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })).toThrow()
     expect(() => service.claimSeason({ season: '2026-W46', score: 0 })).toThrow()
     expect(service.claimedSeasons()).toEqual(['2026-W47'])
@@ -289,15 +305,14 @@ describe('token shop and seasons', () => {
 })
 
 describe('event bonuses', () => {
-  it('hands out tokens and feathers', () => {
+  it('hands out tokens', () => {
     const { service, store } = serviceWith('s')
-    service.grantBonus({ tokens: 2500, feathers: 15 })
+    service.grantBonus({ tokens: 2500 })
     expect(store.wallet.balance()).toBe(STARTING_BALANCE + 2500)
-    expect(service.summary().progression.feathers).toBeGreaterThanOrEqual(15)
     expect(() => service.grantBonus({ tokens: -5 })).toThrow()
   })
 
-  it('doubles the feathers of the next round only', async () => {
+  it('doubles the XP of the next round only, and pays tokens per lane', async () => {
     const seed = await seedSafeFor(3)
     const { service } = serviceWith(seed)
     service.grantBonus({ double: true })
@@ -307,11 +322,12 @@ describe('event bonuses', () => {
     service.step()
     const first = service.cashOut().progress
     expect(first.doubled).toBe(true)
-    expect(first.feathers).toBe(8)
+    expect(first.xp).toBe(8)
+    expect(first.bonusCents).toBe(2 * DOUBLE_LANE_BONUS)
     expect(service.summary().doubleNext).toBe(false)
     await service.start({ modeId: 'easy', betCents: 1000 })
     service.step()
     service.step()
-    expect(service.cashOut().progress.feathers).toBe(4)
+    expect(service.cashOut().progress.xp).toBe(4)
   })
 })

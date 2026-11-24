@@ -1,7 +1,7 @@
 /**
  * Random events that pop up after a round, for fun. They never touch the
- * odds of a round: they only hand out small bonuses (a few tokens, feathers,
- * or double feathers for the next round).
+ * odds of a round: they only hand out small bonuses (a few tokens, or a double
+ * hen: the next round pays double XP and a token bonus per lane).
  */
 
 const t = (tokens) => tokens * 100
@@ -20,14 +20,17 @@ export const EVENTS = Object.freeze([
 /** The wheel's segments, clockwise from the top. Equal chances. */
 export const WHEEL = Object.freeze([
   { id: 't10', label: '+10', detail: '+10 jetons', color: '#ffc21a', bonus: { tokens: t(10) } },
-  { id: 'f15', label: '+15', detail: '+15 plumes', color: '#ffffff', bonus: { feathers: 15 } },
+  { id: 't15', label: '+15', detail: '+15 jetons', color: '#ffffff', bonus: { tokens: t(15) } },
   { id: 'double', label: '×2', detail: 'Double poule', color: '#8e44ad', bonus: { double: true } },
   { id: 't25', label: '+25', detail: '+25 jetons', color: '#ffc21a', bonus: { tokens: t(25) } },
   { id: 'cot', label: 'Cot !', detail: 'Cot cot… rien du tout', color: '#e8392c', bonus: {} },
-  { id: 'f40', label: '+40', detail: '+40 plumes', color: '#ffffff', bonus: { feathers: 40 } },
+  { id: 't100', label: '+100', detail: '+100 jetons', color: '#ffffff', bonus: { tokens: t(100) } },
   { id: 't50', label: '+50', detail: '+50 jetons', color: '#ffc21a', bonus: { tokens: t(50) } },
-  { id: 'f25', label: '+25', detail: '+25 plumes', color: '#ffffff', bonus: { feathers: 25 } },
+  { id: 't35', label: '+35', detail: '+35 jetons', color: '#ffffff', bonus: { tokens: t(35) } },
 ])
 
 /** What a tornado blows in. */
-export const TORNADO_BONUS = Object.freeze({ feathers: 25, tokens: t(5) })
+export const TORNADO_BONUS = Object.freeze({ tokens: t(30) })
+
+/** A double hen pays this many tokens (cents) per lane crossed in the next round, and doubles its XP. */
+export const DOUBLE_LANE_BONUS = t(2)

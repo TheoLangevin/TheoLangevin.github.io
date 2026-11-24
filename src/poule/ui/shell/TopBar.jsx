@@ -2,10 +2,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAccount } from '../../state/useAccount.js'
 import { usePoule } from '../../state/usePoule.js'
 import Avatar from '../account/Avatar.jsx'
-import { count, tokens } from '../format.js'
-import { CoinIcon, FeatherIcon, UserIcon } from '../icons.jsx'
+import { tokens } from '../format.js'
+import { CoinIcon, UserIcon } from '../icons.jsx'
 
-/** Level with its progress ring, feathers, tokens, and the player. */
+/** Level with its progress ring, tokens, and the player. */
 export default function TopBar({ go }) {
   const { ready, balance, progression } = usePoule(
     useShallow((state) => ({
@@ -33,10 +33,6 @@ export default function TopBar({ go }) {
         <span className="pill pill--tokens">
           <CoinIcon size={18} />
           <b>{ready ? tokens(balance) : '…'}</b>
-        </span>
-        <span className="pill pill--feathers">
-          <FeatherIcon size={16} />
-          <b>{progression ? count(progression.feathers) : '…'}</b>
         </span>
       </div>
 

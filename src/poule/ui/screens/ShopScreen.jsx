@@ -5,7 +5,7 @@ import { purchaseCheck } from '../../domain/progression.js'
 import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
-import { BoltIcon, CoinIcon, FeatherIcon, GiftIcon, LockIcon } from '../icons.jsx'
+import { BoltIcon, CoinIcon, GiftIcon, LockIcon } from '../icons.jsx'
 import Mannequin from '../road/Mannequin.jsx'
 import './shop.css'
 
@@ -20,13 +20,9 @@ export function Price({ item }) {
       </span>
     )
   }
-  return item.currency === 'tokens' ? (
+  return (
     <span className="price">
       <CoinIcon size={15} /> {tokens(item.cost)}
-    </span>
-  ) : (
-    <span className="price">
-      <FeatherIcon size={14} /> {count(item.cost)}
     </span>
   )
 }
@@ -122,7 +118,6 @@ function AutocashSetting() {
 
 const REASON = {
   level: (item) => `Niveau ${item.level} requis`,
-  feathers: () => 'Pas assez de plumes',
   tokens: () => 'Pas assez de jetons',
   exclusive: () => 'Récompense de saison',
 }
@@ -243,9 +238,7 @@ export default function ShopScreen({ hidden }) {
         <div className="shop__hero-text">
           <h1 className="screen__title">Boutique</h1>
           <p className="muted">
-            {count(listed.filter((item) => item.currency === 'tokens').length)} objets en jetons,{' '}
-            {count(listed.filter((item) => item.currency === 'feathers').length)} en plumes. Aucun ne change vos
-            chances.
+            {count(listed.length)} objets, tous en jetons. Aucun ne change vos chances.
             {taps >= 3 && <span className="shop__whisper"> Encore…</span>}
           </p>
         </div>

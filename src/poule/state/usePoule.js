@@ -53,7 +53,7 @@ function progressNotices(progress) {
       id: uid(),
       kind: 'achievement',
       title: achievement.label,
-      detail: `Succès débloqué · +${achievement.reward} plumes`,
+      detail: `Succès débloqué · +${tokens(achievement.reward)} jetons`,
     }
   })
   if (progress.levelUp) {
@@ -61,7 +61,9 @@ function progressNotices(progress) {
       id: uid(),
       kind: 'level',
       title: `Niveau ${progress.levelUp} !`,
-      detail: 'De nouvelles améliorations sont disponibles',
+      detail: progress.levelCents
+        ? `+${tokens(progress.levelCents)} jetons offerts`
+        : 'De nouvelles améliorations sont disponibles',
     })
   }
   return notices
@@ -101,7 +103,10 @@ export const usePoule = create((set, get) => {
     }, 1500)
   }
 
-  const featherDetail = (progress) => `+${progress.feathers} plumes${progress.doubled ? ' (×2)' : ''}`
+  const xpDetail = (progress) =>
+    progress.doubled
+      ? `+${progress.xp} XP (×2) · +${tokens(progress.bonusCents)} jetons de bonus`
+      : `+${progress.xp} XP`
 
   function finish(result) {
     const { round, progress } = result
@@ -113,7 +118,7 @@ export const usePoule = create((set, get) => {
       toast: {
         kind: 'win',
         title: `+${tokens(round.payoutCents)} jetons`,
-        detail: `${multiplierLabel(round.multiplier)} après ${round.lane} voie${round.lane > 1 ? 's' : ''} · ${featherDetail(progress)}`,
+        detail: `${multiplierLabel(round.multiplier)} après ${round.lane} voie${round.lane > 1 ? 's' : ''} · ${xpDetail(progress)}`,
         id: uid(),
       },
     })
@@ -245,14 +250,13 @@ export const usePoule = create((set, get) => {
         await sleep(TIMING.crashImpact)
         set((state) => ({ scene: { ...state.scene, deadLane: lane }, ...fx('crash') }))
         await sleep(TIMING.crashResult - TIMING.crashImpact)
-        const feathers = result.progress.feathers
         refresh({
           busy: false,
           reveal: revealOf(result),
           toast: {
             kind: 'lose',
             title: 'Écrasée !',
-            detail: `Voie ${lane} : mise de ${tokens(result.round.betCents)} jetons perdue${feathers ? ` · ${featherDetail(result.progress)}` : ''}`,
+            detail: `Voie ${lane} : mise de ${tokens(result.round.betCents)} jetons perdue${result.progress.xp ? ` · ${xpDetail(result.progress)}` : ''}`,
             id: uid(),
           },
         })
@@ -372,7 +376,7 @@ export const usePoule = create((set, get) => {
     resolveEvent(bonus, notice) {
       try {
         const granted = runtime.service.grantBonus(bonus)
-        refresh({ event: null, ...(bonus.tokens || bonus.feathers ? fx('buy') : {}) })
+        refresh({ event: null, ...(bonus.tokens ? fx('buy') : {}) })
         notify([
           { id: uid(), kind: 'buy', ...notice },
           ...progressNotices({ achievements: granted.achievements, levelUp: null }),

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
-/** The app's screens, by the hash that opens them (#boutique...). */
-export const ROUTES = Object.freeze(['jouer', 'boutique', 'classement', 'profil'])
+/** The app's screens, by the hash that opens them (#boutique...). `admin` has no tab: it is opened from the profile. */
+export const ROUTES = Object.freeze(['jouer', 'boutique', 'classement', 'profil', 'admin'])
 
 const read = () => {
   const hash = location.hash.slice(1)

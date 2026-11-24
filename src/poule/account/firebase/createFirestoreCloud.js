@@ -113,6 +113,28 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
       return snap.exists() ? { ...snap.data(), uid } : null
     },
 
+    /** Admin only (firestore.rules): every player's save, with when it was made and last changed, and the pseudos. */
+    async adminOverview(max = 2000) {
+      const [saves, lines] = await Promise.all([
+        getDocs(query(collection(db, 'users'), limit(max))),
+        getDocs(query(collection(db, 'leaderboard'), limit(max))),
+      ])
+      const millis = (stamp) => (stamp?.toMillis ? stamp.toMillis() : null)
+      return {
+        users: saves.docs.map((entry) => {
+          const data = entry.data()
+          return {
+            uid: entry.id,
+            rev: data.rev ?? 0,
+            createdAt: millis(data.createdAt),
+            updatedAt: millis(data.updatedAt),
+            save: data.save ?? null,
+          }
+        }),
+        profiles: lines.docs.map((entry) => ({ uid: entry.id, pseudo: entry.data().pseudo ?? null })),
+      }
+    },
+
     async seasonRank(season, score) {
       const entries = collection(db, 'seasons', season, 'entries')
       const [above, scored] = await Promise.all([

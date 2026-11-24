@@ -17,6 +17,8 @@
  * @property {(season: string, size?: number) => Promise<object[]>} seasonBoard  by weekly score
  * @property {(uid: string) => Promise<object | null>} profileOf  a player's public profile (their all-time line)
  * @property {(season: string, uid: string) => Promise<object | null>} seasonEntryOf
+ * @property {(max?: number) => Promise<{ users: object[], profiles: object[] }>} adminOverview
+ *   admin only: every save ({ uid, rev, createdAt, updatedAt, save }) and the pseudos
  * @property {(season: string, score: number) => Promise<{ rank: number, total: number }>} seasonRank
  *   rank = players with a higher score + 1; total = players who scored
  */
@@ -100,6 +102,18 @@ export function createMemoryCloud() {
     async seasonEntryOf(id, uid) {
       const line = season(id).get(uid)
       return line ? { uid, ...line } : null
+    },
+    async adminOverview() {
+      return {
+        users: [...users.entries()].map(([uid, entry]) => ({
+          uid,
+          rev: entry.rev,
+          createdAt: entry.createdAt ?? null,
+          updatedAt: entry.updatedAt ?? null,
+          save: copy(entry.save),
+        })),
+        profiles: [...entries.entries()].map(([uid, entry]) => ({ uid, pseudo: entry.pseudo })),
+      }
     },
     async seasonRank(id, score) {
       const scores = [...season(id).values()].map((line) => line.score)

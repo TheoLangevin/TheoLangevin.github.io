@@ -15,6 +15,7 @@
  * @property {(uid: string, pseudo: string, season: string) => Promise<void>} removeEntry
  * @property {(by: 'xp' | 'tokens' | 'bestMultiplier', size?: number) => Promise<object[]>} leaderboard
  * @property {(season: string, size?: number) => Promise<object[]>} seasonBoard  by weekly score
+ * @property {(uid: string) => Promise<object | null>} profileOf  a player's public profile (their all-time line)
  * @property {(season: string, uid: string) => Promise<object | null>} seasonEntryOf
  * @property {(season: string, score: number) => Promise<{ rank: number, total: number }>} seasonRank
  *   rank = players with a higher score + 1; total = players who scored
@@ -92,6 +93,9 @@ export function createMemoryCloud() {
         .filter((line) => line.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, size)
+    },
+    async profileOf(uid) {
+      return entries.has(uid) ? { uid, ...entries.get(uid) } : null
     },
     async seasonEntryOf(id, uid) {
       const line = season(id).get(uid)

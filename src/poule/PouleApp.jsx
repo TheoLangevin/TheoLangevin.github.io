@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAccount } from './state/useAccount.js'
 import { usePoule } from './state/usePoule.js'
 import AccountDialogs from './ui/account/AccountDialogs.jsx'
+import PlayerSheet from './ui/account/PlayerSheet.jsx'
 import { useGameSounds } from './ui/audio/useGameSounds.js'
 import ConeParty from './ui/events/ConeParty.jsx'
 import EventLayer from './ui/events/EventLayer.jsx'
@@ -48,6 +49,7 @@ export default function PouleApp() {
       <TabBar route={route} go={go} />
       <Notices />
       <AccountDialogs />
+      <PlayerSheet />
       <EventLayer />
       <ConeParty />
     </div>

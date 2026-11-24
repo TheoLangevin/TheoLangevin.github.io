@@ -7,7 +7,8 @@ rules_version = '2';
 //   users/{uid}          a player's save. Only they can read or write it.
 //   pseudos/{lowercase}  unique public names. Anyone can read; claiming one
 //                        and freeing your own are the only writes.
-//   leaderboard/{uid}    public all-time line of a player who chose a pseudo.
+//   leaderboard/{uid}    public all-time line of a player who chose a pseudo,
+//                        also their public profile (what their hen wears).
 //   seasons/{week}/entries/{uid}  public line of that player for one week.
 //
 // Saves are computed in the player's browser, so a determined player can
@@ -31,6 +32,16 @@ service cloud.firestore {
 
     function validTitle(title) {
       return title == null || (title is string && title.size() <= 40);
+    }
+
+    // What a hen wears, shown on public profiles: slot -> item id.
+    function validLook(look) {
+      return look is map
+        && look.keys().hasOnly(['hat', 'neck', 'plumage', 'trail', 'road', 'party', 'title'])
+        && look.get('hat', '') is string && look.get('neck', '') is string
+        && look.get('plumage', '') is string && look.get('trail', '') is string
+        && look.get('road', '') is string && look.get('party', '') is string
+        && look.get('title', '') is string;
     }
 
     // The pseudo is this player's once the write is applied.
@@ -93,8 +104,9 @@ service cloud.firestore {
 
       // The experience and tokens shown cannot exceed the player's own save.
       allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['pseudo', 'title', 'level', 'xp', 'tokens', 'bestMultiplier', 'bestLanes', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['pseudo', 'look', 'title', 'level', 'xp', 'tokens', 'bestMultiplier', 'bestLanes', 'updatedAt'])
         && ownsPseudo(request.resource.data.pseudo)
+        && validLook(request.resource.data.get('look', {}))
         && validTitle(request.resource.data.get('title', null))
         && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 50
         && request.resource.data.xp is int && request.resource.data.xp >= 0

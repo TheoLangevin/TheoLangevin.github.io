@@ -6,6 +6,7 @@ import {
   isPristine,
   isValidPseudo,
   leaderboardEntry,
+  publicLook,
   seasonEntry,
   validateSave,
 } from '../save.js'
@@ -87,12 +88,20 @@ describe('save format', () => {
     expect(describeSave(save()).played).toBe(2)
     expect(leaderboardEntry(save(), 'Poulette')).toEqual({
       pseudo: 'Poulette',
+      look: { hat: 'cap' },
       title: null,
       level: 3,
       xp: 120,
       tokens: 90000,
       bestMultiplier: 1.22,
       bestLanes: 3,
+    })
+  })
+
+  it('publishes only what the hen wears, never perks or unknown items', () => {
+    expect(publicLook({ hat: 'cone', perk: 'turbo', road: 'neon', neck: 'jetpack', plumage: 'cap' })).toEqual({
+      hat: 'cone',
+      road: 'neon',
     })
   })
 

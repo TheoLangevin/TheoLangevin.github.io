@@ -242,6 +242,9 @@ export function createSyncService({
     /** All-time board: by 'xp', 'tokens' or 'bestMultiplier'. */
     leaderboard: (by, size) => cloud.leaderboard(by, size),
 
+    /** Another player's public profile: pseudo, look, level and records. */
+    profileOf: (otherUid) => cloud.profileOf(otherUid),
+
     /** This week's board, and where the player stands in it. */
     async season(size) {
       const id = seasonId(now())

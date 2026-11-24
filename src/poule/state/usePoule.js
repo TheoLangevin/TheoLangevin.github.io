@@ -94,9 +94,10 @@ export const usePoule = create((set, get) => {
     const id = rollEvent(Math.random, runtime.roundsSinceEvent)
     if (!id) return
     runtime.roundsSinceEvent = 0
-    // Let the round's result show first; skip it if a new round has started.
+    // Let the round's result show first. It still comes if a new round has
+    // started meanwhile: an event may interrupt play, it is never skipped.
     setTimeout(() => {
-      if (!get().round && !get().event) set({ event: { id, key: uid() } })
+      if (!get().event) set({ event: { id, key: uid() } })
     }, 1500)
   }
 

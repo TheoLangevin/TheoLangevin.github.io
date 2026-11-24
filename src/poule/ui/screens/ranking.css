@@ -115,6 +115,16 @@
   text-align: center;
 }
 
+.podium__who {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 4px 0;
+  background: none;
+  font-weight: 400;
+}
+
 .podium__avatar {
   display: grid;
   place-items: center;
@@ -200,6 +210,12 @@
 }
 
 .board li {
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.board__row {
+  width: 100%;
   display: grid;
   grid-template-columns: 2.4em minmax(0, 1fr) auto;
   align-items: center;
@@ -207,7 +223,9 @@
   min-height: 52px;
   padding: 6px 12px;
   border-radius: 14px;
-  background: var(--card);
+  background: none;
+  text-align: left;
+  font-weight: 400;
 }
 
 .board .is-me {

@@ -13,12 +13,13 @@ import './play.css'
 
 /** Three figures above the road: before a round, what it offers; during it, where it stands. */
 function RoundHud() {
-  const { round, modeId, betCents, autocash } = usePoule(
+  const { round, modeId, betCents, autocash, twin } = usePoule(
     useShallow((state) => ({
       round: state.round,
       modeId: state.round?.modeId ?? state.modeId,
       betCents: state.round?.betCents ?? state.betCents,
       autocash: state.progression?.owned.includes('autocash') ? state.autocashTarget : null,
+      twin: state.doubleNext,
     })),
   )
   const mode = modeById(modeId)
@@ -43,6 +44,7 @@ function RoundHud() {
           <b>{value}</b>
         </div>
       ))}
+      {twin && <span className="hud__twin">Double poule · plumes ×2</span>}
       {round && autocash && (
         <span className="hud__auto">
           <BoltIcon size={12} /> auto {multiplierLabel(autocash)}
@@ -140,8 +142,8 @@ function Refill({ balanceCents, lastRefillAt, refill }) {
     <button type="button" className="refill" onClick={refill} disabled={check.verdict !== 'ok'}>
       <CoinIcon size={20} />
       {check.verdict === 'ok'
-        ? `Plus de jetons ? Recharge gratuite de ${tokens(REFILL_AMOUNT)}`
-        : `Recharge gratuite dans ${minutes} min`}
+        ? `Recharge gratuite : +${tokens(REFILL_AMOUNT)} jetons`
+        : `Prochaine recharge (+${tokens(REFILL_AMOUNT)}) dans ${minutes} min`}
     </button>
   )
 }

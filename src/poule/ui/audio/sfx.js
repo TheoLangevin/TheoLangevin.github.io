@@ -75,3 +75,27 @@ export const playChime = () =>
   )
 
 export const playStart = () => tone({ freq: 440, to: 660, duration: 0.1, type: 'triangle', volume: 0.07 })
+
+/** A little dance tune for the hidden item's party (about 2.5 s). */
+export function playDance() {
+  const notes = [523, 659, 784, 659, 587, 698, 880, 698, 523, 659, 784, 1047]
+  notes.forEach((freq, index) => tone({ freq, duration: 0.16, type: 'square', volume: 0.05, delay: index * 0.2 }))
+  ;[0, 0.8, 1.6].forEach((delay) => tone({ freq: 131, to: 98, duration: 0.25, type: 'triangle', volume: 0.12, delay }))
+}
+
+/** The wheel ticking as it slows down. */
+export function playSpin(duration = 3.6) {
+  let at = 0
+  let gap = 0.05
+  while (at < duration) {
+    tone({ freq: 1400, duration: 0.03, type: 'square', volume: 0.03, delay: at })
+    at += gap
+    gap *= 1.09
+  }
+}
+
+/** Wind for the tornado. */
+export function playWind() {
+  noise({ duration: 1.6, volume: 0.12 })
+  tone({ freq: 180, to: 420, duration: 1.4, type: 'sine', volume: 0.05 })
+}

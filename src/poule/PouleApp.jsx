@@ -3,6 +3,8 @@ import { useAccount } from './state/useAccount.js'
 import { usePoule } from './state/usePoule.js'
 import AccountDialogs from './ui/account/AccountDialogs.jsx'
 import { useGameSounds } from './ui/audio/useGameSounds.js'
+import ConeParty from './ui/events/ConeParty.jsx'
+import EventLayer from './ui/events/EventLayer.jsx'
 import { useHaptics } from './ui/feedback/useHaptics.js'
 import { useKeyboard } from './ui/hooks/useKeyboard.js'
 import Notices from './ui/layout/Notices.jsx'
@@ -46,6 +48,8 @@ export default function PouleApp() {
       <TabBar route={route} go={go} />
       <Notices />
       <AccountDialogs />
+      <EventLayer />
+      <ConeParty />
     </div>
   )
 }

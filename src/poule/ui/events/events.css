@@ -1,0 +1,327 @@
+/* Wheel of fortune */
+
+.wheel {
+  position: relative;
+  justify-self: center;
+  width: min(260px, 70vw, 38dvh);
+  aspect-ratio: 1;
+}
+
+.wheel__disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 6px #2a2c35,
+    0 8px 0 6px #0003;
+  transition: transform 3.6s cubic-bezier(0.12, 0.8, 0.12, 1);
+}
+
+.wheel__label {
+  font: 400 15px var(--display);
+}
+
+.wheel__pointer {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  margin-left: -14px;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid var(--red);
+  filter: drop-shadow(0 3px 0 #0004);
+}
+
+.wheel__result {
+  text-align: center;
+  font: 400 22px var(--display);
+  min-height: 1.3em;
+}
+
+/* Tornado */
+
+.tornado {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tornado__funnel {
+  position: absolute;
+  top: 18%;
+  left: -40%;
+  width: min(180px, 40vw);
+  animation: tornado-cross 2.6s ease-in-out forwards;
+}
+
+.tornado__funnel ellipse {
+  transform-origin: 60px 100px;
+  animation: tornado-spin 0.35s linear infinite alternate;
+}
+
+.tornado__bit {
+  position: absolute;
+  left: -10%;
+  width: 14px;
+  height: 6px;
+  border-radius: 50% 0;
+  background: #fff;
+  box-shadow: 0 0 0 1px #0002;
+  animation: tornado-bits 1.4s ease-in forwards;
+}
+
+.tornado__text {
+  position: absolute;
+  top: 8%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font: 400 40px var(--display);
+  color: #fff;
+  text-shadow:
+    0 3px 0 #2a2c35,
+    0 0 20px #0006;
+  animation: tornado-text 2.6s ease forwards;
+}
+
+@keyframes tornado-cross {
+  0% {
+    transform: translateX(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(80vw) rotate(6deg);
+  }
+  100% {
+    transform: translateX(170vw) rotate(-4deg);
+  }
+}
+
+@keyframes tornado-spin {
+  to {
+    transform: translateX(8px) scaleX(0.92);
+  }
+}
+
+@keyframes tornado-bits {
+  to {
+    transform: translate(120vw, -30vh) rotate(720deg);
+  }
+}
+
+@keyframes tornado-text {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Double hen */
+
+.double {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+}
+
+.double svg {
+  width: min(120px, 32vw);
+  height: auto;
+  overflow: visible;
+  animation: double-bounce 0.7s ease-in-out infinite alternate;
+}
+
+.double svg + svg {
+  margin-left: -28px;
+  animation-delay: 0.35s;
+}
+
+@keyframes double-bounce {
+  to {
+    transform: translateY(-14px) rotate(4deg);
+  }
+}
+
+/* The hidden item's party */
+
+.party {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100dvh;
+  z-index: 60;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 40%, #3b1d5c, #120a1f 70%);
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+  animation: dialog-fade 0.3s ease;
+}
+
+.party__lights {
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg,
+    #ff7a1a33,
+    transparent 10%,
+    #8fd3ff33 20%,
+    transparent 30%,
+    #ffc21a33 40%,
+    transparent 50%,
+    #e8392c33 60%,
+    transparent 70%,
+    #9ff0c833 80%,
+    transparent 90%
+  );
+  animation: party-spin 6s linear infinite;
+}
+
+.party__confetti {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: party-fall linear infinite;
+}
+
+.party__stage {
+  position: relative;
+  width: min(260px, 70vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: end center;
+}
+
+.party__hen {
+  width: 78%;
+  transform-origin: 50% 90%;
+  animation: party-dance 0.5s ease-in-out infinite alternate;
+}
+
+.party__hen svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 6px 0 #0006);
+}
+
+.party__floor {
+  position: absolute;
+  bottom: 2%;
+  width: 70%;
+  height: 12px;
+  border-radius: 50%;
+  background: #0006;
+  animation: party-shadow 0.5s ease-in-out infinite alternate;
+}
+
+.party__note {
+  position: absolute;
+  bottom: 50%;
+  left: calc(10% + var(--i) * 15%);
+  font: 800 28px var(--body);
+  color: #ffc21a;
+  opacity: 0;
+  animation: party-note 1.8s ease-out infinite;
+  animation-delay: calc(var(--i) * 0.3s);
+}
+
+.party__title {
+  position: relative;
+  margin: 8px 0 0;
+  font: 400 clamp(28px, 8vw, 40px) / 1.1 var(--display);
+  color: #ffc21a;
+  text-shadow: 0 4px 0 #0006;
+}
+
+.party__sub {
+  position: relative;
+  margin: 0;
+  max-width: 28ch;
+  font-weight: 700;
+  color: #ffffffcc;
+}
+
+.party__close {
+  position: relative;
+  min-width: 220px;
+  margin-top: 10px;
+}
+
+@keyframes party-dance {
+  0% {
+    transform: rotate(-14deg) translateY(0);
+  }
+  50% {
+    transform: rotate(0) translateY(-22px) scaleY(1.04);
+  }
+  100% {
+    transform: rotate(14deg) translateY(0);
+  }
+}
+
+@keyframes party-shadow {
+  50% {
+    transform: scaleX(0.7);
+    opacity: 0.6;
+  }
+}
+
+@keyframes party-note {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(-10deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-140px) rotate(20deg);
+  }
+}
+
+@keyframes party-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes party-fall {
+  to {
+    transform: translateY(110dvh) rotate(720deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .party__lights,
+  .party__confetti,
+  .party__note,
+  .tornado__funnel ellipse,
+  .double svg {
+    animation: none;
+  }
+
+  .party__hen,
+  .party__floor {
+    animation-duration: 1.5s;
+  }
+}

@@ -6,7 +6,8 @@
  * Every item is paid in one currency: `feathers` (earned by crossing lanes)
  * or `tokens` (the game's chips, in cents like every amount). `level` is the
  * level needed to buy it. `exclusive` items cannot be bought: they are season
- * rewards (domain/seasons.js). One item per slot can be worn at a time, except
+ * rewards (domain/seasons.js). `secret` items are not listed: the shop
+ * reveals them to players who look for them. One item per slot can be worn at a time, except
  * perks, which are always on once owned.
  */
 
@@ -41,6 +42,17 @@ export const UPGRADES = Object.freeze(
     { id: 'wizard', slot: 'hat', label: 'Chapeau de mage', currency: 'tokens', cost: t(7000), level: 6 },
     { id: 'halo', slot: 'hat', label: 'Auréole', currency: 'tokens', cost: t(12000), level: 8 },
     { id: 'laurel', slot: 'hat', label: 'Couronne de laurier', exclusive: true, level: 1 },
+    // Hidden in the shop (tap the hen in the dressing room a few times).
+    {
+      id: 'cone',
+      slot: 'hat',
+      label: 'Ceci n’est pas un chapeau',
+      description: 'Un plot de chantier. Clairement pas un chapeau.',
+      secret: true,
+      currency: 'tokens',
+      cost: t(4444),
+      level: 1,
+    },
 
     // Around the neck
     { id: 'bow-tie', slot: 'neck', label: 'Nœud papillon', currency: 'tokens', cost: t(600), level: 1 },

@@ -154,7 +154,7 @@
 }
 
 .dialog .mannequin--large {
-  width: min(220px, 70%);
+  width: min(200px, 60%, 30dvh);
   justify-self: center;
 }
 
@@ -270,4 +270,40 @@
   background: var(--card);
   color: var(--ink);
   padding: 0 10px;
+}
+
+/* The dressing-room hen hides the secret item: she wobbles when tapped. */
+.shop__hen {
+  padding: 0;
+  min-height: 0;
+  border-radius: 14px;
+  background: none;
+}
+
+.shop__hen:not([data-taps='0']) .mannequin svg {
+  animation: hen-wobble 0.3s ease;
+}
+
+@keyframes hen-wobble {
+  30% {
+    transform: rotate(-10deg) translateY(-4px);
+  }
+  70% {
+    transform: rotate(8deg);
+  }
+}
+
+.shop__whisper {
+  font-style: italic;
+  font-weight: 800;
+  color: #e85d00;
+}
+
+.shop__secret {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ff7a1a22;
+  color: #b84a00;
+  font-weight: 800;
+  text-align: center;
 }

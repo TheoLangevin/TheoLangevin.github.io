@@ -58,6 +58,25 @@
   color: #ffffffaa;
 }
 
+.hud__twin {
+  position: absolute;
+  left: 6px;
+  top: -8px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: #8e44ad;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  animation: twin-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes twin-pulse {
+  to {
+    transform: scale(1.06);
+  }
+}
+
 .hud__auto {
   position: absolute;
   right: 6px;

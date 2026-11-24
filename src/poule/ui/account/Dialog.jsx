@@ -1,10 +1,17 @@
 import { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
- * A modal dialog: traps nothing fancy, but takes focus, closes on Escape and
- * on a click outside (unless `locked`), and gives focus back when it closes.
+ * A modal dialog, shown as a bottom sheet on phones. It is rendered at the end
+ * of <body> (portal), so no scrolling or clipped container of the app can
+ * push it out of view. The `actions` stay pinned at the bottom of the sheet,
+ * above the iPhone home indicator, however long the content is; the content
+ * scrolls between the title and the actions.
+ *
+ * Takes focus, closes on Escape and on a tap outside (unless `locked`), and
+ * gives focus back when it closes.
  */
-export default function Dialog({ title, onClose, locked = false, children, wide = false }) {
+export default function Dialog({ title, onClose, locked = false, children, actions = null, wide = false }) {
   const titleId = useId()
   const panel = useRef(null)
 
@@ -24,8 +31,8 @@ export default function Dialog({ title, onClose, locked = false, children, wide 
     }
   }, [locked, onClose])
 
-  return (
-    <div className="dialog" onMouseDown={(event) => event.target === event.currentTarget && !locked && onClose?.()}>
+  return createPortal(
+    <div className="dialog" onPointerDown={(event) => event.target === event.currentTarget && !locked && onClose?.()}>
       <div
         ref={panel}
         className={`dialog__panel${wide ? ' dialog__panel--wide' : ''}`}
@@ -42,8 +49,10 @@ export default function Dialog({ title, onClose, locked = false, children, wide 
             </button>
           )}
         </div>
-        {children}
+        <div className="dialog__body">{children}</div>
+        {actions && <div className="dialog__actions">{actions}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

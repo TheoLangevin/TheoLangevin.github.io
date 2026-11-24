@@ -23,7 +23,7 @@ const henX = (lane) => (lane === 0 ? START_WIDTH / 2 : START_WIDTH + (lane - 1) 
 
 /** The road seen from above: pavement, lanes, finish line, the hen and the traffic. */
 export default function Road() {
-  const { modeId, round, scene, busy, phase, crashId, play } = usePoule(
+  const { modeId, round, scene, busy, phase, crashId, twin, play } = usePoule(
     useShallow((state) => ({
       modeId: state.round?.modeId ?? state.modeId,
       round: state.round,
@@ -31,6 +31,7 @@ export default function Road() {
       busy: state.busy,
       phase: state.phase,
       crashId: state.fx?.type === 'crash' ? state.fx.id : null,
+      twin: state.doubleNext,
       play: state.play,
     })),
   )
@@ -97,6 +98,7 @@ export default function Road() {
             <Car key={scene.hop} id={-1} {...KILLER_CAR} delay={TIMING.crashCarDelay / 1000} />
           </div>
         )}
+        {twin && <Hen x={x - 30} hop={scene.hop} flat={Boolean(scene.deadLane)} look={look} twin />}
         <Hen x={x} hop={scene.hop} flat={Boolean(scene.deadLane)} look={look} />
       </div>
       {phase === 'loading' && <div className="road__loading">Ouverture de la base SQLite…</div>}

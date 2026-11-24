@@ -104,14 +104,15 @@ describe('game service', () => {
     let now = Date.parse('2026-11-24T10:00:00Z')
     const store = createMemoryStore({ balance: 1000 })
     const service = createGameService({ store, clock: () => new Date(now).toISOString() })
-    expect(service.refill()).toBe(100000)
-    expect(store.wallet.balance()).toBe(101000)
-    store.wallet.set(0)
+    expect(service.refill()).toBe(5000)
+    expect(store.wallet.balance()).toBe(6000)
     expect(() => service.refill()).toThrow()
     expect(service.refillStatus().verdict).toBe('wait')
-    now += 31 * 60_000
+    now += 11 * 60_000
     service.refill()
-    expect(store.wallet.balance()).toBe(100000)
+    expect(store.wallet.balance()).toBe(11000)
+    store.wallet.set(25000)
+    now += 11 * 60_000
     expect(() => service.refill()).toThrow()
   })
 
@@ -284,5 +285,33 @@ describe('token shop and seasons', () => {
     second.service.importSave(exported)
     expect(second.service.claimedSeasons()).toEqual(['2026-W47'])
     expect(second.service.exportSave()).toEqual(exported)
+  })
+})
+
+describe('event bonuses', () => {
+  it('hands out tokens and feathers', () => {
+    const { service, store } = serviceWith('s')
+    service.grantBonus({ tokens: 2500, feathers: 15 })
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE + 2500)
+    expect(service.summary().progression.feathers).toBeGreaterThanOrEqual(15)
+    expect(() => service.grantBonus({ tokens: -5 })).toThrow()
+  })
+
+  it('doubles the feathers of the next round only', async () => {
+    const seed = await seedSafeFor(3)
+    const { service } = serviceWith(seed)
+    service.grantBonus({ double: true })
+    expect(service.summary().doubleNext).toBe(true)
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    service.step()
+    service.step()
+    const first = service.cashOut().progress
+    expect(first.doubled).toBe(true)
+    expect(first.feathers).toBe(8)
+    expect(service.summary().doubleNext).toBe(false)
+    await service.start({ modeId: 'easy', betCents: 1000 })
+    service.step()
+    service.step()
+    expect(service.cashOut().progress.feathers).toBe(4)
   })
 })

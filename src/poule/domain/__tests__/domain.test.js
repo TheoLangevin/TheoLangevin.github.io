@@ -49,12 +49,13 @@ describe('modes and multipliers', () => {
   })
 
   it('refills a broke player, once per cooldown', () => {
-    expect(refillCheck({ balanceCents: 10000, lastRefillAt: null }).verdict).toBe('not-broke')
+    expect(refillCheck({ balanceCents: 20000, lastRefillAt: null }).verdict).toBe('not-broke')
+    expect(refillCheck({ balanceCents: 19999, lastRefillAt: null }).verdict).toBe('ok')
     expect(refillCheck({ balanceCents: 100, lastRefillAt: null }).verdict).toBe('ok')
     const now = 10_000_000
     const wait = refillCheck({ balanceCents: 100, lastRefillAt: now - 60_000, now })
     expect(wait.verdict).toBe('wait')
-    expect(wait.waitMs).toBe(29 * 60_000)
+    expect(wait.waitMs).toBe(9 * 60_000)
   })
 })
 

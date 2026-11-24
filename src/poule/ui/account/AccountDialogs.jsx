@@ -88,7 +88,15 @@ function RewardDialog({ onClose }) {
   const league = LEAGUES.find((entry) => entry.id === reward.league)
   const tier = RANK_REWARDS.find((entry) => entry.id === reward.tier)
   return (
-    <Dialog title={`Saison ${pending.season.slice(-2)} terminée !`} onClose={onClose}>
+    <Dialog
+      title={`Saison ${pending.season.slice(-2)} terminée !`}
+      onClose={onClose}
+      actions={
+        <button type="button" className="big big--buy" onClick={claim}>
+          Récupérer
+        </button>
+      }
+    >
       <div className="reward__hero">
         <span className="league" style={{ '--league': league.color, width: 72, height: 72, fontSize: 32 }}>
           {league.label.charAt(0)}
@@ -115,9 +123,6 @@ function RewardDialog({ onClose }) {
           </li>
         ))}
       </ul>
-      <button type="button" className="big big--buy" onClick={claim}>
-        Récupérer
-      </button>
     </Dialog>
   )
 }

@@ -99,6 +99,14 @@ const HATS = {
       <circle cx="49" cy="12" r="1" fill="#ffd84a" />
     </g>
   ),
+  cone: (
+    <g>
+      <path d="M45.5 16L52 -16l6.5 32z" fill="#ff7a1a" />
+      <path d="M48.4 2.5h7.2l1.2 6h-9.6z M50.2 -6.5h3.6l.9 4.5h-5.4z" fill="#fff" />
+      <path d="M52 -16l6.5 32h-3z" fill="#00000022" />
+      <rect x="39" y="14" width="26" height="5" rx="1.5" fill="#e85d00" />
+    </g>
+  ),
   halo: <ellipse cx="52" cy="4" rx="12" ry="3.5" fill="none" stroke="#ffd84a" strokeWidth="3" />,
   laurel: (
     <g fill="#3c9a4a">

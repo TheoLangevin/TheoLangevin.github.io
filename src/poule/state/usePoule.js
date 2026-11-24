@@ -6,6 +6,7 @@ import { BREAK_REMINDER_MINUTES } from '../config/progression.js'
 import { TIMING } from '../config/timing.js'
 import { AUTOCASH_TARGETS } from '../config/upgrades.js'
 import { openStore } from '../data/openStore.js'
+import { rollEvent } from '../domain/events.js'
 import { multiplierAt } from '../domain/multiplier.js'
 import { canCashOut } from '../domain/round.js'
 import { createGameService, GameError } from '../services/gameService.js'
@@ -18,7 +19,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const EMPTY_SCENE = Object.freeze({ lane: 0, hop: 0, deadLane: null, threat: null })
 
 /** Services live outside React state: they are not data to render. */
-const runtime = { service: null, ready: null, lastBreak: Date.now() }
+const runtime = { service: null, ready: null, lastBreak: Date.now(), roundsSinceEvent: 0 }
 
 /** The game service, once the database is open (for the account layer). */
 export const gameService = async () => {
@@ -87,8 +88,23 @@ export const usePoule = create((set, get) => {
     set({ busy: false, toast: { kind: 'lose', title: error.message, detail: null, id: uid() } })
   }
 
+  /** After every finished round, maybe a random event (wheel, tornado, double hen). */
+  function maybeEvent() {
+    runtime.roundsSinceEvent++
+    const id = rollEvent(Math.random, runtime.roundsSinceEvent)
+    if (!id) return
+    runtime.roundsSinceEvent = 0
+    // Let the round's result show first; skip it if a new round has started.
+    setTimeout(() => {
+      if (!get().round && !get().event) set({ event: { id, key: uid() } })
+    }, 1500)
+  }
+
+  const featherDetail = (progress) => `+${progress.feathers} plumes${progress.doubled ? ' (×2)' : ''}`
+
   function finish(result) {
     const { round, progress } = result
+    maybeEvent()
     refresh({
       busy: false,
       reveal: revealOf(result),
@@ -96,7 +112,7 @@ export const usePoule = create((set, get) => {
       toast: {
         kind: 'win',
         title: `+${tokens(round.payoutCents)} jetons`,
-        detail: `${multiplierLabel(round.multiplier)} après ${round.lane} voie${round.lane > 1 ? 's' : ''} · +${progress.feathers} plumes`,
+        detail: `${multiplierLabel(round.multiplier)} après ${round.lane} voie${round.lane > 1 ? 's' : ''} · ${featherDetail(progress)}`,
         id: uid(),
       },
     })
@@ -140,6 +156,9 @@ export const usePoule = create((set, get) => {
     toast: null,
     notices: [],
     fx: null,
+    event: null,
+    celebration: null,
+    doubleNext: false,
 
     /** Opens the database once, even if called twice (React StrictMode). */
     init() {
@@ -232,11 +251,12 @@ export const usePoule = create((set, get) => {
           toast: {
             kind: 'lose',
             title: 'Écrasée !',
-            detail: `Voie ${lane} : mise de ${tokens(result.round.betCents)} jetons perdue${feathers ? ` · +${feathers} plumes` : ''}`,
+            detail: `Voie ${lane} : mise de ${tokens(result.round.betCents)} jetons perdue${feathers ? ` · ${featherDetail(result.progress)}` : ''}`,
             id: uid(),
           },
         })
         notify(progressNotices(result.progress))
+        maybeEvent()
         return
       }
 
@@ -265,7 +285,8 @@ export const usePoule = create((set, get) => {
       if (get().busy) return
       try {
         const { upgrade, achievements } = runtime.service.buy(upgradeId)
-        refresh(fx('buy'))
+        // The hidden item gets its own party.
+        refresh({ ...fx('buy'), celebration: upgrade.secret ? upgrade.id : get().celebration })
         notify([
           {
             id: uid(),
@@ -345,6 +366,25 @@ export const usePoule = create((set, get) => {
         toast: null,
       })
     },
+
+    /** Applies a random event's bonus (domain/events.js) and says what it gave. */
+    resolveEvent(bonus, notice) {
+      try {
+        const granted = runtime.service.grantBonus(bonus)
+        refresh({ event: null, ...(bonus.tokens || bonus.feathers ? fx('buy') : {}) })
+        notify([
+          { id: uid(), kind: 'buy', ...notice },
+          ...progressNotices({ achievements: granted.achievements, levelUp: null }),
+        ])
+      } catch (error) {
+        set({ event: null })
+        fail(error)
+      }
+    },
+
+    dismissEvent: () => set({ event: null }),
+
+    closeCelebration: () => set({ celebration: null }),
 
     dismissNotice(id) {
       set((state) => ({ notices: state.notices.filter((notice) => notice.id !== id) }))

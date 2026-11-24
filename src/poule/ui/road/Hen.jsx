@@ -17,13 +17,16 @@ export function Trail({ trail, className = '' }) {
 
 /**
  * The hen. A new `hop` value replays the jump (and the trail, if she wears
- * one); `flat` is what a car leaves; `look.fast` is the turbo perk.
+ * one); `flat` is what a car leaves; `look.fast` is the turbo perk; `twin`
+ * is the second hen of the "double poule" event, a step behind.
  */
-export default function Hen({ x, hop, flat, look }) {
-  const className = ['hen', flat && 'hen--flat', look.fast && 'hen--fast'].filter(Boolean).join(' ')
+export default function Hen({ x, hop, flat, look, twin = false }) {
+  const className = ['hen', flat && 'hen--flat', look.fast && 'hen--fast', twin && 'hen--twin']
+    .filter(Boolean)
+    .join(' ')
   return (
     <div className={className} style={{ left: x }}>
-      {look.trail && hop > 0 && !flat && <Trail key={`trail-${hop}`} trail={look.trail} />}
+      {look.trail && hop > 0 && !flat && !twin && <Trail key={`trail-${hop}`} trail={look.trail} />}
       <div key={hop} className={hop > 0 ? 'hen__body hen__body--hop' : 'hen__body'}>
         <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
       </div>

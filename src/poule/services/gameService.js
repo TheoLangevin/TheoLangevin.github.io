@@ -126,13 +126,16 @@ export function createGameService({ store, clock = () => new Date().toISOString(
   /** Feathers, experience and achievements of a finished round. Inside a transaction. */
   function settle(round) {
     const levelBefore = levelFromXp(store.profile.get().xp)
-    const feathers = feathersFor(round)
+    // "Double poule" (random event): this round's feathers count twice.
+    const doubled = store.settings.get('double_next', '0') === '1'
+    const feathers = feathersFor(round) * (doubled ? 2 : 1)
+    if (doubled) store.settings.set('double_next', '0')
     store.rounds.update(toUpdate(round, feathers))
     if (round.payoutCents > 0) store.wallet.credit(round.payoutCents)
     if (feathers > 0) store.profile.earn(feathers)
     const achievements = unlockAchievements()
     const levelAfter = levelFromXp(store.profile.get().xp)
-    return { feathers, achievements, levelUp: levelAfter > levelBefore ? levelAfter : null }
+    return { feathers, doubled, achievements, levelUp: levelAfter > levelBefore ? levelAfter : null }
   }
 
   const service = {
@@ -185,6 +188,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         byMode: store.rounds.statsByMode(),
         week: weeklyStats(store.rounds.forSave(SAVE_ROUNDS).map(roundToSave), new Date(clock())),
         claims: store.seasons.claimed(),
+        doubleNext: store.settings.get('double_next', '0') === '1',
         lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
         progression: {
           xp: profile.xp,
@@ -311,6 +315,22 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         store.settings.set('last_refill_at', Date.parse(clock()))
       })
       return REFILL_AMOUNT
+    },
+
+    /**
+     * A bonus from a random event (domain/events.js): a few tokens, feathers
+     * (which count as experience), and/or double feathers for the next round.
+     * Never touches the odds of a round.
+     */
+    grantBonus({ tokens = 0, feathers = 0, double = false } = {}) {
+      const amounts = [tokens, feathers].every((value) => Number.isInteger(value) && value >= 0 && value <= 100_000)
+      if (!amounts) throw new GameError('invalid-bonus', 'Bonus invalide')
+      return write(() => {
+        if (tokens) store.wallet.credit(tokens)
+        if (feathers) store.profile.earn(feathers)
+        if (double) store.settings.set('double_next', '1')
+        return { tokens, feathers, double, achievements: unlockAchievements() }
+      })
     },
 
     /** Seasons whose reward was already collected. */

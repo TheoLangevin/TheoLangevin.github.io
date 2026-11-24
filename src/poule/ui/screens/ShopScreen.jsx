@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { AUTOCASH_TARGETS, SLOTS, UPGRADES, upgradeById } from '../../config/upgrades.js'
 import { purchaseCheck } from '../../domain/progression.js'
@@ -160,8 +160,38 @@ function ItemSheet({ id, onClose }) {
   const preview = item.slot === 'perk' || item.slot === 'party' ? null : { ...s.progression.equipped, [item.slot]: id }
   const roundBlocks = item.currency === 'tokens' && s.inRound
 
+  // Buttons go in the sheet's pinned footer, always in reach of the thumb.
+  let actions = null
+  if (!owned && !item.exclusive) {
+    actions = (
+      <>
+        {roundBlocks && <p className="note">Terminez la partie en cours pour dépenser des jetons.</p>}
+        {item.currency === 'tokens' && state === 'ok' && !roundBlocks && (
+          <p className="note">Il vous restera {tokens(s.balanceCents - item.cost)} jetons.</p>
+        )}
+        <button
+          type="button"
+          className="big big--buy"
+          disabled={state !== 'ok' || s.busy || roundBlocks}
+          onClick={() => s.buy(id)}
+        >
+          {state === 'ok' ? 'Acheter' : REASON[state]?.(item)}
+          <small>
+            <Price item={item} />
+          </small>
+        </button>
+      </>
+    )
+  } else if (owned && item.slot !== 'perk') {
+    actions = (
+      <button type="button" className="big big--wear" onClick={() => s.toggleEquip(id)}>
+        {state === 'worn' ? 'Retirer' : 'Porter'}
+      </button>
+    )
+  }
+
   return (
-    <Dialog title={item.label} onClose={onClose}>
+    <Dialog title={item.label} onClose={onClose} actions={actions}>
       {preview ? (
         <Mannequin equipped={preview} size="large" />
       ) : (
@@ -169,34 +199,10 @@ function ItemSheet({ id, onClose }) {
       )}
       {item.description && <p>{item.description}</p>}
       {item.exclusive && <p>Se gagne en finissant bien classé une saison. Voir le classement.</p>}
-
-      {!owned && !item.exclusive && (
-        <>
-          <button
-            type="button"
-            className="big big--buy"
-            disabled={state !== 'ok' || s.busy || roundBlocks}
-            onClick={() => s.buy(id)}
-          >
-            {state === 'ok' ? 'Acheter' : REASON[state]?.(item)}
-            <small>
-              <Price item={item} />
-            </small>
-          </button>
-          {roundBlocks && <p className="note">Terminez la partie en cours pour dépenser des jetons.</p>}
-          {item.currency === 'tokens' && state === 'ok' && (
-            <p className="note">Il vous restera {tokens(s.balanceCents - item.cost)} jetons.</p>
-          )}
-        </>
-      )}
+      {item.secret && !owned && <p className="shop__secret">Vous avez trouvé l’objet caché de la boutique.</p>}
       {owned &&
         item.slot === 'perk' &&
         (item.id === 'autocash' ? <AutocashSetting /> : <p className="note">Atout actif.</p>)}
-      {owned && item.slot !== 'perk' && (
-        <button type="button" className="big big--wear" onClick={() => s.toggleEquip(id)}>
-          {state === 'worn' ? 'Retirer' : 'Porter'}
-        </button>
-      )}
     </Dialog>
   )
 }
@@ -208,22 +214,53 @@ export default function ShopScreen({ hidden }) {
     useShallow((state) => ({ progression: state.progression, balanceCents: state.balanceCents })),
   )
   const shop = useMemo(() => (progression ? { ...progression, balanceCents } : null), [progression, balanceCents])
+  const owned = progression?.owned
+  // Secret items show up once owned; season rewards only in their own slot.
   const items = useMemo(
-    () => (slot === 'all' ? UPGRADES.filter((item) => !item.exclusive) : UPGRADES.filter((item) => item.slot === slot)),
-    [slot],
+    () =>
+      UPGRADES.filter((item) => (slot === 'all' ? !item.exclusive : item.slot === slot)).filter(
+        (item) => !item.secret || owned?.includes(item.id),
+      ),
+    [slot, owned],
   )
+  const [taps, setTaps] = useState(0)
+  const tapTimer = useRef(null)
+
+  // The hidden item: tap the hen in the dressing room five times in a row.
+  function tapHen() {
+    clearTimeout(tapTimer.current)
+    const next = taps + 1
+    if (next >= 5) {
+      setTaps(0)
+      setOpen('cone')
+      return
+    }
+    setTaps(next)
+    tapTimer.current = setTimeout(() => setTaps(0), 1500)
+  }
+  const listed = UPGRADES.filter((item) => !item.secret)
   if (!shop) return <main className="screen" hidden={hidden} aria-busy="true" />
 
   return (
     <main className="screen screen--shop" hidden={hidden}>
       <div className="shop__hero card">
-        <Mannequin equipped={shop.equipped ?? NOTHING} />
+        <button
+          type="button"
+          className="shop__hen"
+          data-taps={taps}
+          onClick={tapHen}
+          aria-label="La poule de la cabine d’essayage"
+        >
+          {/* A new key on each tap replays the wobble. */}
+          <Mannequin key={taps} equipped={shop.equipped ?? NOTHING} />
+        </button>
         <div className="shop__hero-text">
           <h1 className="screen__title">Boutique</h1>
           <p className="muted">
-            {count(UPGRADES.filter((item) => item.currency === 'tokens').length)} objets en jetons,{' '}
-            {count(UPGRADES.filter((item) => item.currency === 'feathers').length)} en plumes. Aucun ne change vos
+            {count(listed.filter((item) => item.currency === 'tokens').length)} objets en jetons,{' '}
+            {count(listed.filter((item) => item.currency === 'feathers').length)} en plumes. Aucun ne change vos
             chances.
+            {taps >= 3 && <span className="shop__whisper"> Encore…</span>}
           </p>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { useHaptics } from './ui/feedback/useHaptics.js'
 import { useKeyboard } from './ui/hooks/useKeyboard.js'
 import Notices from './ui/layout/Notices.jsx'
 import StorageNotice from './ui/layout/StorageNotice.jsx'
+import AdminScreen from './ui/screens/AdminScreen.jsx'
 import PlayScreen from './ui/screens/PlayScreen.jsx'
 import ProfileScreen from './ui/screens/ProfileScreen.jsx'
 import RankingScreen from './ui/screens/RankingScreen.jsx'
@@ -44,7 +45,8 @@ export default function PouleApp() {
         <PlayScreen hidden={route !== 'jouer'} />
         {route === 'boutique' && <ShopScreen />}
         {route === 'classement' && <RankingScreen go={go} />}
-        {route === 'profil' && <ProfileScreen />}
+        {route === 'profil' && <ProfileScreen go={go} />}
+        {route === 'admin' && <AdminScreen go={go} />}
       </div>
       <TabBar route={route} go={go} />
       <Notices />

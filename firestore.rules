@@ -4,7 +4,8 @@ rules_version = '2';
 // (Firebase project la-poule-traverse). Published from the Firebase console,
 // or with `firebase deploy --only firestore:rules` (see firebase.json).
 //
-//   users/{uid}          a player's save. Only they can read or write it.
+//   users/{uid}          a player's save. Only they can read or write it;
+//                        the game's admin can also read every save (stats screen).
 //   pseudos/{lowercase}  unique public names. Anyone can read; claiming one
 //                        and freeing your own are the only writes.
 //   leaderboard/{uid}    public all-time line of a player who chose a pseudo,
@@ -24,6 +25,13 @@ service cloud.firestore {
 
     function isOwner(uid) {
       return signedIn() && request.auth.uid == uid;
+    }
+
+    // The admin sees every save, for the stats screen (poule/#admin). Read only.
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'theolangevin3@gmail.com';
     }
 
     function validPseudo(pseudo) {
@@ -56,7 +64,7 @@ service cloud.firestore {
 
     function validSave(save) {
       return save is map
-        && (save.v == 1 || save.v == 2)
+        && (save.v == 1 || save.v == 2 || save.v == 3)
         && save.balanceCents is int && save.balanceCents >= 0
         && save.xp is int && save.xp >= 0
         && save.feathers is int && save.feathers >= 0
@@ -67,7 +75,8 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, delete: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid);
 
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])

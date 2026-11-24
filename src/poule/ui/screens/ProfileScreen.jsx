@@ -1,5 +1,6 @@
 import { useShallow } from 'zustand/react/shallow'
 import { ACHIEVEMENTS } from '../../config/achievements.js'
+import { ADMIN_EMAIL } from '../../config/admin.js'
 import { RTP } from '../../config/economy.js'
 import { MODES } from '../../config/modes.js'
 import { upgradeById } from '../../config/upgrades.js'
@@ -212,7 +213,19 @@ function Fairness() {
   )
 }
 
-export default function ProfileScreen({ hidden }) {
+/** A way into the stats screen, shown only to the admin account. */
+function AdminLink({ go }) {
+  const email = useAccount((state) => state.user?.email)
+  if (email !== ADMIN_EMAIL) return null
+  return (
+    <button type="button" className="cta card" onClick={() => go('admin')}>
+      <b>Tableau de bord</b>
+      <span className="muted">Joueurs, parties, économie, boutique : les statistiques du jeu.</span>
+    </button>
+  )
+}
+
+export default function ProfileScreen({ hidden, go }) {
   const p = usePoule(
     useShallow((state) => ({
       sound: state.sound,
@@ -229,6 +242,7 @@ export default function ProfileScreen({ hidden }) {
     <main className="screen screen--profile" hidden={hidden}>
       <h1 className="screen__title">Profil</h1>
       <AccountCard />
+      <AdminLink go={go} />
 
       <h2 className="section-title">Statistiques</h2>
       <Stats />

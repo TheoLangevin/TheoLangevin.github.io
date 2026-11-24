@@ -5,6 +5,7 @@ import { createFirebaseAuth, describeAuthError } from '../account/firebase/creat
 import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.js'
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
 import { BOARD_SIZE } from '../config/seasons.js'
+import { computeAdminStats } from '../domain/adminStats.js'
 import { gameService, pushNotice, usePoule } from './usePoule.js'
 
 /** Account services, outside React state. */
@@ -49,6 +50,7 @@ export const useAccount = create((set, get) => {
     board: { kind: 'season', entries: [], loading: false, error: null, season: null },
     pendingReward: null,
     player: null,
+    admin: { status: 'idle', stats: null, error: null },
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -225,6 +227,27 @@ export const useAccount = create((set, get) => {
     },
 
     closePlayer: () => set({ player: null }),
+
+    /** Admin stats screen: reads every save and counts (domain/adminStats.js). */
+    async loadAdmin() {
+      if (!runtime.sync?.uid) return
+      set({ admin: { ...get().admin, status: 'loading', error: null } })
+      try {
+        const overview = await runtime.sync.adminOverview()
+        const stats = computeAdminStats({ ...overview, now: Date.now() })
+        set({ admin: { status: 'ready', stats, error: null } })
+      } catch (error) {
+        console.error(error)
+        const denied = error?.code === 'permission-denied'
+        set({
+          admin: {
+            ...get().admin,
+            status: 'error',
+            error: denied ? 'Accès refusé : ce compte n’est pas administrateur.' : 'Statistiques indisponibles.',
+          },
+        })
+      }
+    },
 
     openDialog: (dialog) => set({ dialog }),
     closeDialog: () => set((state) => ({ dialog: state.dialog === 'conflict' ? 'conflict' : null })),

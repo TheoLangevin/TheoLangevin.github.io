@@ -8,6 +8,7 @@ import {
   validateSave,
 } from '../domain/save.js'
 import { previousSeasonId, seasonId, seasonReward } from '../domain/seasons.js'
+import { ADMIN_MAX_PLAYERS } from '../config/admin.js'
 import { CloudConflictError } from './cloud.js'
 
 /**
@@ -238,6 +239,9 @@ export function createSyncService({
         pseudo = null
       })
     },
+
+    /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
+    adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),
 
     /** All-time board: by 'xp', 'tokens' or 'bestMultiplier'. */
     leaderboard: (by, size) => cloud.leaderboard(by, size),

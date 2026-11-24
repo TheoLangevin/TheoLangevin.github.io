@@ -20,6 +20,16 @@ const EMPTY_SCENE = Object.freeze({ lane: 0, hop: 0, deadLane: null, threat: nul
 /** Services live outside React state: they are not data to render. */
 const runtime = { service: null, ready: null, lastBreak: Date.now() }
 
+/** The game service, once the database is open (for the account layer). */
+export const gameService = async () => {
+  await usePoule.getState().init()
+  return runtime.service
+}
+
+/** Lets the account layer show its own notices in the same stack. */
+export const pushNotice = (notice) =>
+  usePoule.setState((state) => ({ notices: [...state.notices, { id: uid(), ...notice }].slice(-4) }))
+
 let nextId = 1
 const uid = () => nextId++
 
@@ -284,6 +294,21 @@ export const usePoule = create((set, get) => {
 
     dismissToast(id) {
       if (get().toast?.id === id) set({ toast: null })
+    },
+
+    /** Re-reads everything from the game service (after a save came from the account). */
+    reload() {
+      if (!runtime.service || get().round) return
+      const preferences = runtime.service.preferences()
+      refresh({
+        modeId: preferences.modeId,
+        betCents: preferences.betCents,
+        autocashTarget: preferences.autocashTarget,
+        sound: preferences.sound,
+        scene: EMPTY_SCENE,
+        reveal: null,
+        toast: null,
+      })
     },
 
     dismissNotice(id) {

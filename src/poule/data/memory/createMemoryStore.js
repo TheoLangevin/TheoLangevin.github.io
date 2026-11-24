@@ -116,6 +116,55 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
         finished: wins.filter((row) => row.road_lanes > 0 && row.crossed === row.road_lanes).length,
       }
     },
+    forSave: (limit) =>
+      finished()
+        .slice(-limit)
+        .map(
+          ({
+            mode_id,
+            bet_cents,
+            payout_cents,
+            multiplier,
+            lane,
+            crossed,
+            road_lanes,
+            feathers,
+            status,
+            ended_at,
+          }) => ({
+            mode_id,
+            bet_cents,
+            payout_cents,
+            multiplier,
+            lane,
+            crossed,
+            road_lanes,
+            feathers,
+            status,
+            ended_at,
+          }),
+        ),
+    replaceFinished(list) {
+      state.rounds = state.rounds.filter((row) => row.status === 'active')
+      for (const round of list) {
+        state.rounds.push({
+          id: state.nextId++,
+          mode_id: round.mode,
+          bet_cents: round.bet,
+          seed: '',
+          seed_hash: '',
+          lane: round.lane,
+          status: round.status,
+          multiplier: round.mult,
+          payout_cents: round.payout,
+          started_at: round.endedAt,
+          ended_at: round.endedAt,
+          crossed: round.crossed,
+          road_lanes: round.roadLanes,
+          feathers: round.feathers,
+        })
+      }
+    },
     clearFinished: () => void (state.rounds = state.rounds.filter((row) => row.status === 'active')),
   }
 
@@ -135,6 +184,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
       state.profile.feathers -= amount
       return true
     },
+    set: ({ xp, feathers }) => void (state.profile = { xp, feathers }),
   }
 
   const upgrades = {
@@ -149,6 +199,10 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
       state.equipped[slot] = upgradeId
     },
     unequip: (slot) => void delete state.equipped[slot],
+    replace(owned, equipped) {
+      state.upgrades = [...owned]
+      state.equipped = { ...equipped }
+    },
   }
 
   const achievements = {
@@ -157,6 +211,7 @@ export function createMemoryStore({ balance = STARTING_BALANCE } = {}) {
       if (state.achievements.includes(id)) throw new Error(`Achievement ${id} already unlocked`)
       state.achievements.push(id)
     },
+    replace: (ids) => void (state.achievements = [...ids]),
   }
 
   return {

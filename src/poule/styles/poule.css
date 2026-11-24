@@ -250,6 +250,10 @@ a:focus-visible {
   border-color: var(--green);
 }
 
+.notice-card--error {
+  border-color: var(--red);
+}
+
 @keyframes notice-in {
   from {
     opacity: 0;

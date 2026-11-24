@@ -21,19 +21,24 @@
  * @property {() => object[]} rounds.statsByMode
  * @property {() => object} rounds.progressStats  totals the achievements are checked against
  * @property {() => void} rounds.clearFinished
+ * @property {(limit: number) => object[]} rounds.forSave  finished rounds, oldest first
+ * @property {(rounds: object[]) => void} rounds.replaceFinished  from a save
  * @property {object} profile  experience and feathers
  * @property {() => { xp: number, feathers: number }} profile.get
  * @property {(amount: number) => void} profile.earn  adds to both xp and feathers
  * @property {(amount: number) => boolean} profile.spend  false if not enough feathers
+ * @property {(profile: { xp: number, feathers: number }) => void} profile.set
  * @property {object} upgrades
  * @property {() => string[]} upgrades.owned
  * @property {(id: string) => void} upgrades.add
  * @property {() => Record<string, string>} upgrades.equipped  slot → upgrade id
  * @property {(slot: string, id: string) => void} upgrades.equip
  * @property {(slot: string) => void} upgrades.unequip
+ * @property {(owned: string[], equipped: Record<string, string>) => void} upgrades.replace
  * @property {object} achievements
  * @property {() => string[]} achievements.unlocked
  * @property {(id: string) => void} achievements.add
+ * @property {(ids: string[]) => void} achievements.replace
  * @property {object} settings
  * @property {(key: string, fallback?: string) => string | null} settings.get
  * @property {(key: string, value: unknown) => void} settings.set

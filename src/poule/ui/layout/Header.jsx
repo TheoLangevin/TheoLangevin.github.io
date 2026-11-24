@@ -1,9 +1,10 @@
 import { useShallow } from 'zustand/react/shallow'
 import { usePoule } from '../../state/usePoule.js'
 import { count, tokens } from '../format.js'
+import AccountButton from '../account/AccountButton.jsx'
 import { FeatherIcon, SoundIcon } from '../icons.jsx'
 
-/** Title, balance, level with its progress, feathers and the sound switch. */
+/** Title, balance, level with its progress, feathers, the sound switch and the account. */
 export default function Header() {
   const { balance, ready, progression, sound, toggleSound } = usePoule(
     useShallow((state) => ({
@@ -61,6 +62,7 @@ export default function Header() {
         >
           <SoundIcon on={sound} />
         </button>
+        <AccountButton />
       </div>
     </header>
   )

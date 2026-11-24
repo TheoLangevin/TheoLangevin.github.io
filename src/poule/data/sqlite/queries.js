@@ -55,6 +55,18 @@ export const SQL = Object.freeze({
     FROM rounds WHERE status <> 'active'
     GROUP BY mode_id`,
 
+  roundsForSave: `
+    SELECT mode_id, bet_cents, payout_cents, multiplier, lane, crossed, road_lanes, feathers, status, ended_at
+    FROM rounds WHERE status <> 'active'
+    ORDER BY id DESC
+    LIMIT :limit`,
+
+  roundImport: `
+    INSERT INTO rounds (mode_id, bet_cents, seed, seed_hash, lane, status, multiplier, payout_cents,
+                        started_at, ended_at, crossed, road_lanes, feathers)
+    VALUES (:modeId, :betCents, '', '', :lane, :status, :multiplier, :payoutCents,
+            :endedAt, :endedAt, :crossed, :roadLanes, :feathers)`,
+
   roundClearFinished: `DELETE FROM rounds WHERE status <> 'active'`,
 
   progressStats: `
@@ -72,11 +84,15 @@ export const SQL = Object.freeze({
 
   profileEarn: `UPDATE profile SET xp = xp + :amount, feathers = feathers + :amount WHERE id = 1`,
 
+  profileSet: `UPDATE profile SET xp = :xp, feathers = :feathers WHERE id = 1`,
+
   profileSpend: `UPDATE profile SET feathers = feathers - :amount WHERE id = 1 AND feathers >= :amount`,
 
   upgradesOwned: `SELECT id FROM upgrades ORDER BY bought_at, id`,
 
   upgradeInsert: `INSERT INTO upgrades (id, bought_at) VALUES (:id, :now)`,
+
+  upgradesClear: `DELETE FROM upgrades`,
 
   equippedAll: `SELECT slot, upgrade_id FROM equipped`,
 
@@ -85,6 +101,10 @@ export const SQL = Object.freeze({
     ON CONFLICT (slot) DO UPDATE SET upgrade_id = excluded.upgrade_id`,
 
   unequip: `DELETE FROM equipped WHERE slot = :slot`,
+
+  equippedClear: `DELETE FROM equipped`,
+
+  achievementsClear: `DELETE FROM achievements`,
 
   achievementsUnlocked: `SELECT id, unlocked_at FROM achievements ORDER BY unlocked_at, id`,
 

@@ -1,7 +1,7 @@
 import { achievementById } from '../config/achievements.js'
 import { MAX_BET, MAX_PAYOUT, MIN_BET, STARTING_BALANCE } from '../config/economy.js'
 import { MODES, modeById } from '../config/modes.js'
-import { MAX_LEVEL } from '../config/progression.js'
+import { FEATHER_TO_CENTS, MAX_LEVEL } from '../config/progression.js'
 import { AUTOCASH_TARGETS, SLOTS, upgradeById } from '../config/upgrades.js'
 import { levelFromXp } from './progression.js'
 import { isSeasonId, leagueFor, seasonId, weeklyStats } from './seasons.js'
@@ -12,8 +12,12 @@ import { isSeasonId, leagueFor, seasonId, weeklyStats } from './seasons.js'
  * decides when to send or apply one.
  */
 
-/** v2 added season claims and the last refill. v1 saves are still read. */
-export const SAVE_VERSION = 2
+/**
+ * v2 added season claims and the last refill; v3 dropped feathers (tokens are the
+ * only currency). Older saves are still read: their unspent feathers become tokens.
+ * The `feathers` key stays in the file, always 0, because the cloud rules ask for it.
+ */
+export const SAVE_VERSION = 3
 /** Finished rounds kept in a save, newest last. Older ones still count in XP. */
 export const SAVE_ROUNDS = 1000
 
@@ -34,7 +38,7 @@ export const roundToSave = (row) => ({
   lane: row.lane,
   crossed: row.crossed,
   roadLanes: row.road_lanes,
-  feathers: row.feathers,
+  xp: row.xp,
   status: row.status,
   endedAt: row.ended_at,
 })
@@ -48,8 +52,8 @@ function validRound(round) {
   const bet = int(round.bet, MIN_BET, MAX_BET)
   const payout = int(round.payout, 0, MAX_PAYOUT)
   const mult = num(round.mult, 0, 1e6)
-  const feathers = int(round.feathers, 0, 10000)
-  if ([lane, crossed, bet, payout, mult, feathers].includes(null)) return null
+  const xp = int(round.xp ?? round.feathers, 0, 10000)
+  if ([lane, crossed, bet, payout, mult, xp].includes(null)) return null
   return {
     mode: mode.id,
     bet,
@@ -58,7 +62,7 @@ function validRound(round) {
     lane,
     crossed,
     roadLanes: int(round.roadLanes, 0, mode.lanes) ?? mode.lanes,
-    feathers,
+    xp,
     status: round.status,
     endedAt: typeof round.endedAt === 'string' ? round.endedAt.slice(0, 40) : null,
   }
@@ -70,11 +74,12 @@ function validRound(round) {
  * and rounds are dropped, so an older game can read a newer save.
  */
 export function validateSave(raw) {
-  if (!raw || typeof raw !== 'object' || ![1, SAVE_VERSION].includes(raw.v)) return null
-  const balanceCents = int(raw.balanceCents, 0, 1e12)
+  if (!raw || typeof raw !== 'object' || ![1, 2, SAVE_VERSION].includes(raw.v)) return null
+  const saved = int(raw.balanceCents, 0, 1e12)
   const xp = int(raw.xp, 0, 1e9)
-  const feathers = int(raw.feathers, 0, 1e9)
-  if ([balanceCents, xp, feathers].includes(null)) return null
+  const feathers = raw.v < 3 ? int(raw.feathers, 0, 1e9) : 0
+  if ([saved, xp, feathers].includes(null)) return null
+  const balanceCents = Math.min(1e12, saved + feathers * FEATHER_TO_CENTS)
 
   const upgrades = [...new Set(Array.isArray(raw.upgrades) ? raw.upgrades : [])].filter((id) => upgradeById(id))
   const equipped = {}
@@ -101,7 +106,7 @@ export function validateSave(raw) {
     v: SAVE_VERSION,
     balanceCents,
     xp,
-    feathers,
+    feathers: 0,
     upgrades,
     equipped,
     achievements,
@@ -126,7 +131,6 @@ export function describeSave(save) {
   return {
     level: levelFromXp(save.xp),
     xp: save.xp,
-    feathers: save.feathers,
     balanceCents: save.balanceCents,
     played: save.rounds.length,
     upgrades: save.upgrades.length,

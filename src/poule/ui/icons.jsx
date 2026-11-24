@@ -1,14 +1,5 @@
 /** Small inline icons, drawn with currentColor. */
 
-export function FeatherIcon({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="icon">
-      <path d="M20 3c-7 0-13 5-14 13l-3 5h2l2-3c8-1 13-7 13-15z" fill="currentColor" opacity=".9" />
-      <path d="M7 17c3-4 6-7 11-11" stroke="#0005" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 export function SoundIcon({ on, size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="icon">

@@ -3,7 +3,7 @@ import { LEAGUES, RANK_REWARDS } from '../../config/seasons.js'
 import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
 import { count, tokens } from '../format.js'
-import { CoinIcon, FeatherIcon, GiftIcon } from '../icons.jsx'
+import { CoinIcon, GiftIcon } from '../icons.jsx'
 import Dialog from './Dialog.jsx'
 import PseudoForm from './PseudoForm.jsx'
 import './account.css'
@@ -113,9 +113,6 @@ function RewardDialog({ onClose }) {
       <ul className="reward__list">
         <li>
           <CoinIcon size={22} /> <b>{tokens(reward.tokens)}</b> jetons
-        </li>
-        <li>
-          <FeatherIcon size={20} /> <b>{count(reward.feathers)}</b> plumes
         </li>
         {reward.items.map((id) => (
           <li key={id}>

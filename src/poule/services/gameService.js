@@ -1,10 +1,12 @@
 import { DEFAULT_BET, REFILL_AMOUNT } from '../config/economy.js'
+import { DOUBLE_LANE_BONUS } from '../config/events.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
 import { HISTORY_SIZE } from '../config/ui.js'
 import { AUTOCASH_TARGETS, upgradeById } from '../config/upgrades.js'
 import { drawOutcomes, firstFatalLane, randomSeed, sha256Hex } from '../domain/fairness.js'
 import {
-  feathersFor,
+  levelUpPay,
+  xpFor,
   lanesCrossed,
   levelFromXp,
   levelProgress,
@@ -28,11 +30,10 @@ const PURCHASE_ERRORS = {
   exclusive: 'Récompense de saison : ne s’achète pas',
   owned: 'Déjà acheté',
   level: 'Niveau trop bas',
-  feathers: 'Pas assez de plumes',
   tokens: 'Pas assez de jetons',
 }
 
-const toUpdate = (round, feathers = 0) => ({
+const toUpdate = (round, xp = 0) => ({
   id: round.id,
   lane: round.lane,
   status: round.status,
@@ -41,13 +42,13 @@ const toUpdate = (round, feathers = 0) => ({
   endedAt: round.endedAt,
   crossed: round.status === ROUND_STATUS.active ? 0 : lanesCrossed(round),
   roadLanes: round.mode.lanes,
-  feathers,
+  xp,
 })
 
 /**
  * Use cases of the game, on top of the domain rules and a store. The UI only
  * talks to this service; the service is the only one writing to the store.
- * Every change of money or feathers happens in one transaction with what
+ * Every change of money or experience happens in one transaction with what
  * caused it, so a reload can never lose a bet, pay a round twice or charge an
  * upgrade without giving it.
  */
@@ -117,25 +118,35 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       if (fresh.length === 0) return unlocked
       for (const achievement of fresh) {
         store.achievements.add(achievement.id)
-        store.profile.earn(achievement.reward)
+        store.wallet.credit(achievement.reward)
         unlocked.push(achievement.id)
       }
     }
   }
 
-  /** Feathers, experience and achievements of a finished round. Inside a transaction. */
+  /**
+   * Experience, level-up tokens and achievements of a finished round. Inside a
+   * transaction. Each new level pays tokens once (`level_paid` remembers the
+   * last one paid; players who already had a level are not paid back for it).
+   */
   function settle(round) {
     const levelBefore = levelFromXp(store.profile.get().xp)
-    // "Double poule" (random event): this round's feathers count twice.
+    const paidBefore = Number(store.settings.get('level_paid', 0)) || levelBefore
+    // "Double poule" (random event): this round's XP counts twice and every lane pays tokens.
     const doubled = store.settings.get('double_next', '0') === '1'
-    const feathers = feathersFor(round) * (doubled ? 2 : 1)
+    const xp = xpFor(round) * (doubled ? 2 : 1)
+    const bonusCents = doubled ? lanesCrossed(round) * DOUBLE_LANE_BONUS : 0
     if (doubled) store.settings.set('double_next', '0')
-    store.rounds.update(toUpdate(round, feathers))
+    store.rounds.update(toUpdate(round, xp))
     if (round.payoutCents > 0) store.wallet.credit(round.payoutCents)
-    if (feathers > 0) store.profile.earn(feathers)
-    const achievements = unlockAchievements()
+    if (bonusCents > 0) store.wallet.credit(bonusCents)
+    if (xp > 0) store.profile.earn(xp)
     const levelAfter = levelFromXp(store.profile.get().xp)
-    return { feathers, doubled, achievements, levelUp: levelAfter > levelBefore ? levelAfter : null }
+    const levelCents = levelUpPay(paidBefore, levelAfter)
+    if (levelCents > 0) store.wallet.credit(levelCents)
+    store.settings.set('level_paid', Math.max(paidBefore, levelAfter))
+    const achievements = unlockAchievements()
+    return { xp, doubled, bonusCents, levelCents, achievements, levelUp: levelAfter > levelBefore ? levelAfter : null }
   }
 
   const service = {
@@ -192,7 +203,6 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
         progression: {
           xp: profile.xp,
-          feathers: profile.feathers,
           ...levelProgress(profile.xp),
           owned: store.upgrades.owned(),
           equipped: store.upgrades.equipped(),
@@ -226,7 +236,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
 
     /**
      * One lane forward: { event: 'crossed' | 'hit' | 'finished', lane, round },
-     * plus `progress` (feathers, achievements, level up) once the round ends.
+     * plus `progress` (xp, level-up tokens, achievements) once the round ends.
      */
     step() {
       if (!current) throw new GameError('no-round', 'Aucune partie en cours')
@@ -250,12 +260,12 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     },
 
     /**
-     * Buys an item with feathers or tokens and puts it on. Token purchases
-     * wait for the round in progress to end. Returns achievements it unlocked.
+     * Buys an item with tokens and puts it on. Purchases wait for the round
+     * in progress to end. Returns achievements it unlocked.
      */
     buy(upgradeId) {
       const upgrade = upgradeById(upgradeId)
-      if (upgrade?.currency === 'tokens' && current) {
+      if (upgrade && current) {
         throw new GameError('round-in-progress', 'Terminez la partie en cours')
       }
       return write(() => {
@@ -263,13 +273,10 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         const verdict = purchaseCheck(upgradeId, {
           owned: store.upgrades.owned(),
           level: levelFromXp(profile.xp),
-          feathers: profile.feathers,
           balanceCents: store.wallet.balance(),
         })
         if (verdict !== 'ok') throw new GameError(`purchase-${verdict}`, PURCHASE_ERRORS[verdict])
-        const paid =
-          upgrade.currency === 'tokens' ? store.wallet.debit(upgrade.cost) : store.profile.spend(upgrade.cost)
-        if (!paid) throw new GameError(`purchase-${upgrade.currency}`, PURCHASE_ERRORS[upgrade.currency])
+        if (!store.wallet.debit(upgrade.cost)) throw new GameError('purchase-tokens', PURCHASE_ERRORS.tokens)
         store.upgrades.add(upgradeId)
         if (upgrade.slot !== 'perk') store.upgrades.equip(upgrade.slot, upgradeId)
         return { upgrade, achievements: unlockAchievements() }
@@ -318,18 +325,16 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     },
 
     /**
-     * A bonus from a random event (domain/events.js): a few tokens, feathers
-     * (which count as experience), and/or double feathers for the next round.
+     * A bonus from a random event (domain/events.js): a few tokens, and/or a
+     * double hen (next round: double XP and tokens per lane).
      * Never touches the odds of a round.
      */
-    grantBonus({ tokens = 0, feathers = 0, double = false } = {}) {
-      const amounts = [tokens, feathers].every((value) => Number.isInteger(value) && value >= 0 && value <= 100_000)
-      if (!amounts) throw new GameError('invalid-bonus', 'Bonus invalide')
+    grantBonus({ tokens = 0, double = false } = {}) {
+      if (!(Number.isInteger(tokens) && tokens >= 0 && tokens <= 1_000_000)) throw new GameError('invalid-bonus', 'Bonus invalide')
       return write(() => {
         if (tokens) store.wallet.credit(tokens)
-        if (feathers) store.profile.earn(feathers)
         if (double) store.settings.set('double_next', '1')
-        return { tokens, feathers, double, achievements: unlockAchievements() }
+        return { tokens, double, achievements: unlockAchievements() }
       })
     },
 
@@ -337,8 +342,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     claimedSeasons: () => store.seasons.claimed().map((claim) => claim.season),
 
     /**
-     * Collects a finished season's reward, once: tokens, feathers (which also
-     * count as experience) and exclusive items. `rank` and `total` come from
+     * Collects a finished season's reward, once: tokens and exclusive items. `rank` and `total` come from
      * the season's board; without them only the league reward is paid.
      */
     claimSeason({ season, score, rank = null, total = null }) {
@@ -349,7 +353,6 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       const achievements = write(() => {
         store.seasons.add({ season, rank, total, score })
         store.wallet.credit(reward.tokens)
-        store.profile.earn(reward.feathers)
         const owned = store.upgrades.owned()
         for (const id of reward.items) {
           if (owned.includes(id)) continue
@@ -376,7 +379,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         v: SAVE_VERSION,
         balanceCents: store.wallet.balance(),
         xp: profile.xp,
-        feathers: profile.feathers,
+        feathers: 0,
         upgrades: store.upgrades.owned(),
         equipped: store.upgrades.equipped(),
         achievements: store.achievements.unlocked(),
@@ -397,7 +400,8 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       if (!save) throw new GameError('invalid-save', 'Sauvegarde du compte illisible')
       store.transaction(() => {
         store.wallet.set(save.balanceCents)
-        store.profile.set({ xp: save.xp, feathers: save.feathers })
+        store.profile.set({ xp: save.xp })
+        store.settings.set('level_paid', levelFromXp(save.xp))
         store.upgrades.replace(save.upgrades, save.equipped)
         store.achievements.replace(save.achievements)
         store.rounds.replaceFinished(save.rounds)

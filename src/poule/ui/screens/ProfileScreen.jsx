@@ -8,7 +8,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Avatar from '../account/Avatar.jsx'
 import { syncLabel } from '../account/syncLabel.js'
 import { count, multiplierLabel, percent, signedTokens, tokens } from '../format.js'
-import { FeatherIcon } from '../icons.jsx'
+import { CoinIcon } from '../icons.jsx'
 import './profile.css'
 
 const NONE = []
@@ -179,7 +179,7 @@ function Achievements() {
             <b>{achievement.label}</b>
             <small>{achievement.hint}</small>
             <span>
-              <FeatherIcon size={12} /> {achievement.reward}
+              <CoinIcon size={12} /> {tokens(achievement.reward)}
             </span>
           </li>
         )

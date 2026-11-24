@@ -39,7 +39,7 @@ export function createSqliteStore(database) {
           endedAt: round.endedAt ?? now(),
           crossed: round.crossed,
           roadLanes: round.roadLanes,
-          feathers: round.feathers,
+          xp: round.xp,
         })
       }
     },
@@ -51,10 +51,9 @@ export function createSqliteStore(database) {
   }
 
   const profile = {
-    get: () => database.get(SQL.profileGet) ?? { xp: 0, feathers: 0 },
+    get: () => database.get(SQL.profileGet) ?? { xp: 0 },
     earn: (amount) => void database.run(SQL.profileEarn, { amount }),
-    spend: (amount) => database.run(SQL.profileSpend, { amount }) === 1,
-    set: ({ xp, feathers }) => void database.run(SQL.profileSet, { xp, feathers }),
+    set: ({ xp }) => void database.run(SQL.profileSet, { xp }),
   }
 
   const upgrades = {

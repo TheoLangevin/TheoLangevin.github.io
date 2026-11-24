@@ -12,10 +12,10 @@ import {
 } from '../save.js'
 
 const save = (extra = {}) => ({
-  v: 2,
+  v: 3,
   balanceCents: 90000,
   xp: 120,
-  feathers: 40,
+  feathers: 0,
   upgrades: ['cap', 'turbo'],
   equipped: { hat: 'cap' },
   achievements: ['first-steps'],
@@ -29,7 +29,7 @@ const save = (extra = {}) => ({
       lane: 3,
       crossed: 3,
       roadLanes: 24,
-      feathers: 6,
+      xp: 6,
       status: 'won',
       endedAt: 't',
     },
@@ -41,7 +41,7 @@ const save = (extra = {}) => ({
       lane: 4,
       crossed: 3,
       roadLanes: 20,
-      feathers: 15,
+      xp: 15,
       status: 'lost',
       endedAt: 't',
     },
@@ -58,9 +58,20 @@ describe('save format', () => {
 
   it('refuses wrong versions, types and negative amounts', () => {
     expect(validateSave(null)).toBeNull()
-    expect(validateSave(save({ v: 3 }))).toBeNull()
+    expect(validateSave(save({ v: 4 }))).toBeNull()
     expect(validateSave(save({ balanceCents: -1 }))).toBeNull()
     expect(validateSave(save({ xp: 'lots' }))).toBeNull()
+  })
+
+  it('turns the feathers of an older save into tokens', () => {
+    const old = { ...save({ v: 2, feathers: 40 }) }
+    old.rounds = old.rounds.map(({ xp, ...round }) => ({ ...round, feathers: xp }))
+    const migrated = validateSave(old)
+    expect(migrated.v).toBe(3)
+    expect(migrated.feathers).toBe(0)
+    expect(migrated.balanceCents).toBe(90000 + 40 * 1000)
+    expect(migrated.rounds[0].xp).toBe(6)
+    expect(validateSave(save({ feathers: 40 })).balanceCents).toBe(90000)
   })
 
   it('drops what it does not know instead of failing', () => {

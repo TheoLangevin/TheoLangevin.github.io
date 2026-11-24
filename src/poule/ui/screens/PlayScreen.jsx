@@ -44,7 +44,7 @@ function RoundHud() {
           <b>{value}</b>
         </div>
       ))}
-      {twin && <span className="hud__twin">Double poule · plumes ×2</span>}
+      {twin && <span className="hud__twin">Double poule · XP ×2 et bonus de jetons</span>}
       {round && autocash && (
         <span className="hud__auto">
           <BoltIcon size={12} /> auto {multiplierLabel(autocash)}

@@ -41,7 +41,7 @@ export function weeklyStats(rounds, date = new Date()) {
     const at = Date.parse(round.endedAt)
     if (!(at >= from && at < to)) continue
     played++
-    xp += round.feathers
+    xp += round.xp
     if (round.status === 'won') bestMultiplier = Math.max(bestMultiplier, round.mult)
   }
   return { xp, bestMultiplier, played }
@@ -85,7 +85,6 @@ export function seasonReward({ score, rank, total }) {
     league: league.id,
     tier: tier?.id ?? null,
     tokens: league.reward.tokens + (tier?.reward.tokens ?? 0),
-    feathers: league.reward.feathers + (tier?.reward.feathers ?? 0),
     items: tier?.reward.items ?? [],
   }
 }

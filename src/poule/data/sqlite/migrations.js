@@ -102,6 +102,19 @@ export const MIGRATIONS = Object.freeze([
       );
     `,
   },
+  {
+    version: 4,
+    name: 'feathers become tokens',
+    up: `
+      -- Tokens are the only currency now. Unspent feathers turn into tokens
+      -- (1 feather = 10 tokens); the column stays, unused, and rounds.feathers
+      -- keeps the experience a round earned.
+      UPDATE wallet
+      SET balance_cents = balance_cents + (SELECT feathers FROM profile WHERE id = 1) * 1000
+      WHERE id = 1;
+      UPDATE profile SET feathers = 0;
+    `,
+  },
 ])
 
 export const LATEST_VERSION = MIGRATIONS.at(-1).version

@@ -9,6 +9,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Avatar from '../account/Avatar.jsx'
 import { syncLabel } from '../account/syncLabel.js'
 import { CollectionAlbum } from '../collection/Collection.jsx'
+import SeasonPass from '../progress/SeasonPass.jsx'
 import { count, multiplierLabel, percent, signedTokens, tokens } from '../format.js'
 import { CoinIcon } from '../icons.jsx'
 import './profile.css'
@@ -231,6 +232,8 @@ export default function ProfileScreen({ hidden, go }) {
     useShallow((state) => ({
       sound: state.sound,
       haptics: state.haptics,
+      music: state.music,
+      toggleMusic: state.toggleMusic,
       inRound: Boolean(state.round),
       toggleSound: state.toggleSound,
       toggleHaptics: state.toggleHaptics,
@@ -244,6 +247,7 @@ export default function ProfileScreen({ hidden, go }) {
       <h1 className="screen__title">Profil</h1>
       <AccountCard />
       <AdminLink go={go} />
+      <SeasonPass />
 
       <h2 className="section-title">Statistiques</h2>
       <Stats />
@@ -262,6 +266,7 @@ export default function ProfileScreen({ hidden, go }) {
       <h2 className="section-title">Réglages</h2>
       <section className="card">
         <Switch label="Son" checked={p.sound} onChange={p.toggleSound} />
+        <Switch label="Musique" checked={p.music} onChange={p.toggleMusic} />
         {'vibrate' in navigator && <Switch label="Vibrations" checked={p.haptics} onChange={p.toggleHaptics} />}
       </section>
 

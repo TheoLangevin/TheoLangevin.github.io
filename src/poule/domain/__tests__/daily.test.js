@@ -1,13 +1,38 @@
 import { describe, expect, it } from 'vitest'
 import { DAILY_TRIES } from '../../config/daily.js'
-import { dailyMode, dailyReward, dailyStatus, dayId, previousDayId, validDaily, validDailyClaims } from '../daily.js'
+import {
+  dailyMode,
+  dailyReward,
+  dailyStatus,
+  dayId,
+  isTournament,
+  previousDayId,
+  tournamentSeed,
+  validDaily,
+  validDailyClaims,
+} from '../daily.js'
 
 describe('daily challenge', () => {
   it('names days in UTC and picks the mode by weekday', () => {
     expect(dayId(new Date('2026-11-25T23:30:00Z'))).toBe('2026-11-25')
     expect(previousDayId(new Date('2026-12-01T01:00:00Z'))).toBe('2026-11-30')
-    expect(dailyMode('2026-11-28').id).toBe('hardcore') // a Saturday
+    expect(dailyMode('2026-11-28').id).toBe('hard') // a Saturday: tournament
     expect(dailyMode('2026-11-25').id).toBe('easy') // a Wednesday
+  })
+
+  it('turns the weekend into a tournament: 5 tries, same roads, bigger rewards', () => {
+    expect(isTournament('2026-11-28')).toBe(true)
+    expect(isTournament('2026-11-29')).toBe(true)
+    expect(isTournament('2026-11-30')).toBe(false)
+    expect(dailyStatus(null, '2026-11-28')).toMatchObject({ left: 5, max: 5, tournament: true })
+    expect(tournamentSeed('2026-11-28', 2)).toBe(tournamentSeed('2026-11-28', 2))
+    expect(tournamentSeed('2026-11-28', 2)).not.toBe(tournamentSeed('2026-11-28', 3))
+    const weekday = dailyReward({ date: '2026-11-25', best: 3, rank: 1, total: 10 })
+    const weekend = dailyReward({ date: '2026-11-28', best: 3, rank: 1, total: 10 })
+    expect(weekend.tokens).toBe(weekday.tokens * 3)
+    expect(weekend.item).toBe('title-tournament')
+    expect(dailyReward({ date: '2026-11-28', best: 3, rank: 2, total: 10 }).item).toBeNull()
+    expect(validDaily({ date: '2026-11-28', tries: 5, best: 2 }).tries).toBe(5)
   })
 
   it('counts tries per day', () => {

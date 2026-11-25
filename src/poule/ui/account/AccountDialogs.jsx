@@ -95,7 +95,7 @@ function RewardDialog({ onClose }) {
   const demoted = before && after.min < before.min
   const tokensTotal = weeks.reduce((sum, week) => sum + week.reward.tokens, 0) + (daily?.reward?.tokens ?? 0)
   const items = [...new Set(weeks.flatMap((week) => week.reward.items))]
-  const title = weeks.length ? (promoted ? 'Promotion !' : demoted ? 'Relégation' : 'Semaine terminée') : 'Défi d’hier'
+  const title = weeks.length ? (promoted ? 'Promotion !' : demoted ? 'Relégation' : 'Journée terminée') : 'Défi d’hier'
 
   return (
     <Dialog
@@ -125,7 +125,7 @@ function RewardDialog({ onClose }) {
             const tier = RANK_REWARDS.find((entry) => entry.id === week.reward.tier)
             return (
               <li key={week.season}>
-                <b>Semaine {week.season.slice(-2)}</b>
+                <b>Ligue du {week.season.slice(8, 10)}/{week.season.slice(5, 7)}</b>
                 <span>
                   {week.score
                     ? `${count(week.score)} XP${week.rank ? ` · ${week.rank === 1 ? '1er' : `${week.rank}e`} sur ${count(week.total)}` : ''}${tier ? ` · ${tier.label}` : ''}`
@@ -161,7 +161,7 @@ function RewardDialog({ onClose }) {
             <GiftIcon size={20} /> <b>{upgradeById(id).label}</b> (exclusif)
           </li>
         ))}
-        {tokensTotal === 0 && items.length === 0 && <li>Pas de récompense cette fois. Jouez cette semaine pour remonter !</li>}
+        {tokensTotal === 0 && items.length === 0 && <li>Pas de récompense cette fois. Jouez aujourd’hui pour remonter !</li>}
       </ul>
     </Dialog>
   )

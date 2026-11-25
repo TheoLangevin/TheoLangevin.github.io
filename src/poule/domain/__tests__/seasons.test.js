@@ -10,30 +10,28 @@ import {
   weeklyStats,
 } from '../seasons.js'
 
-describe('season calendar', () => {
-  it('names weeks the ISO way, across year ends', () => {
-    expect(seasonId(new Date('2026-11-24T10:00:00Z'))).toBe('2026-W48')
-    expect(seasonId(new Date('2027-01-01T10:00:00Z'))).toBe('2026-W53')
-    expect(seasonId(new Date('2027-01-04T00:00:00Z'))).toBe('2027-W01')
-    expect(isSeasonId('2026-W48')).toBe(true)
-    expect(isSeasonId('2026-48')).toBe(false)
+describe('league calendar', () => {
+  it('names days in UTC', () => {
+    expect(seasonId(new Date('2026-11-24T10:00:00Z'))).toBe('2026-11-24')
+    expect(seasonId(new Date('2027-01-01T23:59:00Z'))).toBe('2027-01-01')
+    expect(isSeasonId('2026-11-24')).toBe(true)
+    expect(isSeasonId('2026-W48')).toBe(false)
   })
 
-  it('runs from Monday 00:00 UTC to the next Monday', () => {
+  it('runs from 00:00 UTC to the next day', () => {
     const now = new Date('2026-11-26T18:30:00Z')
-    expect(seasonStart(now).toISOString()).toBe('2026-11-23T00:00:00.000Z')
-    expect(seasonEnd(now).toISOString()).toBe('2026-11-30T00:00:00.000Z')
-    expect(previousSeasonId(now)).toBe('2026-W47')
-    expect(seasonStart(new Date('2026-11-29T23:59:00Z')).toISOString()).toBe('2026-11-23T00:00:00.000Z')
+    expect(seasonStart(now).toISOString()).toBe('2026-11-26T00:00:00.000Z')
+    expect(seasonEnd(now).toISOString()).toBe('2026-11-27T00:00:00.000Z')
+    expect(previousSeasonId(now)).toBe('2026-11-25')
   })
 
-  it('scores the rounds of the week only', () => {
+  it('scores the rounds of the day only', () => {
     const rounds = [
-      { endedAt: '2026-11-22T23:00:00Z', xp: 50, status: 'won', mult: 9 },
-      { endedAt: '2026-11-23T08:00:00Z', xp: 6, status: 'won', mult: 1.22 },
-      { endedAt: '2026-11-25T08:00:00Z', xp: 4, status: 'lost', mult: 0 },
+      { endedAt: '2026-11-25T23:00:00Z', xp: 50, status: 'won', mult: 9 },
+      { endedAt: '2026-11-26T08:00:00Z', xp: 6, status: 'won', mult: 1.22 },
+      { endedAt: '2026-11-26T20:00:00Z', xp: 4, status: 'lost', mult: 0 },
     ]
-    expect(weeklyStats(rounds, new Date('2026-11-26T00:00:00Z'))).toEqual({ xp: 10, bestMultiplier: 1.22, played: 2 })
+    expect(weeklyStats(rounds, new Date('2026-11-26T21:00:00Z'))).toEqual({ xp: 10, bestMultiplier: 1.22, played: 2 })
   })
 })
 

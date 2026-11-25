@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { BET_PRESETS, CENTS, MAX_PAYOUT, MIN_BET, REFILL_AMOUNT } from '../../config/economy.js'
-import { DAILY_BET, DAILY_TRIES } from '../../config/daily.js'
+import { DAILY_BET } from '../../config/daily.js'
 import { DUEL_TRIES, DUEL_TRY_BET } from '../../config/duels.js'
 import { MODES, modeById } from '../../config/modes.js'
 import { allInBet, clampBet, refillCheck } from '../../domain/money.js'
@@ -241,9 +241,11 @@ function PlayControls() {
         ) : s.challenge && s.daily ? (
           <div className="challenge">
             <div>
-              <b>Défi du jour · {s.daily.mode.label}</b>
+              <b>
+                {s.daily.tournament ? 'Tournoi du week-end' : 'Défi du jour'} · {s.daily.mode.label}
+              </b>
               <small>
-                Mise {tokens(DAILY_BET)} jetons · essai {DAILY_TRIES - s.daily.left + 1}/{DAILY_TRIES} · meilleur{' '}
+                Mise {tokens(DAILY_BET)} jetons · essai {s.daily.max - s.daily.left + 1}/{s.daily.max} · meilleur{' '}
                 {s.daily.best ? multiplierLabel(s.daily.best) : '—'}
               </small>
             </div>
@@ -260,7 +262,8 @@ function PlayControls() {
                 onClick={() => s.setChallenge(true)}
                 disabled={locked}
               >
-                🏁 Défi du jour · {s.daily.mode.label} · {s.daily.left} essai{s.daily.left > 1 ? 's' : ''}
+                {s.daily.tournament ? '🏆 Tournoi du week-end' : '🏁 Défi du jour'} · {s.daily.mode.label} · {s.daily.left} essai
+                {s.daily.left > 1 ? 's' : ''}
               </button>
             )}
         <div className="chips modes" role="group" aria-label="Mode">

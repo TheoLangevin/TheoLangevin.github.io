@@ -9,6 +9,7 @@ import { BoltIcon, CoinIcon, GiftIcon, LockIcon } from '../icons.jsx'
 import { CarSprite, HenSprite } from '../road/sprites.jsx'
 import Mannequin from '../road/Mannequin.jsx'
 import { SurpriseBox } from '../collection/Collection.jsx'
+import Talents from '../progress/Talents.jsx'
 import { isEventActive } from '../../domain/calendar.js'
 import './shop.css'
 
@@ -192,7 +193,8 @@ function ItemSheet({ id, onClose }) {
       )}
       {item.description && <p>{item.description}</p>}
       {item.limited && <p className="note">Édition limitée : en vente seulement pendant l’événement.</p>}
-      {item.exclusive && !item.beta && <p>Se gagne en finissant bien classé une semaine. Voir le classement.</p>}
+      {item.exclusive && item.pass && <p>Se gagne avec le pass de saison (Profil).</p>}
+      {item.exclusive && !item.beta && !item.pass && <p>Se gagne en finissant bien classé une journée de ligue ou un tournoi. Voir le classement.</p>}
       {item.beta && !owned && <p className="note">Réservé aux joueurs de la bêta : il ne s’achète pas.</p>}
       {item.secret && !owned && <p className="shop__secret">Vous avez trouvé l’objet caché de la boutique.</p>}
       {owned &&
@@ -259,6 +261,8 @@ export default function ShopScreen({ hidden }) {
           </p>
         </div>
       </div>
+
+      <Talents />
 
       <SurpriseBox />
 

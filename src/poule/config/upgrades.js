@@ -260,7 +260,7 @@ export const UPGRADES = Object.freeze(
     { id: 'title-daredevil', slot: 'title', label: 'Casse-cou', currency: 'tokens', cost: t(3000), level: 3 },
     { id: 'title-road-king', slot: 'title', label: 'Reine de la route', currency: 'tokens', cost: t(9000), level: 6 },
     { id: 'title-legend', slot: 'title', label: 'Légende', currency: 'tokens', cost: t(25000), level: 10 },
-    { id: 'title-champion', slot: 'title', label: 'Championne de la semaine', exclusive: true, level: 1 },
+    { id: 'title-champion', slot: 'title', label: 'Championne du jour', exclusive: true, level: 1 },
     { id: 'title-podium', slot: 'title', label: 'Sur le podium', exclusive: true, level: 1 },
 
     // Christmas, limited: on sale only while the event runs (config/calendar.js).
@@ -288,6 +288,48 @@ export const UPGRADES = Object.freeze(
       skin: 'roadworks',
       level: 1,
     },
+
+    // Season pass and tournament rewards (exclusive).
+    { id: 'title-pass-regular', slot: 'title', label: 'Habituée de la saison', exclusive: true, pass: true, level: 1 },
+    { id: 'title-pass-tireless', slot: 'title', label: 'Infatigable', exclusive: true, pass: true, level: 1 },
+    {
+      id: 'confetti-pass',
+      slot: 'party',
+      label: 'Confettis de saison',
+      exclusive: true,
+      pass: true,
+      level: 1,
+      colors: ['#7c5cff', '#ffd23f', '#ff4d6d', '#22d3ee', '#ffffff'],
+    },
+    {
+      id: 'trail-pass',
+      slot: 'trail',
+      label: 'Traînée de saison',
+      exclusive: true,
+      pass: true,
+      level: 1,
+      trail: { shape: 'glyph', glyph: '✦', colors: ['#c4b5fd', '#ffd23f'] },
+    },
+    {
+      id: 'plumage-pass',
+      slot: 'plumage',
+      label: 'Plumage de saison',
+      exclusive: true,
+      pass: true,
+      level: 1,
+      colors: ['#7c5cff', '#4c2fd1'],
+    },
+    {
+      id: 'plumage-pass-diamond',
+      slot: 'plumage',
+      label: 'Poule de diamant',
+      description: 'Le dernier palier du pass de saison.',
+      exclusive: true,
+      pass: true,
+      level: 1,
+      colors: ['#e0f7ff', '#8fd3ff', '#b9a6ff', '#ffffff'],
+    },
+    { id: 'title-tournament', slot: 'title', label: 'Reine du tournoi', exclusive: true, level: 1 },
 
     // Perks
     {

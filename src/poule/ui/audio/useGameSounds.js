@@ -1,6 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { usePoule } from '../../state/usePoule.js'
-import { playChime, playCoin, playCrash, playHop, playStart, playWin, setMuted, unlockAudio } from './sfx.js'
+import {
+  playChime,
+  playCoin,
+  playCrash,
+  playHop,
+  playStart,
+  playWin,
+  setMuted,
+  startMusic,
+  stopMusic,
+  unlockAudio,
+} from './sfx.js'
 
 const SOUNDS = {
   start: () => playStart(),
@@ -14,9 +25,24 @@ const SOUNDS = {
 export function useGameSounds() {
   const fx = usePoule((state) => state.fx)
   const sound = usePoule((state) => state.sound)
+  const music = usePoule((state) => state.music)
   const noticeCount = usePoule((state) => state.notices.length)
 
   useEffect(() => setMuted(!sound), [sound])
+
+  // Music: on when asked (and sound on), off while the page is hidden.
+  useEffect(() => {
+    if (!music || !sound) return stopMusic()
+    const update = () => (document.visibilityState === 'visible' ? startMusic() : stopMusic())
+    update()
+    window.addEventListener('pointerdown', update)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      stopMusic()
+      window.removeEventListener('pointerdown', update)
+      document.removeEventListener('visibilitychange', update)
+    }
+  }, [music, sound])
 
   useEffect(() => {
     const unlock = () => unlockAudio()

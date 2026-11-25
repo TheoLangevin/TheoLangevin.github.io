@@ -29,7 +29,7 @@ const save = (extra = {}) => ({
   achievements: ['first-steps'],
   prefs: { mode: 'easy', bet: 1000, autocash: null, sound: true },
   rounds: [round(), round({ status: 'won', payout: 1220, mult: 1.22, lane: 3, crossed: 3 })],
-  claims: [{ season: '2026-W47', rank: 1, total: 3, score: 120 }],
+  claims: [{ season: '2026-11-24', rank: 1, total: 3, score: 120 }],
   lastRefillAt: null,
   ...extra,
 })
@@ -88,7 +88,7 @@ describe('admin stats', () => {
     expect(stats.shop.items.find((item) => item.id === 'cap').owners).toBe(3)
     expect(stats.shop.items.find((item) => item.id === 'beanie').owners).toBe(1)
     expect(stats.achievements.find((entry) => entry.id === 'first-steps').count).toBe(2)
-    expect(stats.seasons).toEqual([{ season: '2026-W47', count: 3 }])
+    expect(stats.seasons).toEqual([{ season: '2026-11-24', count: 3 }])
   })
 
   it('flags a return far above the game’s', () => {

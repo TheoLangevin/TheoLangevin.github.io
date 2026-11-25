@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { DAILY_BET, DAILY_REWARDS, DAILY_TRIES } from '../../config/daily.js'
+import { DAILY_BET, DAILY_REWARDS, TOURNAMENT_REWARD_FACTOR } from '../../config/daily.js'
 import { CURRENT_SEASON, GATES, RANK_BONUS, RANK_REWARDS, TIERS } from '../../config/seasons.js'
 import { upgradeById } from '../../config/upgrades.js'
 import { DIVISIONS, divisionById, divisionReward, leagueProgress, weekDelta } from '../../domain/leagues.js'
@@ -15,8 +15,11 @@ import { LiveFeed, TeamsPanel } from '../social/Social.jsx'
 import LeagueBadge from '../league/LeagueBadge.jsx'
 import './ranking.css'
 
+/** "2026-11-25" → "25/11". */
+const dayLabel = (id) => `${id.slice(8, 10)}/${id.slice(5, 7)}`
+
 const BOARDS = [
-  { id: 'season', label: 'Semaine' },
+  { id: 'season', label: 'Aujourd’hui' },
   { id: 'daily', label: 'Défi du jour' },
   { id: 'teams', label: 'Poulaillers' },
   { id: 'lp', label: 'Ligues' },
@@ -66,7 +69,7 @@ function SeasonCard({ onRewards, openPlayer }) {
       <div className="season__head">
         <div>
           <small className="muted">
-            {CURRENT_SEASON.label} · semaine {id.slice(-2)}
+            {CURRENT_SEASON.label} · ligue du {dayLabel(id)}
           </small>
           <h2>Fin dans {timeLeft(seasonEnd(new Date(now)) - now)}</h2>
         </div>
@@ -98,7 +101,7 @@ function SeasonCard({ onRewards, openPlayer }) {
       </div>
       <dl className="season__week">
         <div>
-          <dt>XP cette semaine</dt>
+          <dt>XP aujourd’hui</dt>
           <dd>{count(score)}</dd>
         </div>
         <div>
@@ -118,7 +121,7 @@ function SeasonCard({ onRewards, openPlayer }) {
           </span>
         </button>
       )}
-      {signedIn && standing?.rank === 1 && <p className="rival">👑 Vous menez la semaine. Tenez bon jusqu’à lundi !</p>}
+      {signedIn && standing?.rank === 1 && <p className="rival">👑 Vous menez la journée. Tenez bon jusqu’à minuit (UTC) !</p>}
     </section>
   )
 }
@@ -133,11 +136,21 @@ function DailyCard({ go }) {
   const standing = board.kind === 'daily' ? board.daily?.standing : null
   return (
     <section className="daily-card card">
-      <h2>Défi du jour · {daily.mode.label}</h2>
-      <p>
-        Mêmes règles pour tous aujourd’hui : ce mode, une mise fixe de {tokens(DAILY_BET)} jetons, {DAILY_TRIES} essais. Le meilleur
-        multiplicateur encaissé compte. Les meilleurs sont payés demain.
-      </p>
+      <h2>
+        {daily.tournament ? '🏆 Tournoi du week-end' : 'Défi du jour'} · {daily.mode.label}
+      </h2>
+      {daily.tournament ? (
+        <p>
+          Le week-end, le défi devient un tournoi : {daily.max} essais, une mise fixe de {tokens(DAILY_BET)} jetons, et{' '}
+          <b>les mêmes routes pour tout le monde</b> (l’essai 1 est la même route pour tous, l’essai 2 aussi…). Récompenses
+          ×{TOURNAMENT_REWARD_FACTOR}, et le titre « Reine du tournoi » pour la 1re place.
+        </p>
+      ) : (
+        <p>
+          Mêmes règles pour tous aujourd’hui : ce mode, une mise fixe de {tokens(DAILY_BET)} jetons, {daily.max} essais. Le
+          meilleur multiplicateur encaissé compte. Les meilleurs sont payés demain. Le week-end : tournoi !
+        </p>
+      )}
       <p>
         <b>{daily.left}</b> essai{daily.left > 1 ? 's' : ''} restant{daily.left > 1 ? 's' : ''} · meilleur :{' '}
         <b>{daily.best ? multiplierLabel(daily.best) : '—'}</b>
@@ -200,14 +213,14 @@ function RewardsSheet({ onClose }) {
   return (
     <Dialog title="Ligues et récompenses" onClose={onClose}>
       <p>
-        Chaque lundi, la semaine est réglée : vos points de ligue (PL) montent ou descendent, et vous êtes payé selon
+        Chaque jour à minuit (heure UTC), la journée est réglée : vos points de ligue (PL) montent ou descendent, et vous êtes payé selon
         votre division et votre rang. À récupérer à la connexion suivante.
       </p>
-      <h3 className="sheet__h">Points de la semaine</h3>
+      <h3 className="sheet__h">Points de la journée</h3>
       <ul className="rewards">
         <li>
           <b>Votre XP</b>
-          <span className="rewards__gain">6 × √XP (max 300)</span>
+          <span className="rewards__gain">6 × √XP (max 150)</span>
         </li>
         {RANK_BONUS.map((tier) => (
           <li key={tier.top ?? tier.share}>
@@ -217,11 +230,11 @@ function RewardsSheet({ onClose }) {
         ))}
         <li>
           <b>Entretien de la ligue</b>
-          <span className="rewards__gain">−0 à −180 PL</span>
+          <span className="rewards__gain">−0 à −90 PL</span>
         </li>
         <li>
-          <b>Semaine sans jouer</b>
-          <span className="rewards__gain">−2 × entretien (min −25)</span>
+          <b>Jour sans jouer</b>
+          <span className="rewards__gain">−entretien (min −10), 7 derniers jours seulement</span>
         </li>
       </ul>
       <h3 className="sheet__h">Ligues</h3>
@@ -264,7 +277,7 @@ function RewardsSheet({ onClose }) {
           </li>
         ))}
       </ul>
-      <h3 className="sheet__h">Défi du jour</h3>
+      <h3 className="sheet__h">Défi du jour (×{TOURNAMENT_REWARD_FACTOR} en tournoi le week-end)</h3>
       <ul className="rewards">
         {DAILY_REWARDS.map((tier) => (
           <li key={tier.id}>
@@ -277,11 +290,11 @@ function RewardsSheet({ onClose }) {
       </ul>
       {league?.history.length > 0 && (
         <>
-          <h3 className="sheet__h">Vos dernières semaines</h3>
+          <h3 className="sheet__h">Vos derniers jours</h3>
           <ul className="history-lp">
             {[...league.history].reverse().map((line) => (
               <li key={line.season}>
-                <small className="muted">S{line.season.slice(-2)}</small>
+                <small className="muted">{dayLabel(line.season)}</small>
                 <span>
                   {count(line.score)} XP{line.rank ? ` · ${line.rank}e/${line.total}` : ''}
                 </span>

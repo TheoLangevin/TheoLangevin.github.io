@@ -157,11 +157,11 @@ describe('account sync', () => {
   })
 })
 
-describe('week and daily results', () => {
-  it('settles finished weeks and yesterday\'s challenge once, by rank', async () => {
+describe('league days and daily results', () => {
+  it('settles finished days and yesterday\'s challenge once, by rank', async () => {
     const cloud = createMemoryCloud()
     cloud.seasons.set(
-      '2026-W47',
+      '2026-11-23',
       new Map([
         ['u1', { pseudo: 'Poulette', score: 300 }],
         ['u2', { pseudo: 'Autre', score: 120 }],
@@ -180,26 +180,26 @@ describe('week and daily results', () => {
     const sync = createSyncService({ game, cloud: createMemoryCloud(), delay: 0, now })
     await sync.connect(user)
 
-    // First visit of the season: leagues start from the current week.
+    // First visit of the season: leagues start from today.
     expect(await sync.pendingResults()).toBeNull()
-    expect(game.league().settled).toBe('2026-W47')
+    expect(game.league().settled).toBe('2026-11-23')
 
-    // A player last settled two weeks ago.
+    // A player last settled three days ago.
     const back = startedGame({ store: createMemoryStore(), clock: () => '2026-11-24T10:00:00Z' })
-    back.initLeague('2026-W45')
+    back.initLeague('2026-11-21')
     const backSync = createSyncService({ game: back, cloud, delay: 0, now })
     await backSync.connect(user)
     const pending = await backSync.pendingResults()
-    expect(pending.weeks.map((week) => week.season)).toEqual(['2026-W46', '2026-W47'])
+    expect(pending.weeks.map((week) => week.season)).toEqual(['2026-11-22', '2026-11-23'])
     expect(pending.weeks[0].score).toBe(0)
-    expect(pending.weeks[1]).toEqual({ season: '2026-W47', score: 300, rank: 1, total: 2 })
+    expect(pending.weeks[1]).toEqual({ season: '2026-11-23', score: 300, rank: 1, total: 2 })
     expect(pending.daily).toEqual({ date: '2026-11-23', best: 2.5, rank: 1, total: 2 })
     expect(pending.preview.daily.reward.id).toBe('first')
 
     const before = back.summary().balanceCents
     const result = backSync.claimResults(pending)
-    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(300)) + 150)
-    expect(result.league.settled).toBe('2026-W47')
+    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(300)) + 80)
+    expect(result.league.settled).toBe('2026-11-23')
     const achievements = result.achievements.reduce((sum, id) => sum + achievementById(id).reward, 0)
     expect(back.summary().balanceCents).toBe(before + result.tokens + achievements)
     expect(back.summary().progression.owned).toContain('title-champion')

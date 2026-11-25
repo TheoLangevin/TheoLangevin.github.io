@@ -10,7 +10,7 @@ rules_version = '2';
 //                        and freeing your own are the only writes.
 //   leaderboard/{uid}    public all-time line of a player who chose a pseudo,
 //                        also their public profile (what their hen wears).
-//   seasons/{week}/entries/{uid}  public line of that player for one week.
+//   seasons/{day}/entries/{uid}   public line of that player in one day's league.
 //   daily/{day}/entries/{uid}     public line of that player on a day's challenge.
 //   duels/{id}           a duel between two players, seen and changed by them only.
 //   teams/{id}           a poulailler (team). Public; members join and leave themselves.
@@ -86,6 +86,16 @@ service cloud.firestore {
         && (!('claims' in save) || (save.claims is list && save.claims.size() <= 600));
     }
 
+    // Light anti-cheat: what one write may add to a save. Generous for a real
+    // player (the biggest payout, rewards, many rounds between two syncs),
+    // but a faked save cannot jump to absurd numbers in one go.
+    function plausibleGain(before, after) {
+      let elapsedMs = request.time.toMillis() - before.updatedAt.toMillis();
+      return after.save.balanceCents <= before.save.balanceCents + 1010000000
+        && after.save.xp <= before.save.xp + 3000 + elapsedMs / 1000 * 300
+        && after.save.league.lp <= before.save.league.lp + 2000;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow delete: if isOwner(uid);
@@ -93,6 +103,8 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])
         && validSave(request.resource.data.save)
+        && request.resource.data.save.balanceCents <= 2000000000
+        && request.resource.data.save.league.lp <= 2000
         && request.resource.data.rev == 1
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
@@ -102,6 +114,7 @@ service cloud.firestore {
       allow update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])
         && validSave(request.resource.data.save)
+        && plausibleGain(resource.data, request.resource.data)
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time;
@@ -151,15 +164,16 @@ service cloud.firestore {
     match /seasons/{season}/entries/{uid} {
       allow read: if true;
 
-      // A week's score is experience earned that week: never more than the save's total.
+      // A day's score is experience earned that day: never more than the save's total.
       allow create, update: if isOwner(uid)
-        && season.matches('^[0-9]{4}-W[0-9]{2}$')
+        && season.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.keys().hasOnly(['pseudo', 'title', 'level', 'score', 'bestMultiplier', 'league', 'updatedAt'])
         && ownsPseudo(request.resource.data.pseudo)
         && validTitle(request.resource.data.get('title', null))
         && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 50
         && request.resource.data.score is int && request.resource.data.score >= 0
         && request.resource.data.score <= savedXp(uid)
+        && request.resource.data.score <= 200000
         && request.resource.data.bestMultiplier is number
         && request.resource.data.bestMultiplier >= 0 && request.resource.data.bestMultiplier <= 5000
         && (request.resource.data.league == null || (request.resource.data.league is string && request.resource.data.league.size() <= 20))
@@ -171,7 +185,7 @@ service cloud.firestore {
     match /daily/{day}/entries/{uid} {
       allow read: if true;
 
-      // The day's challenge: three tries at most, the best multiplier cashed out.
+      // The day's challenge: three tries at most (five in the weekend tournament), the best multiplier cashed out.
       allow create, update: if isOwner(uid)
         && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.keys().hasOnly(['pseudo', 'title', 'best', 'tries', 'updatedAt'])
@@ -180,7 +194,7 @@ service cloud.firestore {
         && request.resource.data.best is number
         && request.resource.data.best >= 0 && request.resource.data.best <= 5000
         && request.resource.data.tries is int
-        && request.resource.data.tries >= 1 && request.resource.data.tries <= 3
+        && request.resource.data.tries >= 1 && request.resource.data.tries <= 5
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if isOwner(uid);

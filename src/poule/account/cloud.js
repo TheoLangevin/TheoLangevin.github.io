@@ -10,8 +10,12 @@
  * @property {(uid: string) => Promise<string | null>} myPseudo
  * @property {(uid: string, pseudo: string, entry: object, seasonEntry: object) => Promise<void>} claimPseudo
  *   throws PseudoTakenError if someone else has it; writes both board lines
- * @property {(uid: string, entry: object, seasonEntry: object) => Promise<void>} publishEntry
- *   the all-time line and this week's line (seasonEntry.season says which week)
+ * @property {(uid: string, entry: object, seasonEntry: object, dailyEntry?: object | null) => Promise<void>} publishEntry
+ *   the all-time line, this week's line (seasonEntry.season says which week) and today's daily challenge line
+ * @property {(season: string, score: number) => Promise<object | null>} seasonAbove  the player just above a score
+ * @property {(day: string, size?: number) => Promise<object[]>} dailyBoard  by best multiplier
+ * @property {(day: string, uid: string) => Promise<object | null>} dailyEntryOf
+ * @property {(day: string, best: number) => Promise<{ rank: number, total: number }>} dailyRank
  * @property {(uid: string, pseudo: string, season: string) => Promise<void>} removeEntry
  * @property {(by: 'xp' | 'tokens' | 'bestMultiplier', size?: number) => Promise<object[]>} leaderboard
  * @property {(season: string, size?: number) => Promise<object[]>} seasonBoard  by weekly score
@@ -42,17 +46,28 @@ export function createMemoryCloud() {
   const pseudos = new Map()
   const entries = new Map()
   const seasons = new Map()
+  const days = new Map()
   const copy = (value) => structuredClone(value)
   const season = (id) => {
     if (!seasons.has(id)) seasons.set(id, new Map())
     return seasons.get(id)
   }
   const putSeason = (uid, { season: id, ...line }) => season(id).set(uid, line)
+  const day = (id) => {
+    if (!days.has(id)) days.set(id, new Map())
+    return days.get(id)
+  }
+  const putDaily = (uid, line) => {
+    if (!line) return
+    const { day: id, ...rest } = line
+    day(id).set(uid, rest)
+  }
 
   return {
     users,
     entries,
     seasons,
+    days,
     async loadSave(uid) {
       return users.has(uid) ? copy(users.get(uid)) : null
     },
@@ -65,7 +80,7 @@ export function createMemoryCloud() {
     async myPseudo(uid) {
       return entries.get(uid)?.pseudo ?? null
     },
-    async claimPseudo(uid, pseudo, entry, seasonEntry) {
+    async claimPseudo(uid, pseudo, entry, seasonEntry, dailyEntry = null) {
       const key = pseudo.toLowerCase()
       if (pseudos.has(key) && pseudos.get(key) !== uid) throw new PseudoTakenError(pseudo)
       const previous = entries.get(uid)?.pseudo
@@ -73,10 +88,33 @@ export function createMemoryCloud() {
       pseudos.set(key, uid)
       entries.set(uid, { ...entry, pseudo })
       putSeason(uid, { ...seasonEntry, pseudo })
+      if (dailyEntry) putDaily(uid, { ...dailyEntry, pseudo })
     },
-    async publishEntry(uid, entry, seasonEntry) {
+    async publishEntry(uid, entry, seasonEntry, dailyEntry = null) {
       entries.set(uid, { ...entry })
       putSeason(uid, seasonEntry)
+      putDaily(uid, dailyEntry)
+    },
+    async seasonAbove(id, score) {
+      const above = [...season(id).entries()]
+        .map(([uid, line]) => ({ uid, ...line }))
+        .filter((line) => line.score > score)
+        .sort((a, b) => a.score - b.score)
+      return above[0] ?? null
+    },
+    async dailyBoard(id, size = 20) {
+      return [...day(id).entries()]
+        .map(([uid, line]) => ({ uid, ...line }))
+        .sort((a, b) => b.best - a.best)
+        .slice(0, size)
+    },
+    async dailyEntryOf(id, uid) {
+      const line = day(id).get(uid)
+      return line ? { uid, ...line } : null
+    },
+    async dailyRank(id, best) {
+      const values = [...day(id).values()].map((line) => line.best)
+      return { rank: values.filter((value) => value > best).length + 1, total: values.length }
     },
     async removeEntry(uid, pseudo, seasonId) {
       entries.delete(uid)

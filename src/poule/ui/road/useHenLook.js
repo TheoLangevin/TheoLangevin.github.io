@@ -16,6 +16,7 @@ export function lookFrom(equipped = NOTHING, owned = []) {
     confetti: upgradeById(equipped.party)?.colors ?? DEFAULT_CONFETTI,
     title: upgradeById(equipped.title)?.label ?? null,
     fast: owned.includes('turbo'),
+    skin: upgradeById(equipped.skin)?.skin ?? null,
   }
 }
 

@@ -28,7 +28,7 @@ export default function Hen({ x, hop, flat, look, twin = false }) {
     <div className={className} style={{ left: x }}>
       {look.trail && hop > 0 && !flat && !twin && <Trail key={`trail-${hop}`} trail={look.trail} />}
       <div key={hop} className={hop > 0 ? 'hen__body hen__body--hop' : 'hen__body'}>
-        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
+        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} skin={look.skin} />
       </div>
     </div>
   )

@@ -87,6 +87,7 @@ export default function Road() {
             multiplier={multiplier}
             state={laneState(index + 1)}
             cars={carsByLane.get(index + 1) ?? NO_CARS}
+            skin={look.skin}
             onCarGone={onCarGone}
           />
         ))}
@@ -95,7 +96,7 @@ export default function Road() {
         </div>
         {scene.threat && (
           <div className="road__threat" style={{ left: henX(scene.threat) - LANE_WIDTH / 2, width: LANE_WIDTH }}>
-            <Car key={scene.hop} id={-1} {...KILLER_CAR} delay={TIMING.crashCarDelay / 1000} />
+            <Car key={scene.hop} id={-1} {...KILLER_CAR} skin={look.skin} delay={TIMING.crashCarDelay / 1000} />
           </div>
         )}
         {twin && <Hen x={x - 30} hop={scene.hop} flat={Boolean(scene.deadLane)} look={look} twin />}

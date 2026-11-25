@@ -7,12 +7,15 @@ import {
   isValidPseudo,
   leaderboardEntry,
   publicLook,
+  dailyEntry,
+  needsSeasonReset,
   seasonEntry,
   validateSave,
 } from '../save.js'
 
 const save = (extra = {}) => ({
-  v: 3,
+  v: 4,
+  epoch: 1,
   balanceCents: 90000,
   xp: 120,
   feathers: 0,
@@ -48,6 +51,9 @@ const save = (extra = {}) => ({
   ],
   claims: [{ season: '2026-W47', rank: 3, total: 20, score: 140 }],
   lastRefillAt: 1764000000000,
+  league: { lp: 320, peak: 400, settled: '2026-W47', gates: { top10: true, first: false }, history: [] },
+  daily: { date: '2026-11-25', tries: 2, best: 1.5 },
+  dailyClaims: ['2026-11-24'],
   ...extra,
 })
 
@@ -58,7 +64,7 @@ describe('save format', () => {
 
   it('refuses wrong versions, types and negative amounts', () => {
     expect(validateSave(null)).toBeNull()
-    expect(validateSave(save({ v: 4 }))).toBeNull()
+    expect(validateSave(save({ v: 5 }))).toBeNull()
     expect(validateSave(save({ balanceCents: -1 }))).toBeNull()
     expect(validateSave(save({ xp: 'lots' }))).toBeNull()
   })
@@ -66,12 +72,27 @@ describe('save format', () => {
   it('turns the feathers of an older save into tokens', () => {
     const old = { ...save({ v: 2, feathers: 40 }) }
     old.rounds = old.rounds.map(({ xp, ...round }) => ({ ...round, feathers: xp }))
-    const migrated = validateSave(old)
-    expect(migrated.v).toBe(3)
+    const migrated = validateSave({ ...old, epoch: 1 })
+    expect(migrated.v).toBe(4)
     expect(migrated.feathers).toBe(0)
     expect(migrated.balanceCents).toBe(90000 + 40 * 1000)
     expect(migrated.rounds[0].xp).toBe(6)
     expect(validateSave(save({ feathers: 40 })).balanceCents).toBe(90000)
+  })
+
+  it('resets a save from before Saison 1: 1000 tokens, a new league, the beta skin', () => {
+    const before = validateSave(save({ v: 3, epoch: undefined, balanceCents: 5_000_000 }))
+    expect(before.epoch).toBe(1)
+    expect(before.balanceCents).toBe(STARTING_BALANCE)
+    expect(before.upgrades).toContain('skin-roadworks')
+    expect(before.equipped.skin).toBe('skin-roadworks')
+    expect(before.league).toEqual({ lp: 0, peak: 0, settled: null, gates: { top10: false, first: false }, history: [] })
+    expect(before.xp).toBe(120)
+    expect(before.achievements).toEqual(['first-steps'])
+    expect(needsSeasonReset(save({ epoch: 0 }))).toBe(true)
+    expect(needsSeasonReset(save())).toBe(false)
+    const fresh = validateSave(save({ epoch: 0, xp: 0, rounds: [], upgrades: [], equipped: {} }))
+    expect(fresh.upgrades).toEqual([])
   })
 
   it('drops what it does not know instead of failing', () => {
@@ -104,6 +125,8 @@ describe('save format', () => {
       level: 3,
       xp: 120,
       tokens: 90000,
+      lp: 320,
+      division: 'silver-3',
       bestMultiplier: 1.22,
       bestLanes: 3,
     })
@@ -117,9 +140,20 @@ describe('save format', () => {
   })
 
   it('still reads v1 saves, without claims', () => {
-    const old = validateSave({ ...save(), v: 1, claims: undefined, lastRefillAt: undefined })
+    const old = validateSave({ ...save(), v: 1, epoch: 1, claims: undefined, lastRefillAt: undefined })
     expect(old.claims).toEqual([])
     expect(old.lastRefillAt).toBeNull()
+  })
+
+  it('builds the daily challenge line only on the day it was played', () => {
+    expect(dailyEntry(save(), 'Poulette', new Date('2026-11-25T20:00:00Z'))).toEqual({
+      day: '2026-11-25',
+      pseudo: 'Poulette',
+      title: null,
+      best: 1.5,
+      tries: 2,
+    })
+    expect(dailyEntry(save(), 'Poulette', new Date('2026-11-26T01:00:00Z'))).toBeNull()
   })
 
   it('builds the weekly season line from the rounds of the week', () => {
@@ -135,7 +169,7 @@ describe('save format', () => {
       level: 3,
       score: 21,
       bestMultiplier: 1.22,
-      league: 'bronze',
+      league: 'silver-3',
     })
   })
 

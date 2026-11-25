@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { BET_PRESETS, CENTS, MAX_BET, MAX_PAYOUT, REFILL_AMOUNT } from '../../config/economy.js'
+import { BET_PRESETS, CENTS, MAX_PAYOUT, MIN_BET, REFILL_AMOUNT } from '../../config/economy.js'
+import { DAILY_BET, DAILY_TRIES } from '../../config/daily.js'
 import { MODES, modeById } from '../../config/modes.js'
-import { clampBet, refillCheck } from '../../domain/money.js'
+import { allInBet, clampBet, refillCheck } from '../../domain/money.js'
 import { multiplierAt, payoutCents } from '../../domain/multiplier.js'
 import { usePoule } from '../../state/usePoule.js'
 import { multiplierLabel, tokens } from '../format.js'
@@ -54,15 +55,17 @@ function RoundHud() {
   )
 }
 
-function BetPicker({ betCents, setBet, locked }) {
+function BetPicker({ betCents, balanceCents, setBet, locked }) {
   const [draft, setDraft] = useState(String(betCents / CENTS))
   useEffect(() => setDraft(String(betCents / CENTS)), [betCents])
   const commit = (value) => {
-    const next = clampBet(value)
+    const next = clampBet(value, balanceCents)
     setDraft(String(next / CENTS))
     if (next !== betCents) setBet(next)
   }
   const bet = betCents / CENTS
+  const allIn = allInBet(balanceCents)
+  const isAllIn = betCents === allIn && balanceCents >= MIN_BET
 
   return (
     <div className="bet">
@@ -84,7 +87,7 @@ function BetPicker({ betCents, setBet, locked }) {
             inputMode="numeric"
             enterKeyHint="done"
             min="1"
-            max={MAX_BET / CENTS}
+            max={Math.max(1, Math.floor(balanceCents / CENTS))}
             value={draft}
             disabled={locked}
             onChange={(event) => setDraft(event.target.value)}
@@ -103,6 +106,19 @@ function BetPicker({ betCents, setBet, locked }) {
         </button>
       </div>
       <div className="chips" role="group" aria-label="Mises rapides">
+        <button
+          type="button"
+          className="chip--allin"
+          aria-pressed={isAllIn}
+          onClick={() => {
+            setDraft(String(allIn / CENTS))
+            if (allIn !== betCents) setBet(allIn)
+          }}
+          disabled={locked || balanceCents < MIN_BET}
+          aria-label="Miser tous mes jetons"
+        >
+          Tapis
+        </button>
         {BET_PRESETS.map((preset) => (
           <button
             key={preset}
@@ -119,9 +135,6 @@ function BetPicker({ betCents, setBet, locked }) {
         </button>
         <button type="button" onClick={() => commit(bet * 2)} disabled={locked} aria-label="Doubler la mise">
           ×2
-        </button>
-        <button type="button" onClick={() => commit(MAX_BET / CENTS)} disabled={locked}>
-          Max
         </button>
       </div>
     </div>
@@ -190,6 +203,9 @@ function PlayControls() {
       play: state.play,
       cashOut: state.cashOut,
       refill: state.refill,
+      challenge: state.challenge,
+      daily: state.daily,
+      setChallenge: state.setChallenge,
     })),
   )
   const round = s.round
@@ -201,6 +217,31 @@ function PlayControls() {
     <div className="controls">
       {/* Both panels share one grid cell, so the road keeps its size between them. */}
       <div className="controls__panel" hidden={Boolean(round)} aria-hidden={Boolean(round)}>
+        {s.challenge && s.daily ? (
+          <div className="challenge">
+            <div>
+              <b>Défi du jour · {s.daily.mode.label}</b>
+              <small>
+                Mise {tokens(DAILY_BET)} jetons · essai {DAILY_TRIES - s.daily.left + 1}/{DAILY_TRIES} · meilleur{' '}
+                {s.daily.best ? multiplierLabel(s.daily.best) : '—'}
+              </small>
+            </div>
+            <button type="button" onClick={() => s.setChallenge(false)} disabled={locked}>
+              Quitter
+            </button>
+          </div>
+        ) : (
+          <>
+            {s.daily?.left > 0 && (
+              <button
+                type="button"
+                className="challenge-entry"
+                onClick={() => s.setChallenge(true)}
+                disabled={locked}
+              >
+                🏁 Défi du jour · {s.daily.mode.label} · {s.daily.left} essai{s.daily.left > 1 ? 's' : ''}
+              </button>
+            )}
         <div className="segmented" role="group" aria-label="Difficulté">
           {MODES.map((entry) => (
             <button
@@ -214,16 +255,42 @@ function PlayControls() {
             </button>
           ))}
         </div>
-        <BetPicker betCents={s.betCents} setBet={s.setBet} locked={locked} />
+        <BetPicker betCents={s.betCents} balanceCents={s.balanceCents} setBet={s.setBet} locked={locked} />
+          </>
+        )}
         <Refill balanceCents={s.balanceCents} lastRefillAt={s.lastRefillAt} refill={s.refill} />
-        <button
-          type="button"
-          className="big big--play"
-          onClick={s.play}
-          disabled={locked || s.balanceCents < s.betCents}
-        >
-          Jouer <small>{tokens(s.betCents)} jetons</small>
-        </button>
+        {s.challenge ? (
+          <button
+            type="button"
+            className="big big--play"
+            onClick={s.play}
+            disabled={locked || s.balanceCents < DAILY_BET}
+          >
+            Jouer l’essai <small>{tokens(DAILY_BET)} jetons</small>
+          </button>
+        ) : s.balanceCents < s.betCents && s.balanceCents >= MIN_BET ? (
+          // The bet is more than what is left: offer to play what is left.
+          <button
+            type="button"
+            className="big big--play"
+            onClick={() => {
+              s.setBet(allInBet(s.balanceCents))
+              s.play()
+            }}
+            disabled={locked}
+          >
+            Miser le reste <small>{tokens(s.balanceCents)} jetons</small>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="big big--play"
+            onClick={s.play}
+            disabled={locked || s.balanceCents < s.betCents}
+          >
+            {s.betCents === s.balanceCents ? 'Tapis !' : 'Jouer'} <small>{tokens(s.betCents)} jetons</small>
+          </button>
+        )}
       </div>
 
       <div className="controls__panel controls__panel--live" hidden={!round} aria-hidden={!round}>

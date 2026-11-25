@@ -1,5 +1,7 @@
-import { DEFAULT_BET, REFILL_AMOUNT } from '../config/economy.js'
+import { DEFAULT_BET, MAX_BET, MIN_BET, REFILL_AMOUNT } from '../config/economy.js'
+import { DAILY_BET } from '../config/daily.js'
 import { DOUBLE_LANE_BONUS } from '../config/events.js'
+import { CURRENT_SEASON } from '../config/seasons.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
 import { HISTORY_SIZE } from '../config/ui.js'
 import { AUTOCASH_TARGETS, upgradeById } from '../config/upgrades.js'
@@ -15,8 +17,10 @@ import {
 } from '../domain/progression.js'
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
 import { refillCheck } from '../domain/money.js'
-import { roundToSave, SAVE_ROUNDS, SAVE_VERSION, validateSave } from '../domain/save.js'
-import { isSeasonId, seasonReward, weeklyStats } from '../domain/seasons.js'
+import { dailyReward, dailyStatus, dayId, isDayId, validDaily, validDailyClaims } from '../domain/daily.js'
+import { settleWeek, validLeague } from '../domain/leagues.js'
+import { isPristine, roundToSave, SAVE_ROUNDS, SAVE_VERSION, seasonReset, validateSave } from '../domain/save.js'
+import { isSeasonId, weeklyStats } from '../domain/seasons.js'
 
 export class GameError extends Error {
   constructor(code, message) {
@@ -73,6 +77,27 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       for (const listener of listeners) listener()
     })
     return result
+  }
+
+  const readJson = (key) => {
+    try {
+      return JSON.parse(store.settings.get(key, 'null'))
+    } catch {
+      return null
+    }
+  }
+  const writeJson = (key, value) => store.settings.set(key, JSON.stringify(value))
+  const league = () => validLeague(readJson('league'))
+  const daily = () => validDaily(readJson('daily'))
+  const dailyClaims = () => validDailyClaims(readJson('daily_claims'))
+  const epoch = () => Number(store.settings.get('season_epoch', 0)) || 0
+
+  /** Gives an exclusive item (season or daily reward), worn if its slot is free. */
+  function grantItem(id) {
+    if (store.upgrades.owned().includes(id)) return
+    store.upgrades.add(id)
+    const slot = upgradeById(id).slot
+    if (!store.upgrades.equipped()[slot]) store.upgrades.equip(slot, id)
   }
 
   async function restore(row) {
@@ -139,6 +164,17 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     if (doubled) store.settings.set('double_next', '0')
     store.rounds.update(toUpdate(round, xp))
     if (round.payoutCents > 0) store.wallet.credit(round.payoutCents)
+    // A round of the daily challenge: its multiplier may be the day's best.
+    let dailyBest = null
+    if (Number(store.settings.get('daily_round', 0)) === round.id) {
+      store.settings.set('daily_round', 0)
+      const mine = daily()
+      if (mine && mine.date === dayId(new Date(round.startedAt))) {
+        const best = round.status === ROUND_STATUS.won ? Math.max(mine.best, round.multiplier) : mine.best
+        writeJson('daily', { ...mine, best })
+        dailyBest = { multiplier: round.status === ROUND_STATUS.won ? round.multiplier : 0, best, record: best > mine.best }
+      }
+    }
     if (bonusCents > 0) store.wallet.credit(bonusCents)
     if (xp > 0) store.profile.earn(xp)
     const levelAfter = levelFromXp(store.profile.get().xp)
@@ -146,7 +182,15 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     if (levelCents > 0) store.wallet.credit(levelCents)
     store.settings.set('level_paid', Math.max(paidBefore, levelAfter))
     const achievements = unlockAchievements()
-    return { xp, doubled, bonusCents, levelCents, achievements, levelUp: levelAfter > levelBefore ? levelAfter : null }
+    return {
+      xp,
+      doubled,
+      bonusCents,
+      levelCents,
+      achievements,
+      levelUp: levelAfter > levelBefore ? levelAfter : null,
+      daily: dailyBest,
+    }
   }
 
   const service = {
@@ -201,6 +245,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         claims: store.seasons.claimed(),
         doubleNext: store.settings.get('double_next', '0') === '1',
         lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
+        league: league(),
+        daily: dailyStatus(daily(), dayId(new Date(clock()))),
+        epoch: epoch(),
         progression: {
           xp: profile.xp,
           ...levelProgress(profile.xp),
@@ -211,8 +258,22 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       }
     },
 
-    async start({ modeId, betCents }) {
+    /**
+     * Starts a round. With `daily`, it is a try of the daily challenge: the
+     * day's mode and bet, whatever is asked, and one try fewer.
+     */
+    async start({ modeId, betCents, daily: isDaily = false }) {
       if (current) throw new GameError('round-in-progress', 'Une partie est déjà en cours')
+      const today = dayId(new Date(clock()))
+      const challenge = isDaily ? dailyStatus(daily(), today) : null
+      if (challenge && challenge.left === 0) throw new GameError('daily-done', 'Plus d’essai pour le défi du jour')
+      if (challenge) {
+        modeId = challenge.mode.id
+        betCents = DAILY_BET
+      }
+      if (!Number.isInteger(betCents) || betCents < MIN_BET || betCents > MAX_BET) {
+        throw new GameError('invalid-bet', 'Mise invalide')
+      }
       const mode = modeById(modeId)
       const seed = seeds()
       const [seedHash, outcomes] = await Promise.all([sha256Hex(seed), drawOutcomes(seed, mode)])
@@ -220,7 +281,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
 
       const id = write(() => {
         if (!store.wallet.debit(betCents)) throw new GameError('insufficient-funds', 'Solde insuffisant')
-        return store.rounds.insert({
+        const roundId = store.rounds.insert({
           modeId: mode.id,
           betCents,
           seed,
@@ -229,6 +290,12 @@ export function createGameService({ store, clock = () => new Date().toISOString(
           status: ROUND_STATUS.active,
           startedAt,
         })
+        if (challenge) {
+          const { date, tries, best } = challenge
+          writeJson('daily', { date, tries: tries + 1, best })
+          store.settings.set('daily_round', roundId)
+        }
+        return roundId
       })
       current = createRound({ id, mode, betCents, seed, seedHash, outcomes, startedAt })
       return current
@@ -341,28 +408,82 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     /** Seasons whose reward was already collected. */
     claimedSeasons: () => store.seasons.claimed().map((claim) => claim.season),
 
+    /** The player's league (domain/leagues.js). */
+    league,
+
+    /** The day of the last daily reward collected, and the days collected. */
+    dailyClaims,
+
+    /** First sign-in of a season: weeks before `settled` will never be settled. */
+    initLeague(settled) {
+      if (league().settled || !isSeasonId(settled)) return
+      write(() => writeJson('league', { ...league(), settled }))
+    },
+
     /**
-     * Collects a finished season's reward, once: tokens and exclusive items. `rank` and `total` come from
-     * the season's board; without them only the league reward is paid.
+     * Settles what ended since the player last came: finished weeks (league
+     * points, division reward, rank reward) and yesterday's daily challenge.
+     * `weeks` are [{ season, score, rank, total }], oldest first; weeks already
+     * settled are skipped, so calling it twice pays once. `daily` is
+     * { date, best, rank, total } or null. Resolves to what changed and was paid.
      */
-    claimSeason({ season, score, rank = null, total = null }) {
-      if (!isSeasonId(season)) throw new GameError('invalid-season', 'Saison inconnue')
-      if (service.claimedSeasons().includes(season)) throw new GameError('season-claimed', 'Récompense déjà récupérée')
-      const reward = seasonReward({ score, rank, total })
-      if (!reward) throw new GameError('season-no-reward', 'Pas de score cette saison')
-      const achievements = write(() => {
-        store.seasons.add({ season, rank, total, score })
-        store.wallet.credit(reward.tokens)
-        const owned = store.upgrades.owned()
-        for (const id of reward.items) {
-          if (owned.includes(id)) continue
-          store.upgrades.add(id)
-          const slot = upgradeById(id).slot
-          if (!store.upgrades.equipped()[slot]) store.upgrades.equip(slot, id)
+    settleResults({ weeks = [], daily: day = null }) {
+      return write(() => {
+        let current = league()
+        const results = []
+        let tokensPaid = 0
+        const items = []
+        for (const week of weeks) {
+          if (!isSeasonId(week.season) || (current.settled && week.season <= current.settled)) continue
+          const { league: next, result } = settleWeek(current, week)
+          current = next
+          results.push(result)
+          tokensPaid += result.reward.tokens
+          items.push(...result.reward.items)
+          if (week.score && !store.seasons.claimed().some((claim) => claim.season === week.season)) {
+            store.seasons.add({ season: week.season, rank: week.rank ?? null, total: week.total ?? null, score: week.score })
+          }
         }
-        return unlockAchievements()
+        writeJson('league', current)
+
+        let dailyResult = null
+        if (day && isDayId(day.date) && !dailyClaims().includes(day.date)) {
+          const reward = dailyReward(day)
+          dailyResult = { ...day, reward }
+          if (reward) tokensPaid += reward.tokens
+          writeJson('daily_claims', validDailyClaims([...dailyClaims(), day.date]))
+        }
+
+        if (tokensPaid > 0) store.wallet.credit(tokensPaid)
+        for (const id of items) grantItem(id)
+        return { weeks: results, daily: dailyResult, tokens: tokensPaid, items, league: current, achievements: unlockAchievements() }
       })
-      return { ...reward, achievements }
+    },
+
+    /**
+     * Applies the big season in play to this device's progress, once (see
+     * seasonReset in domain/save.js). Resolves to { beta } when it did, else null.
+     */
+    startSeason() {
+      if (epoch() >= CURRENT_SEASON.id) return null
+      const before = service.exportSave()
+      const after = seasonReset({ ...before, epoch: epoch() })
+      // A device never played on has nothing to send: no need to flag it for the sync.
+      const apply = isPristine(before) ? (work) => store.transaction(work) : write
+      apply(() => {
+        store.wallet.set(after.balanceCents)
+        store.upgrades.replace(after.upgrades, after.equipped)
+        writeJson('league', after.league)
+        store.settings.set('daily', 'null')
+        store.settings.set('last_refill_at', 0)
+        store.settings.set('season_epoch', after.epoch)
+      })
+      return { beta: after.upgrades.length > before.upgrades.length, previousBalanceCents: before.balanceCents }
+    },
+
+    /** Flags the device as changed, so the sync sends it (after a season reset came from the cloud). */
+    touch() {
+      write(() => {})
     },
 
     /** Called after every change of progress (to sync it). Returns an unsubscribe function. */
@@ -387,6 +508,10 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         rounds: store.rounds.forSave(SAVE_ROUNDS).map(roundToSave),
         claims: store.seasons.claimed(),
         lastRefillAt: Number(store.settings.get('last_refill_at', 0)) || null,
+        epoch: epoch(),
+        league: league(),
+        daily: daily(),
+        dailyClaims: dailyClaims(),
       }
     },
 
@@ -411,6 +536,11 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         if (save.prefs.bet) store.settings.set('bet', save.prefs.bet)
         store.settings.set('autocash', save.prefs.autocash ?? '')
         store.settings.set('sound', save.prefs.sound ? 'on' : 'off')
+        store.settings.set('season_epoch', save.epoch)
+        writeJson('league', save.league)
+        writeJson('daily', save.daily)
+        writeJson('daily_claims', save.dailyClaims)
+        store.settings.set('daily_round', 0)
       })
       return save
     },

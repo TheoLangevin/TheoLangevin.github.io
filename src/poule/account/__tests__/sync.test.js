@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { achievementById } from '../../config/achievements.js'
 import { STARTING_BALANCE } from '../../config/economy.js'
 import { createMemoryStore } from '../../data/memory/createMemoryStore.js'
 import { drawOutcomes, firstFatalLane } from '../../domain/fairness.js'
 import { createGameService } from '../../services/gameService.js'
+
+/** A game already in the current big season (the app calls startSeason when it opens). */
+const startedGame = (options) => {
+  const game = createGameService(options)
+  game.startSeason()
+  return game
+}
 import { createMemoryCloud, PseudoTakenError } from '../cloud.js'
 import { createSyncService } from '../createSyncService.js'
 
@@ -18,7 +26,7 @@ async function safeSeed(lanes) {
 /** A device: its own local store and game, syncing with a shared cloud. */
 async function device(cloud) {
   const seed = await safeSeed(3)
-  const game = createGameService({ store: createMemoryStore(), seeds: () => seed })
+  const game = startedGame({ store: createMemoryStore(), seeds: () => seed })
   const statuses = []
   let imported = 0
   const sync = createSyncService({
@@ -149,38 +157,55 @@ describe('account sync', () => {
   })
 })
 
-describe('season rewards', () => {
-  it("pays last week's reward once, by rank", async () => {
+describe('week and daily results', () => {
+  it('settles finished weeks and yesterday\'s challenge once, by rank', async () => {
     const cloud = createMemoryCloud()
-    const lastWeek = '2026-W47'
     cloud.seasons.set(
-      lastWeek,
+      '2026-W47',
       new Map([
         ['u1', { pseudo: 'Poulette', score: 300 }],
         ['u2', { pseudo: 'Autre', score: 120 }],
         ['u3', { pseudo: 'Troisième', score: 0 }],
       ]),
     )
-    const game = createGameService({ store: createMemoryStore(), clock: () => '2026-11-24T10:00:00Z' })
-    const sync = createSyncService({ game, cloud, delay: 0, now: () => new Date('2026-11-24T10:00:00Z') })
+    cloud.days.set(
+      '2026-11-23',
+      new Map([
+        ['u1', { pseudo: 'Poulette', best: 2.5, tries: 3 }],
+        ['u2', { pseudo: 'Autre', best: 1.2, tries: 1 }],
+      ]),
+    )
+    const now = () => new Date('2026-11-24T10:00:00Z')
+    const game = startedGame({ store: createMemoryStore(), clock: () => '2026-11-24T10:00:00Z' })
+    const sync = createSyncService({ game, cloud: createMemoryCloud(), delay: 0, now })
     await sync.connect(user)
-    const pending = await sync.pendingSeasonReward()
-    expect(pending.season).toBe(lastWeek)
-    expect(pending.rank).toBe(1)
-    expect(pending.total).toBe(2)
-    expect(pending.reward.tier).toBe('first')
-    sync.claimSeasonReward(pending)
-    expect(game.summary().progression.owned).toContain('title-champion')
-    expect(await sync.pendingSeasonReward()).toBeNull()
 
-    const other = createSyncService({
-      game: createGameService({ store: createMemoryStore() }),
-      cloud,
-      delay: 0,
-      now: () => new Date('2026-11-24T10:00:00Z'),
-    })
-    await other.connect({ uid: 'u3', name: 'Sans score' })
-    expect(await other.pendingSeasonReward()).toBeNull()
+    // First visit of the season: leagues start from the current week.
+    expect(await sync.pendingResults()).toBeNull()
+    expect(game.league().settled).toBe('2026-W47')
+
+    // A player last settled two weeks ago.
+    const back = startedGame({ store: createMemoryStore(), clock: () => '2026-11-24T10:00:00Z' })
+    back.initLeague('2026-W45')
+    const backSync = createSyncService({ game: back, cloud, delay: 0, now })
+    await backSync.connect(user)
+    const pending = await backSync.pendingResults()
+    expect(pending.weeks.map((week) => week.season)).toEqual(['2026-W46', '2026-W47'])
+    expect(pending.weeks[0].score).toBe(0)
+    expect(pending.weeks[1]).toEqual({ season: '2026-W47', score: 300, rank: 1, total: 2 })
+    expect(pending.daily).toEqual({ date: '2026-11-23', best: 2.5, rank: 1, total: 2 })
+    expect(pending.preview.daily.reward.id).toBe('first')
+
+    const before = back.summary().balanceCents
+    const result = backSync.claimResults(pending)
+    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(300)) + 150)
+    expect(result.league.settled).toBe('2026-W47')
+    const achievements = result.achievements.reduce((sum, id) => sum + achievementById(id).reward, 0)
+    expect(back.summary().balanceCents).toBe(before + result.tokens + achievements)
+    expect(back.summary().progression.owned).toContain('title-champion')
+    expect(await backSync.pendingResults()).toBeNull()
+    // Settling the same weeks again pays nothing.
+    expect(backSync.claimResults(pending).tokens).toBe(0)
   })
 })
 

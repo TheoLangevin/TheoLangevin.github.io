@@ -178,7 +178,12 @@ const COMB_SHOWS = new Set([null, 'shades', 'crown', 'halo', 'laurel'])
  * two colours (body, shade) or more for a gradient. `hat` and `neck` are ids
  * of shop items.
  */
-export function HenSprite({ colors = ['#ffffff', '#e4e1d6'], hat = null, neck = null }) {
+export function HenSprite({ colors = ['#ffffff', '#e4e1d6'], hat = null, neck = null, skin = null }) {
+  if (skin === 'roadworks') return <ConeSprite neck={neck} />
+  return <Hen colors={colors} hat={hat} neck={neck} />
+}
+
+function Hen({ colors, hat, neck }) {
   const gradient = useId()
   const gradientFill = colors.length > 2
   const body = gradientFill ? `url(#${gradient})` : colors[0]
@@ -210,8 +215,59 @@ export function HenSprite({ colors = ['#ffffff', '#e4e1d6'], hat = null, neck = 
   )
 }
 
+/**
+ * The "Chantier" skin: the hen is a traffic cone with eyes, a beak and the
+ * hen's feet. She keeps her neck item; a hat would not fit on the tip.
+ */
+function ConeSprite({ neck }) {
+  return (
+    <svg viewBox="0 -14 88 94" aria-hidden="true">
+      <path d="M33 64v10M47 64v10M29 74h8M43 74h8" stroke="#f08a24" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <rect x="18" y="58" width="48" height="9" rx="3" fill="#d95400" />
+      <path d="M29 60L40 -6h4l11 66z" fill="#ff7a1a" />
+      <path d="M44 -6l11 66h-6z" fill="#00000022" />
+      <path d="M33.5 34h17l2 12h-21z M37 14h10l1.6 9.5h-13.2z" fill="#fff" />
+      <circle cx="40" cy="27" r="3.2" fill="#fff" />
+      <circle cx="47" cy="27" r="3.2" fill="#fff" />
+      <circle cx="41" cy="27.4" r="1.7" fill="#1d1a12" />
+      <circle cx="48" cy="27.4" r="1.7" fill="#1d1a12" />
+      <path d="M50 31l7 2-7 3z" fill="#f08a24" />
+      <path d="M37 -6q3-6 5 0q2-6 5 0z" fill="#e8392c" />
+      {neck && <g transform="translate(-10 14)">{NECK[neck]}</g>}
+    </svg>
+  )
+}
+
+/** A yellow bulldozer seen from above, blade first: the traffic of the "Chantier" skin. */
+export function BulldozerSprite() {
+  return (
+    <svg viewBox="0 0 54 92" aria-hidden="true">
+      <rect x="1" y="14" width="11" height="70" rx="4" fill="#2b2b2b" />
+      <rect x="42" y="14" width="11" height="70" rx="4" fill="#2b2b2b" />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <rect key={i} x="1" y={17 + i * 7.6} width="52" height="2" fill="#444" />
+      ))}
+      <rect x="9" y="18" width="36" height="62" rx="6" fill="#ffc21a" />
+      <rect x="13" y="22" width="28" height="22" rx="4" fill="#1c2230" />
+      <rect x="15" y="24" width="10" height="8" rx="2" fill="#ffffff40" />
+      <rect x="14" y="50" width="26" height="4" rx="2" fill="#e0a400" />
+      <rect x="14" y="58" width="26" height="4" rx="2" fill="#e0a400" />
+      <rect x="22" y="66" width="10" height="10" rx="2" fill="#555" />
+      <path d="M17 80h20v4H17z" fill="#888" />
+      <path d="M2 84h50l-3 7H5z" fill="#9aa0a8" />
+      <path d="M2 84h50v2H2z" fill="#c9ced6" />
+      <rect x="15" y="10" width="6" height="8" rx="2" fill="#ff7a1a" />
+    </svg>
+  )
+}
+
 /** A car seen from above, driving down the screen. */
-export function CarSprite({ color }) {
+export function CarSprite({ color, skin = null }) {
+  if (skin === 'roadworks') return <BulldozerSprite />
+  return <Car color={color} />
+}
+
+function Car({ color }) {
   const shine = useId()
   return (
     <svg viewBox="0 0 54 92" aria-hidden="true">

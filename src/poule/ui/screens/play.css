@@ -26,6 +26,44 @@
   gap: 6px;
 }
 
+.challenge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2a2c35, #3b2a5e);
+  color: #fff;
+}
+
+.challenge > div {
+  display: grid;
+  gap: 2px;
+}
+
+.challenge b {
+  font: 400 18px/1.1 var(--display);
+}
+
+.challenge small {
+  color: #ffffffbb;
+  font-weight: 700;
+}
+
+.challenge button {
+  background: #ffffff22;
+  color: #fff;
+}
+
+.challenge-entry {
+  min-height: 36px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #2a2c35, #3b2a5e);
+  color: #fff;
+  font-size: 14px;
+}
+
 .hud__figure {
   display: grid;
   padding: 6px 10px;
@@ -305,7 +343,8 @@
   .screen--play > .history,
   .controls__hint,
   .round-card__row--small,
-  .bet .chips {
+  .bet .chips,
+  .challenge-entry {
     display: none;
   }
 

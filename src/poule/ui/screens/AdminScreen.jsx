@@ -90,7 +90,7 @@ function PlayerLine({ player }) {
 }
 
 function Dashboard({ stats }) {
-  const { players, rounds, economy, shop, achievements, seasons, flagged } = stats
+  const { players, rounds, economy, shop, achievements, seasons, flagged, leagues } = stats
   const rtpGap = rounds.rtp == null ? null : rounds.rtp - rounds.targetRtp
   return (
     <>
@@ -196,6 +196,11 @@ function Dashboard({ stats }) {
         <p className="admin__never">
           {shop.items.filter((item) => item.owners === 0 && !item.exclusive).map((item) => item.label).join(' · ') || 'Aucun'}
         </p>
+      </Section>
+
+      <Section title="Ligues">
+        <Rows rows={(leagues ?? []).map((tier) => ({ label: tier.label, value: tier.count }))} />
+        <p className="muted admin__note">Joueurs par ligue · {count(stats.beta ?? 0)} joueurs de la bêta (skin Chantier).</p>
       </Section>
 
       <Section title="Succès">

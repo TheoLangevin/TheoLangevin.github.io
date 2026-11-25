@@ -8,6 +8,7 @@ import { CloudConflictError, PseudoTakenError } from '../cloud.js'
  *   leaderboard/{uid}    { pseudo, look, title, level, xp, tokens, bestMultiplier, bestLanes, updatedAt }  public,
  *                        also a player's public profile (look = what their hen wears)
  *   seasons/{week}/entries/{uid}  { pseudo, title, level, score, bestMultiplier, league, updatedAt }  public
+ *   daily/{day}/entries/{uid}     { pseudo, title, best, tries, updatedAt }  public, the daily challenge
  *
  * firestore.rules enforces who may write what.
  */
@@ -31,7 +32,9 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
   const pseudoRef = (pseudo) => doc(db, 'pseudos', pseudo.toLowerCase())
   const entryRef = (uid) => doc(db, 'leaderboard', uid)
   const seasonRef = (season, uid) => doc(db, 'seasons', season, 'entries', uid)
+  const dailyRef = (day, uid) => doc(db, 'daily', day, 'entries', uid)
   const seasonLine = ({ season, ...line }) => ({ ...line, updatedAt: serverTimestamp() })
+  const dailyLine = ({ day, ...line }) => ({ ...line, updatedAt: serverTimestamp() })
   const rows = (snap) => snap.docs.map((entry) => ({ ...entry.data(), uid: entry.id, updatedAt: undefined }))
 
   return {
@@ -62,7 +65,7 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
     },
 
     /** Claims a unique pseudo, frees the previous one, and publishes the leaderboard line. */
-    async claimPseudo(uid, pseudo, entry, seasonEntry) {
+    async claimPseudo(uid, pseudo, entry, seasonEntry, dailyEntry = null) {
       await runTransaction(db, async (transaction) => {
         const wanted = pseudoRef(pseudo)
         const [taken, current] = await Promise.all([transaction.get(wanted), transaction.get(entryRef(uid))])
@@ -72,14 +75,16 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
         if (!taken.exists()) transaction.set(wanted, { uid, pseudo })
         transaction.set(entryRef(uid), { ...entry, pseudo, updatedAt: serverTimestamp() })
         transaction.set(seasonRef(seasonEntry.season, uid), seasonLine({ ...seasonEntry, pseudo }))
+        if (dailyEntry) transaction.set(dailyRef(dailyEntry.day, uid), dailyLine({ ...dailyEntry, pseudo }))
       })
     },
 
     /** Updates the leaderboard line (the pseudo must already be claimed). */
-    async publishEntry(uid, entry, seasonEntry) {
+    async publishEntry(uid, entry, seasonEntry, dailyEntry = null) {
       const batch = writeBatch(db)
       batch.set(entryRef(uid), { ...entry, updatedAt: serverTimestamp() })
       batch.set(seasonRef(seasonEntry.season, uid), seasonLine(seasonEntry))
+      if (dailyEntry) batch.set(dailyRef(dailyEntry.day, uid), dailyLine(dailyEntry))
       await batch.commit()
     },
 
@@ -101,6 +106,33 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
     async seasonBoard(season, size = 20) {
       const entries = collection(db, 'seasons', season, 'entries')
       return rows(await getDocs(query(entries, where('score', '>', 0), orderBy('score', 'desc'), limit(size))))
+    },
+
+    /** The player just above `score` this week (the rival to overtake), or null. */
+    async seasonAbove(season, score) {
+      const entries = collection(db, 'seasons', season, 'entries')
+      const found = rows(await getDocs(query(entries, where('score', '>', score), orderBy('score', 'asc'), limit(1))))
+      return found[0] ?? null
+    },
+
+    /** The day's challenge board, by best multiplier. */
+    async dailyBoard(day, size = 20) {
+      const entries = collection(db, 'daily', day, 'entries')
+      return rows(await getDocs(query(entries, orderBy('best', 'desc'), limit(size))))
+    },
+
+    async dailyEntryOf(day, uid) {
+      const snap = await getDoc(dailyRef(day, uid))
+      return snap.exists() ? { ...snap.data(), uid, updatedAt: undefined } : null
+    },
+
+    async dailyRank(day, best) {
+      const entries = collection(db, 'daily', day, 'entries')
+      const [above, all] = await Promise.all([
+        getCountFromServer(query(entries, where('best', '>', best))),
+        getCountFromServer(entries),
+      ])
+      return { rank: above.data().count + 1, total: all.data().count }
     },
 
     async profileOf(uid) {

@@ -325,3 +325,28 @@
     animation-duration: 1.5s;
   }
 }
+
+.season-intro__gift {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  align-items: center;
+  gap: 12px;
+  height: 140px;
+  padding: 10px 24px;
+  border-radius: 18px;
+  background: repeating-linear-gradient(45deg, #2a2c35 0 18px, #33353f 18px 36px);
+}
+
+.season-intro__gift svg {
+  display: block;
+  width: 100%;
+  max-height: 120px;
+}
+
+.season-intro__list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+}

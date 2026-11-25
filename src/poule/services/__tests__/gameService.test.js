@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { achievementById } from '../../config/achievements.js'
 import { STARTING_BALANCE } from '../../config/economy.js'
+import { DAILY_BET } from '../../config/daily.js'
 import { DOUBLE_LANE_BONUS } from '../../config/events.js'
 import { modeById } from '../../config/modes.js'
 import { createMemoryStore } from '../../data/memory/createMemoryStore.js'
 import { drawOutcomes, firstFatalLane } from '../../domain/fairness.js'
 import { payoutCents } from '../../domain/multiplier.js'
 import { createGameService } from '../gameService.js'
+
+/** A game already in the current big season (the app calls startSeason when it opens). */
+const startedGame = (options) => {
+  const game = createGameService(options)
+  game.startSeason()
+  return game
+}
 
 const easy = modeById('easy')
 
@@ -30,7 +38,7 @@ const achievementPay = (service) =>
 
 const serviceWith = (seed, store = createMemoryStore()) => ({
   store,
-  service: createGameService({ store, seeds: () => seed, clock: () => '2026-01-01T00:00:00Z' }),
+  service: startedGame({ store, seeds: () => seed, clock: () => '2026-01-01T00:00:00Z' }),
 })
 
 describe('game service', () => {
@@ -43,6 +51,7 @@ describe('game service', () => {
 
   it('refuses a bet larger than the balance and keeps the money', async () => {
     const { service, store } = serviceWith('s', createMemoryStore({ balance: 500 }))
+    store.wallet.set(500)
     await expect(service.start({ modeId: 'easy', betCents: 1000 })).rejects.toThrow()
     expect(store.wallet.balance()).toBe(500)
     expect(store.rounds.active()).toBeNull()
@@ -80,7 +89,7 @@ describe('game service', () => {
     await first.service.start({ modeId: 'easy', betCents: 1000 })
     first.service.step()
 
-    const reopened = createGameService({ store: first.store })
+    const reopened = startedGame({ store: first.store })
     const round = await reopened.resume()
     expect(round.lane).toBe(1)
     expect(round.seed).toBe(seed)
@@ -279,28 +288,95 @@ describe('token shop and seasons', () => {
     expect(() => service.buy('bow-tie')).toThrow()
   })
 
-  it('pays a season reward once, with its exclusive items', () => {
+  it('settles weeks once: league points, division and rank rewards', () => {
     const { service, store } = serviceWith('s')
-    const reward = service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })
-    expect(store.wallet.balance()).toBe(STARTING_BALANCE + reward.tokens + achievementPay(service))
-    const { progression } = service.summary()
+    service.initLeague('2026-W46')
+    const result = service.settleResults({ weeks: [{ season: '2026-W47', score: 250, rank: 1, total: 9 }] })
+    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(250)) + 150)
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE + result.tokens + achievementPay(service))
+    const { progression, league } = service.summary()
+    expect(league.lp).toBe(result.league.lp)
     expect(progression.owned).toContain('title-champion')
     expect(progression.equipped.title).toBe('title-champion')
-    expect(() => service.claimSeason({ season: '2026-W47', score: 250, rank: 1, total: 9 })).toThrow()
-    expect(() => service.claimSeason({ season: '2026-W46', score: 0 })).toThrow()
+    expect(service.settleResults({ weeks: [{ season: '2026-W47', score: 250, rank: 1, total: 9 }] }).tokens).toBe(0)
     expect(service.claimedSeasons()).toEqual(['2026-W47'])
   })
 
-  it('carries claims and the last refill in the save', () => {
+  it('carries claims, league, daily and the last refill in the save', () => {
     const first = serviceWith('s')
-    first.service.claimSeason({ season: '2026-W47', score: 30 })
+    first.service.initLeague('2026-W46')
+    first.service.settleResults({
+      weeks: [{ season: '2026-W47', score: 30, rank: 2, total: 5 }],
+      daily: { date: '2026-11-23', best: 2, rank: 1, total: 3 },
+    })
     first.store.wallet.set(0)
     first.service.refill()
     const exported = first.service.exportSave()
+    expect(exported.dailyClaims).toEqual(['2026-11-23'])
     const second = serviceWith('t')
     second.service.importSave(exported)
     expect(second.service.claimedSeasons()).toEqual(['2026-W47'])
     expect(second.service.exportSave()).toEqual(exported)
+  })
+})
+
+describe('big season', () => {
+  it('resets the balance once and gives the beta skin to players who played', async () => {
+    const store = createMemoryStore()
+    const old = createGameService({ store, seeds: () => 's', clock: () => '2026-11-20T10:00:00Z' })
+    store.profile.earn(50)
+    store.wallet.set(9_000_000)
+    const started = old.startSeason()
+    expect(started).toEqual({ beta: true, previousBalanceCents: 9_000_000 })
+    expect(store.wallet.balance()).toBe(STARTING_BALANCE)
+    expect(old.summary().progression.equipped.skin).toBe('skin-roadworks')
+    expect(old.summary().progression.xp).toBe(50)
+    expect(old.startSeason()).toBeNull()
+    store.wallet.set(5000)
+    expect(createGameService({ store }).startSeason()).toBeNull()
+    expect(store.wallet.balance()).toBe(5000)
+  })
+
+  it('gives nothing to a brand new player', () => {
+    const fresh = createGameService({ store: createMemoryStore() })
+    expect(fresh.startSeason()).toEqual({ beta: false, previousBalanceCents: STARTING_BALANCE })
+    expect(fresh.summary().progression.owned).toEqual([])
+  })
+})
+
+describe('all-in and the daily challenge', () => {
+  it('lets a player bet everything, cents included', async () => {
+    const store = createMemoryStore({ balance: 123456 })
+    const service = startedGame({ store, seeds: () => 's' })
+    store.wallet.set(123456)
+    await service.start({ modeId: 'easy', betCents: 123456 })
+    expect(store.wallet.balance()).toBe(0)
+  })
+
+  it('plays the day\'s mode and bet, three tries, and keeps the best', async () => {
+    const seed = await seedSafeFor(3)
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => seed, clock: () => '2026-11-25T10:00:00Z' })
+    expect(service.summary().daily).toMatchObject({ date: '2026-11-25', left: 3, best: 0 })
+    const round = await service.start({ modeId: 'hardcore', betCents: 5000, daily: true })
+    expect(round.mode.id).toBe('easy')
+    expect(round.betCents).toBe(DAILY_BET)
+    service.step()
+    service.step()
+    const { progress } = service.cashOut()
+    expect(progress.daily.best).toBe(progress.daily.multiplier)
+    expect(progress.daily.record).toBe(true)
+    await service.start({ daily: true })
+    service.step()
+    service.cashOut()
+    await service.start({ daily: true })
+    service.step()
+    service.cashOut()
+    expect(service.summary().daily.left).toBe(0)
+    await expect(service.start({ daily: true })).rejects.toThrow()
+    const best = service.summary().daily.best
+    expect(best).toBeGreaterThan(1)
+    expect(service.exportSave().daily).toEqual({ date: '2026-11-25', tries: 3, best })
   })
 })
 

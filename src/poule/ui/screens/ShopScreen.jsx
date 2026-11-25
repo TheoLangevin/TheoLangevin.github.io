@@ -6,6 +6,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { BoltIcon, CoinIcon, GiftIcon, LockIcon } from '../icons.jsx'
+import { CarSprite, HenSprite } from '../road/sprites.jsx'
 import Mannequin from '../road/Mannequin.jsx'
 import './shop.css'
 
@@ -16,7 +17,7 @@ export function Price({ item }) {
   if (item.exclusive) {
     return (
       <span className="price price--exclusive">
-        <GiftIcon size={14} /> Saison
+        <GiftIcon size={14} /> {item.beta ? 'Bêta' : 'Saison'}
       </span>
     )
   }
@@ -58,6 +59,14 @@ function Thumb({ item, equipped }) {
         <i />
         <i />
         <i />
+      </div>
+    )
+  }
+  if (item.slot === 'skin') {
+    return (
+      <div className="thumb thumb--skin road-swatch" aria-hidden="true">
+        <HenSprite skin={item.skin} neck={equipped.neck ?? null} />
+        <CarSprite skin={item.skin} />
       </div>
     )
   }
@@ -179,7 +188,8 @@ function ItemSheet({ id, onClose }) {
         <Thumb item={item} equipped={s.progression.equipped} />
       )}
       {item.description && <p>{item.description}</p>}
-      {item.exclusive && <p>Se gagne en finissant bien classé une saison. Voir le classement.</p>}
+      {item.exclusive && !item.beta && <p>Se gagne en finissant bien classé une semaine. Voir le classement.</p>}
+      {item.beta && !owned && <p className="note">Réservé aux joueurs de la bêta : il ne s’achète pas.</p>}
       {item.secret && !owned && <p className="shop__secret">Vous avez trouvé l’objet caché de la boutique.</p>}
       {owned &&
         item.slot === 'perk' &&

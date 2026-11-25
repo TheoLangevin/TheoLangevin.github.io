@@ -2,6 +2,8 @@ import { ACHIEVEMENTS } from '../config/achievements.js'
 import { CENTS, REFILL_BELOW, RTP } from '../config/economy.js'
 import { MODES } from '../config/modes.js'
 import { UPGRADES } from '../config/upgrades.js'
+import { TIERS } from '../config/seasons.js'
+import { divisionFor } from './leagues.js'
 import { levelFromXp } from './progression.js'
 import { validateSave } from './save.js'
 
@@ -123,7 +125,7 @@ export function computeAdminStats({ users, profiles = [], now }) {
   const bets = histogram(
     rounds.map((round) => round.bet / CENTS),
     [6, 21, 51, 101],
-    ['1 à 5', '6 à 20', '21 à 50', '51 à 100', '101 à 200'],
+    ['1 à 5', '6 à 20', '21 à 50', '51 à 100', '101 et +'],
   )
 
   // Economy
@@ -223,6 +225,12 @@ export function computeAdminStats({ users, profiles = [], now }) {
       purchases: sum(bought.filter((item) => !item.exclusive).map((item) => item.owners)),
     },
     achievements: unlocked.sort((a, b) => b.count - a.count),
+    leagues: TIERS.map((tier) => ({
+      id: tier.id,
+      label: tier.label,
+      count: players.filter((player) => divisionFor(player.save.league.lp).tier.id === tier.id).length,
+    })),
+    beta: players.filter((player) => player.save.upgrades.includes('skin-roadworks')).length,
     seasons: Object.entries(claimsBySeason)
       .map(([season, count]) => ({ season, count }))
       .sort((a, b) => (a.season < b.season ? 1 : -1))

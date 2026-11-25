@@ -2,9 +2,12 @@ import { achievementById } from '../config/achievements.js'
 import { MAX_BET, MAX_PAYOUT, MIN_BET, STARTING_BALANCE } from '../config/economy.js'
 import { MODES, modeById } from '../config/modes.js'
 import { FEATHER_TO_CENTS, MAX_LEVEL } from '../config/progression.js'
+import { BETA_SKIN, CURRENT_SEASON } from '../config/seasons.js'
 import { AUTOCASH_TARGETS, SLOTS, upgradeById } from '../config/upgrades.js'
 import { levelFromXp } from './progression.js'
-import { isSeasonId, leagueFor, seasonId, weeklyStats } from './seasons.js'
+import { dayId, validDaily, validDailyClaims } from './daily.js'
+import { divisionFor, freshLeague, validLeague } from './leagues.js'
+import { isSeasonId, seasonId, weeklyStats } from './seasons.js'
 
 /**
  * A save: everything that makes a player's progress, as one plain object that
@@ -16,8 +19,10 @@ import { isSeasonId, leagueFor, seasonId, weeklyStats } from './seasons.js'
  * v2 added season claims and the last refill; v3 dropped feathers (tokens are the
  * only currency). Older saves are still read: their unspent feathers become tokens.
  * The `feathers` key stays in the file, always 0, because the cloud rules ask for it.
+ * v4 added the big season (`epoch`), the league and the daily challenge; the
+ * cloud only accepts v4 writes, so an outdated game can no longer overwrite a save.
  */
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 /** Finished rounds kept in a save, newest last. Older ones still count in XP. */
 export const SAVE_ROUNDS = 1000
 
@@ -74,7 +79,7 @@ function validRound(round) {
  * and rounds are dropped, so an older game can read a newer save.
  */
 export function validateSave(raw) {
-  if (!raw || typeof raw !== 'object' || ![1, 2, SAVE_VERSION].includes(raw.v)) return null
+  if (!raw || typeof raw !== 'object' || ![1, 2, 3, SAVE_VERSION].includes(raw.v)) return null
   const saved = int(raw.balanceCents, 0, 1e12)
   const xp = int(raw.xp, 0, 1e9)
   const feathers = raw.v < 3 ? int(raw.feathers, 0, 1e9) : 0
@@ -102,8 +107,9 @@ export function validateSave(raw) {
       score: int(claim.score, 0, 1e9) ?? 0,
     }))
 
-  return {
+  const save = {
     v: SAVE_VERSION,
+    epoch: int(raw.epoch, 0, 1000) ?? 0,
     balanceCents,
     xp,
     feathers: 0,
@@ -119,6 +125,35 @@ export function validateSave(raw) {
     rounds,
     claims,
     lastRefillAt: int(raw.lastRefillAt, 0, 1e14),
+    league: validLeague(raw.league),
+    daily: validDaily(raw.daily),
+    dailyClaims: validDailyClaims(raw.dailyClaims),
+  }
+  return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
+}
+
+/** True for a save from before the big season in play: reading it resets it. */
+export const needsSeasonReset = (raw) => !(Number.isInteger(raw?.epoch) && raw.epoch >= CURRENT_SEASON.id)
+
+/** True when a save shows any play: such a player took part in the beta. */
+const playedBefore = (save) => save.xp > 0 || save.rounds.length > 0 || save.upgrades.length > 0
+
+/**
+ * A new big season: the balance goes back to the start, the league starts
+ * over, and players who played before Saison 1 get the beta skin (worn).
+ * Level, items, achievements and history stay.
+ */
+export function seasonReset(save) {
+  const beta = CURRENT_SEASON.id === 1 && playedBefore(save) && !save.upgrades.includes(BETA_SKIN)
+  return {
+    ...save,
+    epoch: CURRENT_SEASON.id,
+    balanceCents: STARTING_BALANCE,
+    lastRefillAt: null,
+    upgrades: beta ? [...save.upgrades, BETA_SKIN] : save.upgrades,
+    equipped: beta ? { ...save.equipped, skin: BETA_SKIN } : save.equipped,
+    league: freshLeague(),
+    daily: null,
   }
 }
 
@@ -139,7 +174,7 @@ export function describeSave(save) {
 }
 
 /** Slots shown on a public profile (what the hen wears), never perks. */
-export const LOOK_SLOTS = Object.freeze(['hat', 'neck', 'plumage', 'trail', 'road', 'party', 'title'])
+export const LOOK_SLOTS = Object.freeze(['hat', 'neck', 'plumage', 'trail', 'road', 'party', 'title', 'skin'])
 
 /** What the hen wears, as public data: slot → item id, known items only. */
 export function publicLook(equipped = {}) {
@@ -161,6 +196,8 @@ export function leaderboardEntry(save, pseudo) {
     level: Math.min(MAX_LEVEL, levelFromXp(save.xp)),
     xp: save.xp,
     tokens: save.balanceCents,
+    lp: save.league.lp,
+    division: divisionFor(save.league.lp).id,
     bestMultiplier: won.reduce((best, round) => Math.max(best, round.mult), 0),
     bestLanes: save.rounds.reduce((best, round) => Math.max(best, round.crossed), 0),
   }
@@ -176,7 +213,20 @@ export function seasonEntry(save, pseudo, date = new Date()) {
     level: Math.min(MAX_LEVEL, levelFromXp(save.xp)),
     score: week.xp,
     bestMultiplier: week.bestMultiplier,
-    league: leagueFor(week.xp)?.id ?? null,
+    league: divisionFor(save.league.lp).id,
+  }
+}
+
+/** The player's line on today's daily challenge board, or null if they have not tried it. */
+export function dailyEntry(save, pseudo, date = new Date()) {
+  const today = dayId(date)
+  if (save.daily?.date !== today || !save.daily.tries) return null
+  return {
+    day: today,
+    pseudo,
+    title: save.equipped.title ?? null,
+    best: save.daily.best,
+    tries: save.daily.tries,
   }
 }
 

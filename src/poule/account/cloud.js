@@ -16,6 +16,10 @@
  * @property {(day: string, size?: number) => Promise<object[]>} dailyBoard  by best multiplier
  * @property {(day: string, uid: string) => Promise<object | null>} dailyEntryOf
  * @property {(day: string, best: number) => Promise<{ rank: number, total: number }>} dailyRank
+ * @property {() => string} newDuelId
+ * @property {(id: string, duel: object) => Promise<void>} createDuel
+ * @property {(id: string, patch: object) => Promise<void>} updateDuel  dotted keys allowed (scores.uid)
+ * @property {(uid: string) => Promise<object[]>} duelsOf  both sides
  * @property {(uid: string, pseudo: string, season: string) => Promise<void>} removeEntry
  * @property {(by: 'xp' | 'tokens' | 'bestMultiplier', size?: number) => Promise<object[]>} leaderboard
  * @property {(season: string, size?: number) => Promise<object[]>} seasonBoard  by weekly score
@@ -47,6 +51,8 @@ export function createMemoryCloud() {
   const entries = new Map()
   const seasons = new Map()
   const days = new Map()
+  const duels = new Map()
+  let nextDuel = 1
   const copy = (value) => structuredClone(value)
   const season = (id) => {
     if (!seasons.has(id)) seasons.set(id, new Map())
@@ -68,6 +74,7 @@ export function createMemoryCloud() {
     entries,
     seasons,
     days,
+    duels,
     async loadSave(uid) {
       return users.has(uid) ? copy(users.get(uid)) : null
     },
@@ -133,6 +140,23 @@ export function createMemoryCloud() {
         .filter((line) => line.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, size)
+    },
+    newDuelId: () => `duel${String(nextDuel++).padStart(4, '0')}`,
+    async createDuel(id, duel) {
+      duels.set(id, copy(duel))
+    },
+    async updateDuel(id, patch) {
+      const duel = duels.get(id)
+      for (const [key, value] of Object.entries(patch)) {
+        const [head, sub] = key.split('.')
+        if (sub) duel[head] = { ...duel[head], [sub]: value }
+        else duel[key] = value
+      }
+    },
+    async duelsOf(uid) {
+      return [...duels.entries()]
+        .filter(([, duel]) => duel.from.uid === uid || duel.to.uid === uid)
+        .map(([id, duel]) => ({ ...copy(duel), id }))
     },
     async profileOf(uid) {
       return entries.has(uid) ? { uid, ...entries.get(uid) } : null

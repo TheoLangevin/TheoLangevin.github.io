@@ -1,5 +1,6 @@
 import { DEFAULT_BET, MAX_BET, MIN_BET, REFILL_AMOUNT } from '../config/economy.js'
 import { DAILY_BET } from '../config/daily.js'
+import { DUEL_TRIES, DUEL_TRY_BET } from '../config/duels.js'
 import { DOUBLE_LANE_BONUS } from '../config/events.js'
 import { CURRENT_SEASON } from '../config/seasons.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
@@ -18,7 +19,9 @@ import {
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
 import { refillCheck } from '../domain/money.js'
 import { dailyReward, dailyStatus, dayId, isDayId, validDaily, validDailyClaims } from '../domain/daily.js'
+import { validLedger } from '../domain/duels.js'
 import { settleWeek, validLeague } from '../domain/leagues.js'
+import { missionProgress, missionsFor, roundsOfDay, streakToday, validMissions, validStreak } from '../domain/missions.js'
 import { isPristine, roundToSave, SAVE_ROUNDS, SAVE_VERSION, seasonReset, validateSave } from '../domain/save.js'
 import { isSeasonId, weeklyStats } from '../domain/seasons.js'
 
@@ -91,6 +94,27 @@ export function createGameService({ store, clock = () => new Date().toISOString(
   const daily = () => validDaily(readJson('daily'))
   const dailyClaims = () => validDailyClaims(readJson('daily_claims'))
   const epoch = () => Number(store.settings.get('season_epoch', 0)) || 0
+  const missionsDone = () => validMissions(readJson('missions'))
+  const streak = () => validStreak(readJson('streak'))
+  const ledger = () => validLedger(readJson('duel_ledger'))
+  const duelTries = () => {
+    const raw = readJson('duel_tries') ?? {}
+    return Object.fromEntries(Object.entries(raw).filter(([id]) => id in ledger()))
+  }
+  const today = () => dayId(new Date(clock()))
+
+  /** The day's missions with their progress and whether they were collected. */
+  function missionList() {
+    const day = today()
+    const rounds = roundsOfDay(store.rounds.forSave(SAVE_ROUNDS).map(roundToSave), day)
+    const done = missionsDone()
+    const claimed = done?.date === day ? done.claimed : []
+    return missionsFor(day).map((mission) => ({
+      ...mission,
+      progress: missionProgress(mission, rounds),
+      claimed: claimed.includes(mission.id),
+    }))
+  }
 
   /** Gives an exclusive item (season or daily reward), worn if its slot is free. */
   function grantItem(id) {
@@ -165,6 +189,17 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     store.rounds.update(toUpdate(round, xp))
     if (round.payoutCents > 0) store.wallet.credit(round.payoutCents)
     // A round of the daily challenge: its multiplier may be the day's best.
+    // A try of a duel: its multiplier may be the player's best in it.
+    let duelBest = null
+    const duelRound = readJson('duel_round')
+    if (duelRound?.roundId === round.id) {
+      store.settings.set('duel_round', 'null')
+      const all = readJson('duel_tries') ?? {}
+      const mine = all[duelRound.id] ?? { tries: 0, best: 0 }
+      const best = round.status === ROUND_STATUS.won ? Math.max(mine.best, round.multiplier) : mine.best
+      writeJson('duel_tries', { ...all, [duelRound.id]: { tries: mine.tries, best } })
+      duelBest = { id: duelRound.id, tries: mine.tries, best }
+    }
     let dailyBest = null
     if (Number(store.settings.get('daily_round', 0)) === round.id) {
       store.settings.set('daily_round', 0)
@@ -190,6 +225,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       achievements,
       levelUp: levelAfter > levelBefore ? levelAfter : null,
       daily: dailyBest,
+      duel: duelBest,
     }
   }
 
@@ -248,6 +284,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         league: league(),
         daily: dailyStatus(daily(), dayId(new Date(clock()))),
         epoch: epoch(),
+        missions: missionList(),
+        streak: { ...streak(), next: streakToday(streak(), today()) },
+        duelTries: duelTries(),
         progression: {
           xp: profile.xp,
           ...levelProgress(profile.xp),
@@ -262,10 +301,15 @@ export function createGameService({ store, clock = () => new Date().toISOString(
      * Starts a round. With `daily`, it is a try of the daily challenge: the
      * day's mode and bet, whatever is asked, and one try fewer.
      */
-    async start({ modeId, betCents, daily: isDaily = false }) {
+    async start({ modeId, betCents, daily: isDaily = false, duel = null }) {
       if (current) throw new GameError('round-in-progress', 'Une partie est déjà en cours')
-      const today = dayId(new Date(clock()))
-      const challenge = isDaily ? dailyStatus(daily(), today) : null
+      const challenge = isDaily && !duel ? dailyStatus(daily(), today()) : null
+      if (duel) {
+        if (ledger()[duel.id] !== 'staked') throw new GameError('duel-unknown', 'Duel introuvable')
+        if ((duelTries()[duel.id]?.tries ?? 0) >= DUEL_TRIES) throw new GameError('duel-done', 'Plus d’essai pour ce duel')
+        modeId = duel.modeId
+        betCents = DUEL_TRY_BET
+      }
       if (challenge && challenge.left === 0) throw new GameError('daily-done', 'Plus d’essai pour le défi du jour')
       if (challenge) {
         modeId = challenge.mode.id
@@ -294,6 +338,12 @@ export function createGameService({ store, clock = () => new Date().toISOString(
           const { date, tries, best } = challenge
           writeJson('daily', { date, tries: tries + 1, best })
           store.settings.set('daily_round', roundId)
+        }
+        if (duel) {
+          const all = readJson('duel_tries') ?? {}
+          const mine = all[duel.id] ?? { tries: 0, best: 0 }
+          writeJson('duel_tries', { ...all, [duel.id]: { ...mine, tries: mine.tries + 1 } })
+          writeJson('duel_round', { id: duel.id, roundId })
         }
         return roundId
       })
@@ -486,6 +536,54 @@ export function createGameService({ store, clock = () => new Date().toISOString(
       write(() => {})
     },
 
+    /** Collects a finished daily mission, once. Resolves to the tokens paid (cents). */
+    claimMission(id) {
+      const mission = missionList().find((entry) => entry.id === id)
+      if (!mission) throw new GameError('mission-unknown', 'Mission inconnue')
+      if (mission.claimed) throw new GameError('mission-claimed', 'Déjà récupérée')
+      if (mission.progress < mission.goal) throw new GameError('mission-todo', 'Mission pas terminée')
+      return write(() => {
+        const done = missionsDone()
+        const claimed = done?.date === today() ? done.claimed : []
+        writeJson('missions', { date: today(), claimed: [...claimed, id] })
+        store.wallet.credit(mission.reward)
+        return { tokens: mission.reward, achievements: unlockAchievements() }
+      })
+    },
+
+    /** The comeback bonus of the day, once a day: more for each day in a row. */
+    claimStreak() {
+      const next = streakToday(streak(), today())
+      if (!next) throw new GameError('streak-claimed', 'Bonus déjà récupéré aujourd’hui')
+      write(() => {
+        writeJson('streak', { last: today(), days: next.days })
+        store.wallet.credit(next.bonus)
+      })
+      return next
+    },
+
+    /** Puts a duel's stake aside (challenge or acceptance). */
+    stakeDuel(id, cents) {
+      if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      if (ledger()[id]) throw new GameError('duel-staked', 'Mise déjà engagée')
+      write(() => {
+        if (!store.wallet.debit(cents)) throw new GameError('insufficient-funds', 'Solde insuffisant')
+        writeJson('duel_ledger', validLedger({ ...ledger(), [id]: 'staked' }))
+      })
+    },
+
+    /** Pays what a duel gives back (win, tie, refund), once. Resolves to whether it paid. */
+    settleDuel(id, cents) {
+      if (ledger()[id] !== 'staked') return false
+      write(() => {
+        if (cents > 0) store.wallet.credit(cents)
+        writeJson('duel_ledger', { ...ledger(), [id]: 'settled' })
+      })
+      return true
+    },
+
+    duelLedger: ledger,
+
     /** Called after every change of progress (to sync it). Returns an unsubscribe function. */
     onChange(listener) {
       listeners.add(listener)
@@ -512,6 +610,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         league: league(),
         daily: daily(),
         dailyClaims: dailyClaims(),
+        missions: missionsDone(),
+        streak: streak(),
+        duels: { ledger: ledger(), tries: duelTries() },
       }
     },
 
@@ -540,6 +641,11 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         writeJson('league', save.league)
         writeJson('daily', save.daily)
         writeJson('daily_claims', save.dailyClaims)
+        writeJson('missions', save.missions)
+        writeJson('streak', save.streak)
+        writeJson('duel_ledger', save.duels.ledger)
+        writeJson('duel_tries', save.duels.tries)
+        store.settings.set('duel_round', 'null')
         store.settings.set('daily_round', 0)
       })
       return save

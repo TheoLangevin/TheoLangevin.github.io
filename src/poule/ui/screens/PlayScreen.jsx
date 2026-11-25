@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { BET_PRESETS, CENTS, MAX_PAYOUT, MIN_BET, REFILL_AMOUNT } from '../../config/economy.js'
 import { DAILY_BET, DAILY_TRIES } from '../../config/daily.js'
+import { DUEL_TRIES, DUEL_TRY_BET } from '../../config/duels.js'
 import { MODES, modeById } from '../../config/modes.js'
 import { allInBet, clampBet, refillCheck } from '../../domain/money.js'
 import { multiplierAt, payoutCents } from '../../domain/multiplier.js'
@@ -206,6 +207,9 @@ function PlayControls() {
       challenge: state.challenge,
       daily: state.daily,
       setChallenge: state.setChallenge,
+      duel: state.duel,
+      duelTries: state.duelTries,
+      setDuel: state.setDuel,
     })),
   )
   const round = s.round
@@ -217,7 +221,22 @@ function PlayControls() {
     <div className="controls">
       {/* Both panels share one grid cell, so the road keeps its size between them. */}
       <div className="controls__panel" hidden={Boolean(round)} aria-hidden={Boolean(round)}>
-        {s.challenge && s.daily ? (
+        {s.duel ? (
+          <div className="challenge">
+            <div>
+              <b>
+                Duel contre {s.duel.opponent} · {modeById(s.duel.modeId).label}
+              </b>
+              <small>
+                Mise {tokens(DUEL_TRY_BET)} jetons · essai {(s.duelTries[s.duel.id]?.tries ?? 0) + 1}/{DUEL_TRIES} ·
+                meilleur {s.duelTries[s.duel.id]?.best ? multiplierLabel(s.duelTries[s.duel.id].best) : '—'}
+              </small>
+            </div>
+            <button type="button" onClick={() => s.setDuel(null)} disabled={locked}>
+              Quitter
+            </button>
+          </div>
+        ) : s.challenge && s.daily ? (
           <div className="challenge">
             <div>
               <b>Défi du jour · {s.daily.mode.label}</b>
@@ -259,7 +278,16 @@ function PlayControls() {
           </>
         )}
         <Refill balanceCents={s.balanceCents} lastRefillAt={s.lastRefillAt} refill={s.refill} />
-        {s.challenge ? (
+        {s.duel ? (
+          <button
+            type="button"
+            className="big big--play"
+            onClick={s.play}
+            disabled={locked || s.balanceCents < DUEL_TRY_BET}
+          >
+            Jouer l’essai <small>{tokens(DUEL_TRY_BET)} jetons</small>
+          </button>
+        ) : s.challenge ? (
           <button
             type="button"
             className="big big--play"

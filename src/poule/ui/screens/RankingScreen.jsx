@@ -10,6 +10,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { CoinIcon } from '../icons.jsx'
+import { DuelsCard } from '../duels/Duels.jsx'
 import LeagueBadge from '../league/LeagueBadge.jsx'
 import './ranking.css'
 
@@ -337,6 +338,7 @@ export default function RankingScreen({ hidden, go }) {
         </button>
       )}
 
+      {a.status === 'signedIn' && a.pseudo && <DuelsCard go={go} />}
       {kind === 'daily' && <DailyCard go={go} />}
 
       <div className="chips ranking__tabs" role="tablist" aria-label="Classements">

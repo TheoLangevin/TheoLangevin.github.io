@@ -3,6 +3,7 @@ import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { divisionById } from '../../domain/leagues.js'
+import { ChallengeButtons } from '../duels/Duels.jsx'
 import Mannequin from '../road/Mannequin.jsx'
 import Dialog from './Dialog.jsx'
 
@@ -54,6 +55,7 @@ export default function PlayerSheet() {
           </>
         )}
         {!loading && worn.length === 0 && !error && <p className="note">Une poule nature, sans accessoire.</p>}
+        <ChallengeButtons player={{ uid: player.uid, pseudo: profile.pseudo }} />
       </div>
     </Dialog>
   )

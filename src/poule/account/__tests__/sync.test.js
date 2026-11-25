@@ -222,3 +222,33 @@ describe('refresh', () => {
     expect((await laptop.sync.refresh()).action).toBe('download')
   })
 })
+
+describe('duels', () => {
+  it('stakes, plays and pays a duel once', async () => {
+    const cloud = createMemoryCloud()
+    let now = Date.parse('2026-11-25T10:00:00Z')
+    const make = async (uid, pseudo) => {
+      const game = startedGame({ store: createMemoryStore(), seeds: () => 's', clock: () => new Date(now).toISOString() })
+      const sync = createSyncService({ game, cloud, delay: 0, now: () => new Date(now) })
+      await sync.connect({ uid, name: pseudo })
+      await sync.choosePseudo(pseudo)
+      return { game, sync }
+    }
+    const a = await make('ua', 'Alice')
+    const b = await make('ub', 'Bruno')
+    const start = a.game.summary().balanceCents
+    const id = await a.sync.challenge({ uid: 'ub', pseudo: 'Bruno' }, 10000, 'easy')
+    expect(a.game.summary().balanceCents).toBe(start - 10000)
+    const [incoming] = (await b.sync.duels()).duels
+    expect(incoming.state).toBe('open')
+    await b.sync.acceptDuel(incoming)
+    expect(b.game.summary().balanceCents).toBe(start - 10000)
+    await a.sync.pushDuelScore(id, { tries: 3, best: 2.5 })
+    await b.sync.pushDuelScore(id, { tries: 3, best: 1.2 })
+    const before = a.game.summary().balanceCents
+    expect((await a.sync.duels()).paid).toBe(20000)
+    expect(a.game.summary().balanceCents).toBe(before + 20000)
+    expect((await a.sync.duels()).paid).toBe(0)
+    expect((await b.sync.duels()).paid).toBe(0)
+  })
+})

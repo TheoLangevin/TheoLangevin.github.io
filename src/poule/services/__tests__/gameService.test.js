@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { achievementById } from '../../config/achievements.js'
 import { STARTING_BALANCE } from '../../config/economy.js'
 import { DAILY_BET } from '../../config/daily.js'
+import { DUEL_TRY_BET } from '../../config/duels.js'
 import { DOUBLE_LANE_BONUS } from '../../config/events.js'
 import { modeById } from '../../config/modes.js'
 import { createMemoryStore } from '../../data/memory/createMemoryStore.js'
@@ -405,5 +406,37 @@ describe('event bonuses', () => {
     service.step()
     service.step()
     expect(service.cashOut().progress.xp).toBe(4)
+  })
+})
+
+describe('missions and duel tries', () => {
+  it('pays a finished mission and the daily bonus once', async () => {
+    const seed = await seedSafeFor(3)
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => seed, clock: () => '2026-11-25T10:00:00Z' })
+    const bonus = service.claimStreak()
+    expect(bonus).toEqual({ days: 1, bonus: 2000 })
+    expect(() => service.claimStreak()).toThrow()
+    const mission = service.summary().missions[0]
+    expect(() => service.claimMission(mission.id)).toThrow()
+    store.settings.set('missions', JSON.stringify(null))
+    expect(service.summary().streak.next).toBeNull()
+  })
+
+  it("plays a duel's tries in its mode and keeps the best", async () => {
+    const seed = await seedSafeFor(3)
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => seed })
+    service.stakeDuel('duel0001', 2500)
+    const round = await service.start({ modeId: 'hard', betCents: 5000, duel: { id: 'duel0001', modeId: 'easy' } })
+    expect(round.mode.id).toBe('easy')
+    expect(round.betCents).toBe(DUEL_TRY_BET)
+    service.step()
+    const { progress } = service.cashOut()
+    expect(progress.duel).toEqual({ id: 'duel0001', tries: 1, best: progress.duel.best })
+    expect(progress.duel.best).toBeGreaterThan(1)
+    expect(service.settleDuel('duel0001', 5000)).toBe(true)
+    expect(service.settleDuel('duel0001', 5000)).toBe(false)
+    await expect(service.start({ duel: { id: 'duel0001', modeId: 'easy' } })).rejects.toThrow()
   })
 })

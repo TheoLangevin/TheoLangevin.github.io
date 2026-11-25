@@ -4,6 +4,7 @@ import { usePoule } from '../../state/usePoule.js'
 import Avatar from '../account/Avatar.jsx'
 import { tokens } from '../format.js'
 import { CoinIcon, UserIcon } from '../icons.jsx'
+import { hasMissionReward } from '../missions/MissionsSheet.jsx'
 
 /** Level with its progress ring, tokens, and the player. */
 export default function TopBar({ go }) {
@@ -16,6 +17,8 @@ export default function TopBar({ go }) {
   )
   const { user, syncState } = useAccount(useShallow((state) => ({ user: state.user, syncState: state.sync.state })))
   const ratio = progression?.ratio ?? 0
+  const reward = usePoule(hasMissionReward)
+  const openMissions = usePoule((state) => state.openMissions)
 
   return (
     <header className="topbar">
@@ -36,6 +39,14 @@ export default function TopBar({ go }) {
         </span>
       </div>
 
+      <button
+        type="button"
+        className="topbar__missions"
+        onClick={() => openMissions(true)}
+        aria-label={reward ? 'Missions du jour : récompense à récupérer' : 'Missions du jour'}
+      >
+        🎯{reward && <i className="topbar__dot topbar__dot--reward" aria-hidden="true" />}
+      </button>
       <button type="button" className="topbar__me" onClick={() => go('profil')} aria-label="Mon profil">
         {user ? <Avatar user={user} size={36} /> : <UserIcon size={22} />}
         {user && <i className={`topbar__dot topbar__dot--${syncState}`} aria-hidden="true" />}

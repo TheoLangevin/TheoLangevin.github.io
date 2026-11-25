@@ -57,6 +57,9 @@ const save = (extra = {}) => ({
   missions: null,
   streak: null,
   duels: { ledger: {}, tries: {} },
+  gifts: [],
+  setsClaimed: [],
+  team: null,
   ...extra,
 })
 
@@ -132,6 +135,7 @@ describe('save format', () => {
       division: 'silver-3',
       bestMultiplier: 1.22,
       bestLanes: 3,
+      team: null,
     })
   })
 

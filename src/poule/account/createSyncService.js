@@ -10,6 +10,7 @@ import {
   validateSave,
 } from '../domain/save.js'
 import { DUEL_STAKES } from '../config/duels.js'
+import { TEAM_SIZE } from '../config/teams.js'
 import { MAX_WEEKS_TO_FETCH } from '../config/seasons.js'
 import { DUEL_MS, duelPayout, duelState } from '../domain/duels.js'
 import { dailyReward, dayId, previousDayId } from '../domain/daily.js'
@@ -399,6 +400,59 @@ export function createSyncService({
 
     /** Publishes the player's tries and best multiplier in a duel. */
     pushDuelScore: (id, score) => cloud.updateDuel(id, { [`scores.${uid}`]: score }),
+
+    /**
+     * Poulaillers: every team with its members' league points summed, best
+     * first, and the player's own team. Fixes the player's cached team if it
+     * no longer holds them.
+     */
+    async teamBoard() {
+      const [teams, lines] = await Promise.all([cloud.teams(), cloud.teamLines()])
+      const lp = new Map(lines.map((line) => [line.uid, line.lp ?? 0]))
+      const board = teams
+        .map((team) => ({
+          ...team,
+          lp: team.members.reduce((sum, member) => sum + (lp.get(member) ?? 0), 0),
+          size: team.members.length,
+        }))
+        .sort((a, b) => b.lp - a.lp)
+      const mine = uid ? (board.find((team) => team.members.includes(uid)) ?? null) : null
+      if (uid && (mine?.id ?? null) !== game.exportSave().team) game.setTeam(mine?.id ?? null)
+      return { teams: board, mine }
+    },
+
+    async createTeam(name) {
+      if (!uid || !pseudo) throw new Error('no-pseudo')
+      const clean = name.trim().replace(/\s+/g, ' ')
+      if (clean.length < 3 || clean.length > 20) throw new Error('Nom de 3 à 20 caractères.')
+      const id = cloud.newTeamId()
+      await cloud.createTeam(id, { name: clean, owner: uid, members: [uid], pseudos: { [uid]: pseudo }, createdAt: now().getTime() })
+      game.setTeam(id)
+      return id
+    },
+
+    async joinTeam(team) {
+      if (!uid || !pseudo) throw new Error('no-pseudo')
+      if (team.members.length >= TEAM_SIZE) throw new Error('Ce poulailler est complet.')
+      const current = game.exportSave().team
+      if (current && current !== team.id) await cloud.leaveTeam(current, uid)
+      await cloud.joinTeam(team.id, uid, pseudo)
+      game.setTeam(team.id)
+    },
+
+    async leaveTeam() {
+      const current = game.exportSave().team
+      game.setTeam(null)
+      if (current) await cloud.leaveTeam(current, uid)
+    },
+
+    /** Posts to the activity feed (only players with a pseudo appear there). */
+    postFeed(item) {
+      if (!uid || !pseudo) return Promise.resolve()
+      return cloud.postFeed({ uid, pseudo, mult: 0, mode: null, lanes: 0, other: null, ...item, at: now().getTime() })
+    },
+
+    feed: (size) => cloud.feed(size),
 
     /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
     adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),

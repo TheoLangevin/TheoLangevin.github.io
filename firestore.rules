@@ -13,6 +13,8 @@ rules_version = '2';
 //   seasons/{week}/entries/{uid}  public line of that player for one week.
 //   daily/{day}/entries/{uid}     public line of that player on a day's challenge.
 //   duels/{id}           a duel between two players, seen and changed by them only.
+//   teams/{id}           a poulailler (team). Public; members join and leave themselves.
+//   feed/{id}            the public activity feed: big moments, posted by their player.
 //
 // Saves are computed in the player's browser, so a determined player can
 // still fake their own numbers; these rules keep the data well formed, private
@@ -123,7 +125,9 @@ service cloud.firestore {
 
       // The experience and tokens shown cannot exceed the player's own save.
       allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['pseudo', 'look', 'title', 'level', 'xp', 'tokens', 'lp', 'division', 'bestMultiplier', 'bestLanes', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['pseudo', 'look', 'title', 'level', 'xp', 'tokens', 'lp', 'division', 'bestMultiplier', 'bestLanes', 'team', 'updatedAt'])
+        && (request.resource.data.get('team', null) == null
+          || request.auth.uid in get(/databases/$(database)/documents/teams/$(request.resource.data.team)).data.members)
         && request.resource.data.lp is int && request.resource.data.lp >= 0
         && request.resource.data.lp <= savedLp(uid)
         && request.resource.data.division is string && request.resource.data.division.size() <= 20
@@ -195,7 +199,7 @@ service cloud.firestore {
         && request.resource.data.from.uid == request.auth.uid
         && request.resource.data.to.uid != request.auth.uid
         && ownsPseudo(request.resource.data.from.pseudo)
-        && request.resource.data.mode in ['easy', 'medium', 'hard', 'hardcore']
+        && request.resource.data.mode in ['easy', 'medium', 'hard', 'hardcore', 'night', 'mystery']
         && request.resource.data.stake in [2500, 10000, 50000]
         && request.resource.data.status == 'open'
         && request.resource.data.scores == {};
@@ -214,6 +218,46 @@ service cloud.firestore {
           || (resource.data.status == 'open'
             && resource.data.to.uid == request.auth.uid
             && request.resource.data.status in ['accepted', 'declined']));
+    }
+
+    match /teams/{id} {
+      allow read: if true;
+
+      // The founder creates it alone in it.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'owner', 'members', 'pseudos', 'createdAt'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.pseudos.keys().hasOnly([request.auth.uid])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 20;
+
+      // A player only adds or removes themself; 10 members at most.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'pseudos'])
+        && request.resource.data.members.size() <= 10
+        && request.resource.data.pseudos.diff(resource.data.pseudos).affectedKeys().hasOnly([request.auth.uid])
+        && (request.resource.data.members.toSet().difference(resource.data.members.toSet()) == [request.auth.uid].toSet()
+          || resource.data.members.toSet().difference(request.resource.data.members.toSet()) == [request.auth.uid].toSet());
+
+      // The last member leaving deletes it.
+      allow delete: if signedIn() && resource.data.members == [request.auth.uid];
+    }
+
+    match /feed/{id} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'pseudo', 'kind', 'mult', 'mode', 'lanes', 'other', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && ownsPseudo(request.resource.data.pseudo)
+        && request.resource.data.kind in ['cash', 'finish', 'duel', 'promotion']
+        && request.resource.data.mult is number && request.resource.data.mult >= 0 && request.resource.data.mult <= 5000
+        && request.resource.data.lanes is int && request.resource.data.lanes >= 0 && request.resource.data.lanes <= 24
+        && (request.resource.data.other == null || (request.resource.data.other is string && request.resource.data.other.size() <= 20))
+        && request.resource.data.at is int;
+
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
   }
 }

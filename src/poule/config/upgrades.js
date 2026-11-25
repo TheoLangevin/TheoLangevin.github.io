@@ -263,6 +263,20 @@ export const UPGRADES = Object.freeze(
     { id: 'title-champion', slot: 'title', label: 'Championne de la semaine', exclusive: true, level: 1 },
     { id: 'title-podium', slot: 'title', label: 'Sur le podium', exclusive: true, level: 1 },
 
+    // Christmas, limited: on sale only while the event runs (config/calendar.js).
+    { id: 'santa', slot: 'hat', label: 'Bonnet de Noël', currency: 'tokens', cost: t(1200), level: 1, limited: 'christmas' },
+    { id: 'xmas-scarf', slot: 'neck', label: 'Écharpe de Noël', currency: 'tokens', cost: t(900), level: 1, limited: 'christmas' },
+    {
+      id: 'snowflakes',
+      slot: 'trail',
+      label: 'Flocons',
+      currency: 'tokens',
+      cost: t(1500),
+      level: 1,
+      limited: 'christmas',
+      trail: { shape: 'glyph', glyph: '❄', colors: ['#ffffff', '#bfe3ff'] },
+    },
+
     // Game skins: they change the hen and the traffic together.
     {
       id: 'skin-roadworks',

@@ -8,6 +8,8 @@ import { count, multiplierLabel, tokens } from '../format.js'
 import { BoltIcon, CoinIcon, GiftIcon, LockIcon } from '../icons.jsx'
 import { CarSprite, HenSprite } from '../road/sprites.jsx'
 import Mannequin from '../road/Mannequin.jsx'
+import { SurpriseBox } from '../collection/Collection.jsx'
+import { isEventActive } from '../../domain/calendar.js'
 import './shop.css'
 
 const NOTHING = {}
@@ -129,6 +131,7 @@ const REASON = {
   level: (item) => `Niveau ${item.level} requis`,
   tokens: () => 'Pas assez de jetons',
   exclusive: () => 'Récompense de saison',
+  limited: () => 'Édition limitée terminée',
 }
 
 /** Bottom sheet of one item: big preview, then buy, wear or take off. */
@@ -188,6 +191,7 @@ function ItemSheet({ id, onClose }) {
         <Thumb item={item} equipped={s.progression.equipped} />
       )}
       {item.description && <p>{item.description}</p>}
+      {item.limited && <p className="note">Édition limitée : en vente seulement pendant l’événement.</p>}
       {item.exclusive && !item.beta && <p>Se gagne en finissant bien classé une semaine. Voir le classement.</p>}
       {item.beta && !owned && <p className="note">Réservé aux joueurs de la bêta : il ne s’achète pas.</p>}
       {item.secret && !owned && <p className="shop__secret">Vous avez trouvé l’objet caché de la boutique.</p>}
@@ -210,7 +214,9 @@ export default function ShopScreen({ hidden }) {
   const items = useMemo(
     () =>
       UPGRADES.filter((item) => (slot === 'all' ? !item.exclusive : item.slot === slot)).filter(
-        (item) => !item.secret || owned?.includes(item.id),
+        (item) =>
+          (!item.secret || owned?.includes(item.id)) &&
+          (!item.limited || isEventActive(item.limited) || owned?.includes(item.id)),
       ),
     [slot, owned],
   )
@@ -229,7 +235,7 @@ export default function ShopScreen({ hidden }) {
     setTaps(next)
     tapTimer.current = setTimeout(() => setTaps(0), 1500)
   }
-  const listed = UPGRADES.filter((item) => !item.secret)
+  const listed = UPGRADES.filter((item) => !item.secret && (!item.limited || isEventActive(item.limited)))
   if (!shop) return <main className="screen" hidden={hidden} aria-busy="true" />
 
   return (
@@ -253,6 +259,8 @@ export default function ShopScreen({ hidden }) {
           </p>
         </div>
       </div>
+
+      <SurpriseBox />
 
       <div className="chips shop__tabs" role="tablist" aria-label="Catégories">
         {[{ id: 'all', label: 'Tout' }, ...SLOTS].map((entry) => (

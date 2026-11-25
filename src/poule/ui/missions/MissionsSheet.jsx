@@ -6,7 +6,8 @@ import { CoinIcon } from '../icons.jsx'
 
 /** Whether something waits to be collected: the day's bonus or a finished mission. */
 export const hasMissionReward = (state) =>
-  Boolean(state.streak?.next) || state.missions.some((mission) => !mission.claimed && mission.progress >= mission.goal)
+  Boolean(state.streak?.next) ||
+  state.events.some((event) => event.gift) || state.missions.some((mission) => !mission.claimed && mission.progress >= mission.goal)
 
 /** The day's comeback bonus and three missions. */
 export default function MissionsSheet() {
@@ -18,13 +19,29 @@ export default function MissionsSheet() {
       openMissions: state.openMissions,
       claimMission: state.claimMission,
       claimStreak: state.claimStreak,
+      events: state.events,
+      claimGift: state.claimGift,
     })),
   )
   if (!s.open) return null
   const close = () => s.openMissions(false)
   const next = s.streak?.next
   return (
-    <Dialog title="Missions du jour" onClose={close}>
+    <Dialog title="Missions et événements" onClose={close}>
+      {s.events.length > 0 && (
+        <section className="events-now">
+          {s.events.map((event) => (
+            <div key={event.id} className="events-now__item">
+              <b>🎉 {event.label}</b>
+              {event.gift && (
+                <button type="button" className="big big--buy" onClick={() => s.claimGift(event.id)}>
+                  Récupérer mon cadeau
+                </button>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       <section className="streak">
         <div className="streak__days" aria-label="Série de jours">
           {Array.from({ length: 7 }, (_, index) => {

@@ -11,12 +11,14 @@ import Dialog from '../account/Dialog.jsx'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { CoinIcon } from '../icons.jsx'
 import { DuelsCard } from '../duels/Duels.jsx'
+import { LiveFeed, TeamsPanel } from '../social/Social.jsx'
 import LeagueBadge from '../league/LeagueBadge.jsx'
 import './ranking.css'
 
 const BOARDS = [
   { id: 'season', label: 'Semaine' },
   { id: 'daily', label: 'Défi du jour' },
+  { id: 'teams', label: 'Poulaillers' },
   { id: 'lp', label: 'Ligues' },
   { id: 'tokens', label: 'Jetons' },
   { id: 'xp', label: 'Niveau' },
@@ -296,6 +298,7 @@ function RewardsSheet({ onClose }) {
 
 export default function RankingScreen({ hidden, go }) {
   const [rewardsOpen, setRewardsOpen] = useState(false)
+  const [tab, setTab] = useState(null)
   const a = useAccount(
     useShallow((state) => ({
       status: state.status,
@@ -342,8 +345,9 @@ export default function RankingScreen({ hidden, go }) {
         </button>
       )}
 
+      {ready && <LiveFeed />}
       {a.status === 'signedIn' && a.pseudo && <DuelsCard go={go} />}
-      {kind === 'daily' && <DailyCard go={go} />}
+      {kind === 'daily' && tab !== 'teams' && <DailyCard go={go} />}
 
       <div className="chips ranking__tabs" role="tablist" aria-label="Classements">
         {BOARDS.map((board) => (
@@ -351,8 +355,8 @@ export default function RankingScreen({ hidden, go }) {
             key={board.id}
             type="button"
             role="tab"
-            aria-selected={kind === board.id}
-            onClick={() => a.loadBoard(board.id)}
+            aria-selected={(tab ?? kind) === board.id}
+            onClick={() => (board.id === 'teams' ? setTab('teams') : (setTab(null), a.loadBoard(board.id)))}
           >
             {board.label}
           </button>
@@ -363,11 +367,12 @@ export default function RankingScreen({ hidden, go }) {
         <p className="note">{a.status === 'loading' ? 'Chargement…' : 'Classement indisponible pour le moment.'}</p>
       )}
       {ready && error && <p className="note">{error}</p>}
-      {ready && !error && entries.length === 0 && (
+      {ready && !error && tab !== 'teams' && entries.length === 0 && (
         <p className="note">{loading ? 'Chargement…' : 'Personne pour l’instant. Soyez la première poule !'}</p>
       )}
 
-      {entries.length > 0 && (
+      {tab === 'teams' && <TeamsPanel openPlayer={a.openPlayer} />}
+      {tab !== 'teams' && entries.length > 0 && (
         <div aria-busy={loading}>
           <Podium kind={kind} entries={entries} uid={a.uid} open={a.openPlayer} />
           <ol className="board" start={4}>
@@ -394,7 +399,7 @@ export default function RankingScreen({ hidden, go }) {
         </div>
       )}
 
-      {mine && !inList && own?.standing && (
+      {tab !== 'teams' && mine && !inList && own?.standing && (
         <ol className="board board--me" aria-label="Votre place">
           <li className="is-me">
             <button type="button" className="board__row" onClick={() => a.openPlayer(a.uid, mine)}>

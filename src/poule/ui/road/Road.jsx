@@ -75,6 +75,7 @@ export default function Road() {
     <div
       className={`road${onRoadTap ? ' road--tappable' : ''}`}
       data-road={look.road ?? undefined}
+      data-mode={mode.night ? 'night' : mode.mystery ? 'mystery' : undefined}
       ref={viewport}
       onClick={onRoadTap}
       aria-label={`Route de ${mode.lanes} voies, mode ${mode.label}`}
@@ -88,6 +89,7 @@ export default function Road() {
             state={laneState(index + 1)}
             cars={carsByLane.get(index + 1) ?? NO_CARS}
             skin={look.skin}
+            hidden={Boolean(mode.mystery) && index + 1 > crossedUpTo}
             onCarGone={onCarGone}
           />
         ))}

@@ -6,6 +6,7 @@ import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.j
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
 import { BOARD_SIZE } from '../config/seasons.js'
 import { computeAdminStats } from '../domain/adminStats.js'
+import { divisionById } from '../domain/leagues.js'
 import { tokens } from '../ui/format.js'
 import { gameService, pushNotice, usePoule } from './usePoule.js'
 
@@ -56,6 +57,8 @@ export const useAccount = create((set, get) => {
     duels: { list: [], loading: false },
     /** The player being challenged (challenge sheet open), or null. */
     challengeTarget: null,
+    teams: { list: [], mine: null, loading: false },
+    feed: [],
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -71,6 +74,13 @@ export const useAccount = create((set, get) => {
             onImported: () => usePoule.getState().reload(),
           })
           game.onChange(() => runtime.sync.changed())
+          // Big moments go to the activity feed.
+          usePoule.subscribe((state, previous) => {
+            const moment = state.highlight
+            if (!moment || moment === previous.highlight) return
+            const { key, ...item } = moment
+            runtime.sync.postFeed(item).catch((error) => console.error(error))
+          })
           // Duel tries go to the duel as soon as they are played.
           usePoule.subscribe((state, previous) => {
             const progress = state.duelProgress
@@ -219,7 +229,12 @@ export const useAccount = create((set, get) => {
       const pending = get().pendingReward
       if (!pending) return
       try {
-        usePoule.getState().applyResults(() => runtime.sync.claimResults(pending))
+        const result = usePoule.getState().applyResults(() => runtime.sync.claimResults(pending))
+        const before = pending.preview.weeks[0]?.before
+        const after = result?.weeks?.at(-1)?.after
+        if (before && after && divisionById(after).min > divisionById(before).min) {
+          runtime.sync.postFeed({ kind: 'promotion', other: after }).catch(() => {})
+        }
         set({ pendingReward: null, dialog: null })
       } catch (error) {
         console.error(error)
@@ -256,7 +271,18 @@ export const useAccount = create((set, get) => {
       if (!runtime.sync?.uid) return
       set({ duels: { ...get().duels, loading: true } })
       try {
+        const before = new Set(get().duels.list.filter((duel) => duel.state === 'done').map((duel) => duel.id))
         const { duels, paid } = await runtime.sync.duels()
+        // A duel just won: tell the feed.
+        const me = get().user?.uid
+        for (const duel of duels) {
+          if (duel.state !== 'done' || before.has(duel.id) || !get().duels.list.length) continue
+          const mine = duel.scores?.[me]?.best ?? 0
+          const other = duel.from.uid === me ? duel.to : duel.from
+          if (mine > (duel.scores?.[other.uid]?.best ?? 0)) {
+            runtime.sync.postFeed({ kind: 'duel', mult: mine, mode: duel.mode, other: other.pseudo }).catch(() => {})
+          }
+        }
         set({ duels: { list: duels, loading: false } })
         if (paid > 0) {
           usePoule.getState().sync()
@@ -265,6 +291,49 @@ export const useAccount = create((set, get) => {
       } catch (error) {
         console.error(error)
         set({ duels: { ...get().duels, loading: false } })
+      }
+    },
+
+    /** Poulaillers and their board. */
+    async loadTeams() {
+      if (!runtime.sync) return
+      set({ teams: { ...get().teams, loading: true } })
+      try {
+        const { teams, mine } = await runtime.sync.teamBoard()
+        set({ teams: { list: teams, mine, loading: false } })
+      } catch (error) {
+        console.error(error)
+        set({ teams: { ...get().teams, loading: false } })
+      }
+    },
+
+    async teamAction(action, argument) {
+      try {
+        if (action === 'create') await runtime.sync.createTeam(argument)
+        if (action === 'join') await runtime.sync.joinTeam(argument)
+        if (action === 'leave') await runtime.sync.leaveTeam()
+        usePoule.getState().sync()
+        await get().loadTeams()
+        return true
+      } catch (error) {
+        console.error(error)
+        sayError(
+          error.message === 'no-pseudo'
+            ? 'Choisissez un pseudo d’abord.'
+            : error.name === 'FirebaseError' || !error.message
+              ? 'Action impossible pour le moment.'
+              : error.message,
+        )
+        return false
+      }
+    },
+
+    async loadFeed() {
+      if (!runtime.sync) return
+      try {
+        set({ feed: await runtime.sync.feed(15) })
+      } catch (error) {
+        console.error(error)
       }
     },
 

@@ -252,3 +252,35 @@ describe('duels', () => {
     expect((await b.sync.duels()).paid).toBe(0)
   })
 })
+
+describe('teams and feed', () => {
+  it('builds poulaillers that add up their league points, and posts to the feed', async () => {
+    const cloud = createMemoryCloud()
+    const make = async (uid, pseudo, lp) => {
+      const game = startedGame({ store: createMemoryStore(), seeds: () => 's' })
+      const sync = createSyncService({ game, cloud, delay: 0 })
+      await sync.connect({ uid, name: pseudo })
+      await sync.choosePseudo(pseudo)
+      cloud.entries.set(uid, { ...cloud.entries.get(uid), lp })
+      return { game, sync }
+    }
+    const a = await make('ua', 'Alice', 300)
+    const b = await make('ub', 'Bruno', 120)
+    const id = await a.sync.createTeam('Les Cocottes')
+    expect(a.game.exportSave().team).toBe(id)
+    const { teams } = await b.sync.teamBoard()
+    await b.sync.joinTeam(teams[0])
+    cloud.entries.set('ua', { ...cloud.entries.get('ua'), team: id })
+    cloud.entries.set('ub', { ...cloud.entries.get('ub'), team: id })
+    const board = await a.sync.teamBoard()
+    expect(board.mine.members).toEqual(['ua', 'ub'])
+    expect(board.mine.lp).toBe(420)
+    await b.sync.leaveTeam()
+    expect(b.game.exportSave().team).toBeNull()
+    expect((await a.sync.teamBoard()).mine.members).toEqual(['ua'])
+    await a.sync.postFeed({ kind: 'cash', mult: 12.5, mode: 'hard', lanes: 9 })
+    const [item] = await a.sync.feed()
+    expect(item).toMatchObject({ uid: 'ua', pseudo: 'Alice', kind: 'cash', mult: 12.5 })
+    await expect(a.sync.createTeam('x')).rejects.toThrow()
+  })
+})

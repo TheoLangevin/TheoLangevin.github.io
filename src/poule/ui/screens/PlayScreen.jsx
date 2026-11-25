@@ -15,13 +15,14 @@ import './play.css'
 
 /** Three figures above the road: before a round, what it offers; during it, where it stands. */
 function RoundHud() {
-  const { round, modeId, betCents, autocash, twin } = usePoule(
+  const { round, modeId, betCents, autocash, twin, xpEvent } = usePoule(
     useShallow((state) => ({
       round: state.round,
       modeId: state.round?.modeId ?? state.modeId,
       betCents: state.round?.betCents ?? state.betCents,
       autocash: state.progression?.owned.includes('autocash') ? state.autocashTarget : null,
       twin: state.doubleNext,
+      xpEvent: state.events.find((event) => event.xp?.[state.round?.modeId ?? state.modeId]) ?? null,
     })),
   )
   const mode = modeById(modeId)
@@ -30,12 +31,12 @@ function RoundHud() {
     ? [
         ['Multiplicateur', lane ? multiplierLabel(multiplierAt(mode, lane)) : 'x1,00'],
         ['Gain', lane ? tokens(payoutCents(betCents, mode, lane)) : '—'],
-        ['Voie suivante', lane < mode.lanes ? multiplierLabel(multiplierAt(mode, lane + 1)) : '—'],
+        ['Voie suivante', lane >= mode.lanes ? '—' : mode.mystery ? '?' : multiplierLabel(multiplierAt(mode, lane + 1))],
       ]
     : [
         ['Chance par voie', `${Math.round(mode.survival * 100)} %`],
         ['Voies', String(mode.lanes)],
-        ['Jusqu’à', multiplierLabel(multiplierAt(mode, mode.lanes))],
+        mode.mystery ? ['Multiplicateurs', 'Mystère'] : ['Jusqu’à', multiplierLabel(multiplierAt(mode, mode.lanes))],
       ]
 
   return (
@@ -47,6 +48,7 @@ function RoundHud() {
         </div>
       ))}
       {twin && <span className="hud__twin">Double poule · XP ×2 et bonus de jetons</span>}
+      {!twin && !round && xpEvent && <span className="hud__twin hud__event">{xpEvent.label}</span>}
       {round && autocash && (
         <span className="hud__auto">
           <BoltIcon size={12} /> auto {multiplierLabel(autocash)}
@@ -261,7 +263,7 @@ function PlayControls() {
                 🏁 Défi du jour · {s.daily.mode.label} · {s.daily.left} essai{s.daily.left > 1 ? 's' : ''}
               </button>
             )}
-        <div className="segmented" role="group" aria-label="Difficulté">
+        <div className="chips modes" role="group" aria-label="Mode">
           {MODES.map((entry) => (
             <button
               key={entry.id}
@@ -331,7 +333,7 @@ function PlayControls() {
           </button>
           <button type="button" className="big big--play" onClick={s.play} disabled={s.busy || !round}>
             Avancer
-            <small>{round && round.lane < mode.lanes ? multiplierLabel(multiplierAt(mode, round.lane + 1)) : ''}</small>
+            <small>{round && round.lane < mode.lanes ? (mode.mystery ? '?' : multiplierLabel(multiplierAt(mode, round.lane + 1))) : ''}</small>
           </button>
         </div>
       </div>

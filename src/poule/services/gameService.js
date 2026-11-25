@@ -1,5 +1,7 @@
 import { DEFAULT_BET, MAX_BET, MIN_BET, REFILL_AMOUNT } from '../config/economy.js'
 import { DAILY_BET } from '../config/daily.js'
+import { CALENDAR } from '../config/calendar.js'
+import { SETS } from '../config/collection.js'
 import { DUEL_TRIES, DUEL_TRY_BET } from '../config/duels.js'
 import { DOUBLE_LANE_BONUS } from '../config/events.js'
 import { CURRENT_SEASON } from '../config/seasons.js'
@@ -19,6 +21,8 @@ import {
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
 import { refillCheck } from '../domain/money.js'
 import { dailyReward, dailyStatus, dayId, isDayId, validDaily, validDailyClaims } from '../domain/daily.js'
+import { activeEvents, isEventActive, xpMultiplier } from '../domain/calendar.js'
+import { BOX_PRICE, collectionStatus, drawBox } from '../domain/collection.js'
 import { validLedger } from '../domain/duels.js'
 import { settleWeek, validLeague } from '../domain/leagues.js'
 import { missionProgress, missionsFor, roundsOfDay, streakToday, validMissions, validStreak } from '../domain/missions.js'
@@ -59,7 +63,12 @@ const toUpdate = (round, xp = 0) => ({
  * caused it, so a reload can never lose a bet, pay a round twice or charge an
  * upgrade without giving it.
  */
-export function createGameService({ store, clock = () => new Date().toISOString(), seeds = randomSeed }) {
+export function createGameService({
+  store,
+  clock = () => new Date().toISOString(),
+  seeds = randomSeed,
+  rng = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32,
+}) {
   let current = null
   let changes = 0
   const listeners = new Set()
@@ -102,6 +111,16 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     return Object.fromEntries(Object.entries(raw).filter(([id]) => id in ledger()))
   }
   const today = () => dayId(new Date(clock()))
+  const listOf = (key) => {
+    const value = readJson(key)
+    return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : []
+  }
+  const gifts = () => listOf('gifts')
+  const setsClaimed = () => listOf('sets_claimed')
+  const team = () => {
+    const value = store.settings.get('team', '')
+    return value && value !== 'null' ? value : null
+  }
 
   /** The day's missions with their progress and whether they were collected. */
   function missionList() {
@@ -183,7 +202,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
     const paidBefore = Number(store.settings.get('level_paid', 0)) || levelBefore
     // "Double poule" (random event): this round's XP counts twice and every lane pays tokens.
     const doubled = store.settings.get('double_next', '0') === '1'
-    const xp = xpFor(round) * (doubled ? 2 : 1)
+    const xp = xpFor(round) * (doubled ? 2 : 1) * xpMultiplier(round.mode.id, new Date(round.startedAt))
     const bonusCents = doubled ? lanesCrossed(round) * DOUBLE_LANE_BONUS : 0
     if (doubled) store.settings.set('double_next', '0')
     store.rounds.update(toUpdate(round, xp))
@@ -287,6 +306,15 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         missions: missionList(),
         streak: { ...streak(), next: streakToday(streak(), today()) },
         duelTries: duelTries(),
+        events: activeEvents(new Date(clock())).map(({ id, label, gift, until, xp }) => ({
+          id,
+          label,
+          until: until ?? null,
+          xp: xp ?? null,
+          gift: gift && !gifts().includes(id) ? gift : null,
+        })),
+        collection: collectionStatus(store.upgrades.owned(), setsClaimed()),
+        team: team(),
         progression: {
           xp: profile.xp,
           ...levelProgress(profile.xp),
@@ -391,6 +419,7 @@ export function createGameService({ store, clock = () => new Date().toISOString(
           owned: store.upgrades.owned(),
           level: levelFromXp(profile.xp),
           balanceCents: store.wallet.balance(),
+          date: new Date(clock()),
         })
         if (verdict !== 'ok') throw new GameError(`purchase-${verdict}`, PURCHASE_ERRORS[verdict])
         if (!store.wallet.debit(upgrade.cost)) throw new GameError('purchase-tokens', PURCHASE_ERRORS.tokens)
@@ -584,6 +613,49 @@ export function createGameService({ store, clock = () => new Date().toISOString(
 
     duelLedger: ledger,
 
+    /** Collects a calendar event's gift (an item), once. */
+    claimGift(eventId) {
+      const event = CALENDAR.find((entry) => entry.id === eventId)
+      if (!event?.gift || !isEventActive(eventId, new Date(clock()))) throw new GameError('gift-none', 'Pas de cadeau en ce moment')
+      if (gifts().includes(eventId)) throw new GameError('gift-claimed', 'Cadeau déjà récupéré')
+      write(() => {
+        writeJson('gifts', [...gifts(), eventId])
+        grantItem(event.gift)
+      })
+      return upgradeById(event.gift)
+    },
+
+    /** Pays a completed set of the collection, once. */
+    claimSet(setId) {
+      const set = SETS.find((entry) => entry.id === setId)
+      const owned = store.upgrades.owned()
+      if (!set || !set.items.every((id) => owned.includes(id))) throw new GameError('set-todo', 'Série incomplète')
+      if (setsClaimed().includes(setId)) throw new GameError('set-claimed', 'Série déjà récompensée')
+      return write(() => {
+        writeJson('sets_claimed', [...setsClaimed(), setId])
+        store.wallet.credit(set.reward)
+        return { tokens: set.reward, achievements: unlockAchievements() }
+      })
+    },
+
+    /** Buys a surprise box: one cosmetic not owned yet, put on. */
+    openBox() {
+      if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      const item = drawBox(store.upgrades.owned(), rng)
+      if (!item) throw new GameError('box-empty', 'Vous avez déjà tout !')
+      return write(() => {
+        if (!store.wallet.debit(BOX_PRICE)) throw new GameError('insufficient-funds', 'Pas assez de jetons')
+        store.upgrades.add(item.id)
+        store.upgrades.equip(item.slot, item.id)
+        return { item, achievements: unlockAchievements() }
+      })
+    },
+
+    /** The player's poulailler (team id), cached here for the leaderboard line. */
+    setTeam(id) {
+      write(() => store.settings.set('team', id ?? ''))
+    },
+
     /** Called after every change of progress (to sync it). Returns an unsubscribe function. */
     onChange(listener) {
       listeners.add(listener)
@@ -613,6 +685,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         missions: missionsDone(),
         streak: streak(),
         duels: { ledger: ledger(), tries: duelTries() },
+        gifts: gifts(),
+        setsClaimed: setsClaimed(),
+        team: team(),
       }
     },
 
@@ -646,6 +721,9 @@ export function createGameService({ store, clock = () => new Date().toISOString(
         writeJson('duel_ledger', save.duels.ledger)
         writeJson('duel_tries', save.duels.tries)
         store.settings.set('duel_round', 'null')
+        writeJson('gifts', save.gifts)
+        writeJson('sets_claimed', save.setsClaimed)
+        store.settings.set('team', save.team ?? '')
         store.settings.set('daily_round', 0)
       })
       return save

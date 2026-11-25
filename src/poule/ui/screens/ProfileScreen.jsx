@@ -8,6 +8,7 @@ import { useAccount } from '../../state/useAccount.js'
 import { usePoule } from '../../state/usePoule.js'
 import Avatar from '../account/Avatar.jsx'
 import { syncLabel } from '../account/syncLabel.js'
+import { CollectionAlbum } from '../collection/Collection.jsx'
 import { count, multiplierLabel, percent, signedTokens, tokens } from '../format.js'
 import { CoinIcon } from '../icons.jsx'
 import './profile.css'
@@ -254,6 +255,9 @@ export default function ProfileScreen({ hidden, go }) {
         </small>
       </h2>
       <Achievements />
+
+      <h2 className="section-title">Collection</h2>
+      <CollectionAlbum />
 
       <h2 className="section-title">Réglages</h2>
       <section className="card">

@@ -445,7 +445,7 @@ describe('collection, gifts and boxes', () => {
   it('opens a box once paid, pays a set once, gives the Christmas gift once', () => {
     const store = createMemoryStore()
     const service = startedGame({ store, seeds: () => 's', clock: () => '2026-12-05T10:00:00Z', rng: () => 0 })
-    store.wallet.set(1_000_000)
+    store.wallet.set(10_000_000)
     const { item } = service.openBox()
     expect(service.summary().progression.owned).toContain(item.id)
     expect(store.wallet.balance()).toBeLessThanOrEqual(1_000_000 - 150_000)
@@ -466,11 +466,11 @@ describe('talents, season pass and tournament', () => {
     const seed = await seedFatalAt(1)
     const store = createMemoryStore()
     const service = startedGame({ store, seeds: () => seed, clock: () => '2026-11-25T10:00:00Z' })
-    store.wallet.set(1_000_000)
+    store.wallet.set(10_000_000)
     const before = service.summary().balanceCents
-    expect(service.buyTalent('insurance')).toMatchObject({ level: 1, cost: 150000 })
+    expect(service.buyTalent('insurance')).toMatchObject({ level: 1, cost: 1500000 })
     expect(service.summary().talents).toEqual({ insurance: 1 })
-    expect(service.summary().balanceCents).toBe(before - 150000)
+    expect(service.summary().balanceCents).toBe(before - 1500000)
     await service.start({ modeId: 'easy', betCents: 10000 })
     const { progress } = service.step()
     expect(progress.talentCents).toBe(800) // 8 % of the bet back

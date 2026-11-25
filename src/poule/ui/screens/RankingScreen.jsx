@@ -306,11 +306,15 @@ export default function RankingScreen({ hidden, go }) {
       signIn: state.signIn,
       openDialog: state.openDialog,
       openPlayer: state.openPlayer,
+      loadDuels: state.loadDuels,
     })),
   )
   const ready = a.status === 'signedIn' || a.status === 'signedOut'
   useEffect(() => {
-    if (!hidden && ready) a.loadBoard()
+    if (!hidden && ready) {
+      a.loadBoard()
+      a.loadDuels()
+    }
     // Reload each time the screen is opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden, ready])

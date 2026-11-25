@@ -54,6 +54,8 @@ export const useAccount = create((set, get) => {
     player: null,
     admin: { status: 'idle', stats: null, error: null },
     duels: { list: [], loading: false },
+    /** The player being challenged (challenge sheet open), or null. */
+    challengeTarget: null,
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -266,9 +268,12 @@ export const useAccount = create((set, get) => {
       }
     },
 
-    async challenge(other, stake) {
+    openChallenge: (player) => set({ challengeTarget: { uid: player.uid, pseudo: player.pseudo }, player: null }),
+    closeChallenge: () => set({ challengeTarget: null }),
+
+    async challenge(other, stake, modeId = usePoule.getState().modeId) {
       try {
-        await runtime.sync.challenge(other, stake, usePoule.getState().modeId)
+        await runtime.sync.challenge(other, stake, modeId)
         usePoule.getState().sync()
         pushNotice({ kind: 'buy', title: 'Défi envoyé !', detail: `${other.pseudo} a 24 h pour répondre.` })
         get().loadDuels()
@@ -292,9 +297,11 @@ export const useAccount = create((set, get) => {
         else await runtime.sync.declineDuel(duel)
         usePoule.getState().sync()
         await get().loadDuels()
+        return true
       } catch (error) {
         console.error(error)
         sayError(error.name === 'FirebaseError' || !error.message ? 'Réponse impossible pour le moment.' : error.message)
+        return false
       }
     },
 

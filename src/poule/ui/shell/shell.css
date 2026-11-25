@@ -361,3 +361,50 @@
   font: 900 13px/22px var(--body);
   text-align: center;
 }
+
+.duel__status {
+  margin: 0;
+  font-weight: 900;
+}
+
+.duel__status--action {
+  color: #c25e00;
+}
+
+.duel__status--win {
+  color: var(--green);
+}
+
+.duel__status--lose {
+  color: #e8392c;
+}
+
+.duel__status--muted {
+  color: var(--muted);
+}
+
+.duel--action {
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.duel__again {
+  justify-self: start;
+}
+
+.duel-rules {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.duel-new {
+  display: grid;
+  gap: 8px;
+}
+
+.duel-pick {
+  flex-wrap: wrap;
+  overflow: visible;
+}

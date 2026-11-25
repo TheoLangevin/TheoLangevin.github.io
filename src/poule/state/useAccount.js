@@ -5,6 +5,7 @@ import { createFirebaseAuth, describeAuthError } from '../account/firebase/creat
 import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.js'
 import { createRemoteGame } from '../account/firebase/createRemoteGame.js'
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
+import { warmServer } from '../account/firebase/warmServer.js'
 import { BOARD_SIZE } from '../config/seasons.js'
 import { computeAdminStats } from '../domain/adminStats.js'
 import { divisionById } from '../domain/leagues.js'
@@ -100,6 +101,7 @@ export const useAccount = create((set, get) => {
       if (!accountsEnabled()) return Promise.resolve()
       runtime.ready ??= (async () => {
         try {
+          warmServer()
           const [firebase, game] = await Promise.all([loadFirebase(), gameService()])
           runtime.auth = createFirebaseAuth(firebase)
           runtime.game = game

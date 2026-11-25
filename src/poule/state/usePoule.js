@@ -319,23 +319,41 @@ export const usePoule = create((set, get) => {
 
     async step() {
       if (get().busy || !get().round) return
-      set({ busy: true })
+      // On the server, the hop starts right away and the answer arrives
+      // during it: the wait is hidden in the animation.
+      const early = Boolean(runtime.remote)
+      const from = get().round.lane
+      const started = Date.now()
+      const since = () => Date.now() - started
+      if (early) {
+        set((state) => ({
+          busy: true,
+          scene: { lane: from + 1, hop: state.scene.hop + 1, deadLane: null, threat: null },
+          ...fx('hop', { lane: from + 1 }),
+        }))
+      } else set({ busy: true })
       let result
       try {
         result = await act('step')
       } catch (error) {
+        if (early) set((state) => ({ scene: { ...state.scene, lane: from } }))
         return fail(error)
       }
       const { lane } = result
       const hit = result.event === 'hit'
-      set((state) => ({
-        busy: true,
-        scene: { lane, hop: state.scene.hop + 1, deadLane: null, threat: hit ? lane : null },
-        ...fx('hop', { lane }),
-      }))
+      if (early) {
+        if (hit) set((state) => ({ scene: { ...state.scene, lane, threat: lane } }))
+      } else {
+        set((state) => ({
+          busy: true,
+          scene: { lane, hop: state.scene.hop + 1, deadLane: null, threat: hit ? lane : null },
+          ...fx('hop', { lane }),
+        }))
+      }
+      const elapsed = early ? since() : 0
 
       if (hit) {
-        await sleep(TIMING.crashImpact)
+        await sleep(Math.max(TIMING.crashImpact - elapsed, 120))
         set((state) => ({ scene: { ...state.scene, deadLane: lane }, ...fx('crash') }))
         await sleep(TIMING.crashResult - TIMING.crashImpact)
         refresh({
@@ -355,7 +373,7 @@ export const usePoule = create((set, get) => {
         return
       }
 
-      await sleep(hopDuration())
+      await sleep(Math.max(hopDuration() - elapsed, 0))
       if (result.event === 'finished') return finish(result)
       refresh({ busy: false })
 

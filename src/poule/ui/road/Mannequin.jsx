@@ -8,7 +8,7 @@ export default function Mannequin({ equipped, size = 'small' }) {
   return (
     <div className={`mannequin mannequin--${size} road-swatch`} data-road={look.road ?? undefined}>
       {look.trail && <Trail trail={look.trail} className="trail--static" />}
-      <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
+      <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} skin={look.skin} />
       {look.title && <span className="mannequin__title">{look.title}</span>}
     </div>
   )

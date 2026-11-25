@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MAX_BET, MAX_PAYOUT, MIN_BET, RTP } from '../../config/economy.js'
 import { MODES, modeById } from '../../config/modes.js'
 import { drawOutcomes, firstFatalLane, rollFromHash, sha256Hex, verifyRound } from '../fairness.js'
-import { clampBet, refillCheck } from '../money.js'
+import { allInBet, clampBet, refillCheck } from '../money.js'
 import { laneMultipliers, multiplierAt, payoutCents } from '../multiplier.js'
 import { advance, canCashOut, cashOut, createRound, ROUND_STATUS } from '../round.js'
 
@@ -44,7 +44,13 @@ describe('modes and multipliers', () => {
   it('clamps bets to whole tokens in the allowed range', () => {
     expect(clampBet(0)).toBe(MIN_BET)
     expect(clampBet(12.6)).toBe(1300)
-    expect(clampBet(9999)).toBe(MAX_BET)
+    expect(clampBet(9999)).toBe(999900)
+    expect(clampBet(1e12)).toBe(MAX_BET)
+    expect(clampBet(500, 12345)).toBe(12345)
+    expect(clampBet(50, 12345)).toBe(5000)
+    expect(clampBet(5, 0)).toBe(MIN_BET)
+    expect(allInBet(12345)).toBe(12345)
+    expect(allInBet(10)).toBe(MIN_BET)
     expect(clampBet('abc')).toBe(MIN_BET)
   })
 

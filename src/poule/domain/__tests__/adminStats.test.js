@@ -19,7 +19,8 @@ const round = (extra = {}) => ({
 })
 
 const save = (extra = {}) => ({
-  v: 3,
+  v: 4,
+  epoch: 1,
   balanceCents: 100000,
   xp: 100,
   feathers: 0,

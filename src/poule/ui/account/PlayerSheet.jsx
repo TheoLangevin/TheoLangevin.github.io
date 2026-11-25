@@ -2,6 +2,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
 import { count, multiplierLabel, tokens } from '../format.js'
+import { divisionById } from '../../domain/leagues.js'
 import Mannequin from '../road/Mannequin.jsx'
 import Dialog from './Dialog.jsx'
 
@@ -15,10 +16,12 @@ export default function PlayerSheet() {
   if (!player) return null
   const { profile, loading, error } = player
   const look = profile.look ?? NOTHING
-  const worn = ['hat', 'neck', 'plumage', 'trail', 'road', 'party']
+  const worn = ['skin', 'hat', 'neck', 'plumage', 'trail', 'road', 'party']
     .map((slot) => upgradeById(look[slot]))
     .filter(Boolean)
   const figures = [
+    ['Ligue', divisionById(profile.division)?.label ?? '—'],
+    ['PL', profile.lp != null ? count(profile.lp) : '—'],
     ['Niveau', profile.level ? count(profile.level) : '—'],
     ['XP', profile.xp != null ? count(profile.xp) : '—'],
     ['Jetons', profile.tokens != null ? tokens(profile.tokens) : '—'],

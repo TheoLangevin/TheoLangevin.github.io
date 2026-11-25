@@ -162,14 +162,23 @@ export const useAccount = create((set, get) => {
       }
     },
 
-    /** Loads a board: 'season' (this week), 'tokens', 'xp' or 'bestMultiplier' (all time). */
+    /**
+     * Loads a board: 'season' (this week, with the rival to overtake), 'daily'
+     * (today's challenge), or all time: 'lp' (leagues), 'tokens', 'xp', 'bestMultiplier'.
+     */
     async loadBoard(kind = get().board.kind) {
       if (!runtime.sync) return
       set({ board: { ...get().board, kind, loading: true, error: null } })
       try {
         if (kind === 'season') {
           const season = await runtime.sync.season(BOARD_SIZE)
-          set({ board: { kind, entries: season.entries, loading: false, error: null, season } })
+          const week = usePoule.getState().week?.xp ?? 0
+          const score = Math.max(week, season.mine?.score ?? 0)
+          const rival = score > 0 ? await runtime.sync.rival(score).catch(() => null) : null
+          set({ board: { kind, entries: season.entries, loading: false, error: null, season: { ...season, rival } } })
+        } else if (kind === 'daily') {
+          const daily = await runtime.sync.dailyBoard(BOARD_SIZE)
+          set({ board: { kind, entries: daily.entries, loading: false, error: null, season: get().board.season, daily } })
         } else {
           const entries = await runtime.sync.leaderboard(kind, BOARD_SIZE)
           set({ board: { kind, entries, loading: false, error: null, season: get().board.season } })
@@ -180,11 +189,11 @@ export const useAccount = create((set, get) => {
       }
     },
 
-    /** Looks for last week's reward; opens its dialog when there is one. */
+    /** Looks for finished weeks and yesterday's challenge to settle; opens the results when there are some. */
     async checkReward() {
       if (!runtime.sync?.uid) return
       try {
-        const pending = await runtime.sync.pendingSeasonReward()
+        const pending = await runtime.sync.pendingResults()
         set({ pendingReward: pending })
         if (pending && !get().conflict) set({ dialog: 'reward' })
       } catch (error) {
@@ -196,7 +205,7 @@ export const useAccount = create((set, get) => {
       const pending = get().pendingReward
       if (!pending) return
       try {
-        usePoule.getState().applySeasonReward(() => runtime.sync.claimSeasonReward(pending))
+        usePoule.getState().applyResults(() => runtime.sync.claimResults(pending))
         set({ pendingReward: null, dialog: null })
       } catch (error) {
         console.error(error)

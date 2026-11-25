@@ -3,11 +3,16 @@ import {
   describeSave,
   isPristine,
   isValidPseudo,
+  dailyEntry,
   leaderboardEntry,
+  needsSeasonReset,
   seasonEntry,
   validateSave,
 } from '../domain/save.js'
-import { previousSeasonId, seasonId, seasonReward } from '../domain/seasons.js'
+import { MAX_WEEKS_TO_FETCH } from '../config/seasons.js'
+import { dailyReward, dayId, previousDayId } from '../domain/daily.js'
+import { settleWeek, weeksBetween } from '../domain/leagues.js'
+import { previousSeasonId, seasonId } from '../domain/seasons.js'
 import { ADMIN_MAX_PLAYERS } from '../config/admin.js'
 import { CloudConflictError } from './cloud.js'
 
@@ -53,7 +58,12 @@ export function createSyncService({
 
   async function publish(save) {
     if (!uid || !pseudo) return
-    await cloud.publishEntry(uid, leaderboardEntry(save, pseudo), seasonEntry(save, pseudo, now()))
+    await cloud.publishEntry(
+      uid,
+      leaderboardEntry(save, pseudo),
+      seasonEntry(save, pseudo, now()),
+      dailyEntry(save, pseudo, now()),
+    )
   }
 
   async function upload(expectedRev) {
@@ -68,6 +78,8 @@ export function createSyncService({
   function download(remote) {
     const save = game.importSave(remote.save)
     game.markSynced(uid, remote.rev)
+    // A save from an earlier big season was reset on reading: send the reset back.
+    if (needsSeasonReset(remote.save)) game.touch()
     onImported()
     return save
   }
@@ -225,7 +237,13 @@ export function createSyncService({
         const { dirty, syncedRev, linkedUid } = game.syncState()
         if (dirty && !game.round && linkedUid === uid) await upload(syncedRev)
         const save = game.exportSave()
-        await cloud.claimPseudo(uid, wanted, leaderboardEntry(save, wanted), seasonEntry(save, wanted, now()))
+        await cloud.claimPseudo(
+          uid,
+          wanted,
+          leaderboardEntry(save, wanted),
+          seasonEntry(save, wanted, now()),
+          dailyEntry(save, wanted, now()),
+        )
         pseudo = wanted
         return pseudo
       })
@@ -239,9 +257,6 @@ export function createSyncService({
         pseudo = null
       })
     },
-
-    /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
-    adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),
 
     /** All-time board: by 'xp', 'tokens' or 'bestMultiplier'. */
     leaderboard: (by, size) => cloud.leaderboard(by, size),
@@ -258,29 +273,74 @@ export function createSyncService({
       return { id, entries, mine, standing }
     },
 
-    /**
-     * Last week's reward, if the player scored and has not collected it:
-     * { season, score, rank, total, reward } or null.
-     */
-    async pendingSeasonReward() {
+    /** The player just above this week's score: the rival to overtake. */
+    async rival(score) {
       if (!uid) return null
-      const id = previousSeasonId(now())
-      if (game.claimedSeasons().includes(id)) return null
-      const line = await cloud.seasonEntryOf(id, uid)
-      if (!line?.score) return null
-      const { rank, total } = await cloud.seasonRank(id, line.score)
-      return { season: id, score: line.score, rank, total, reward: seasonReward({ score: line.score, rank, total }) }
+      return cloud.seasonAbove(seasonId(now()), score)
     },
 
-    /** Collects a reward found by pendingSeasonReward; it syncs like any change. */
-    claimSeasonReward(pending) {
-      return game.claimSeason({
-        season: pending.season,
-        score: pending.score,
-        rank: pending.rank,
-        total: pending.total,
-      })
+    /** Today's daily challenge board, and the player's line in it. */
+    async dailyBoard(size) {
+      const day = dayId(now())
+      const entries = await cloud.dailyBoard(day, size)
+      const mine = uid ? await cloud.dailyEntryOf(day, uid) : null
+      const standing = mine ? await cloud.dailyRank(day, mine.best) : null
+      return { day, entries, mine, standing }
     },
+
+    /**
+     * What ended since the player last came and is still to settle: finished
+     * weeks of the league ({ season, score, rank, total }, oldest first) and
+     * yesterday's daily challenge. Null when there is nothing.
+     */
+    async pendingResults() {
+      if (!uid) return null
+      const last = previousSeasonId(now())
+      const league = game.league()
+      if (!league.settled) {
+        // First time on this season's leagues: they start with the current week.
+        game.initLeague(last)
+        return null
+      }
+      const ids = weeksBetween(league.settled, last)
+      const fetched = new Set(ids.slice(-MAX_WEEKS_TO_FETCH))
+      const weeks = []
+      for (const id of ids) {
+        const line = fetched.has(id) ? await cloud.seasonEntryOf(id, uid) : null
+        const score = line?.score ?? 0
+        const standing = score > 0 ? await cloud.seasonRank(id, score) : { rank: null, total: null }
+        weeks.push({ season: id, score, ...standing })
+      }
+
+      let daily = null
+      const yesterday = previousDayId(now())
+      if (!game.dailyClaims().includes(yesterday)) {
+        const line = await cloud.dailyEntryOf(yesterday, uid)
+        if (line) {
+          const standing = line.best > 0 ? await cloud.dailyRank(yesterday, line.best) : { rank: null, total: null }
+          daily = { date: yesterday, best: line.best, ...standing }
+        }
+      }
+      if (weeks.length === 0 && !daily) return null
+
+      // What it would give, without changing anything yet.
+      let preview = league
+      const results = []
+      for (const week of weeks) {
+        const settled = settleWeek(preview, week)
+        preview = settled.league
+        results.push(settled.result)
+      }
+      return { weeks, daily, preview: { weeks: results, league: preview, daily: daily && { ...daily, reward: dailyReward(daily) } } }
+    },
+
+    /** Settles what pendingResults found; it syncs like any change. */
+    claimResults(pending) {
+      return game.settleResults({ weeks: pending.weeks, daily: pending.daily })
+    },
+
+    /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
+    adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),
   }
   return service
 }

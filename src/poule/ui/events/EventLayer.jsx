@@ -172,8 +172,8 @@ function DoubleHen({ resolve }) {
   return (
     <Dialog title="Double poule !" onClose={actions.props.onClick} actions={actions}>
       <div className="double" aria-hidden="true">
-        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
-        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} />
+        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} skin={look.skin} />
+        <HenSprite colors={look.colors} hat={look.hat} neck={look.neck} skin={look.skin} />
       </div>
       <p>
         Une jumelle vous accompagne : à la prochaine partie, vous gagnez deux fois plus d’XP et chaque voie franchie rapporte des jetons en plus.

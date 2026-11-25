@@ -1,5 +1,3 @@
-import { LEAGUES, RANK_REWARDS } from '../config/seasons.js'
-
 const DAY = 86_400_000
 
 /** ISO 8601 week of a date, in UTC: { year, week }. */
@@ -45,46 +43,4 @@ export function weeklyStats(rounds, date = new Date()) {
     if (round.status === 'won') bestMultiplier = Math.max(bestMultiplier, round.mult)
   }
   return { xp, bestMultiplier, played }
-}
-
-/** The league of a weekly score, or null below the first one. */
-export function leagueFor(score) {
-  let league = null
-  for (const entry of LEAGUES) if (score >= entry.min) league = entry
-  return league
-}
-
-/** The next league to reach and how far along the player is. */
-export function leagueProgress(score) {
-  const current = leagueFor(score)
-  const next = LEAGUES.find((entry) => entry.min > score) ?? null
-  const floor = current?.min ?? 0
-  return {
-    current,
-    next,
-    ratio: next ? Math.min(1, (score - floor) / (next.min - floor)) : 1,
-    missing: next ? next.min - score : 0,
-  }
-}
-
-/** The rank tier of a final position among `total` players who scored, or null. */
-export function rankTier(rank, total) {
-  if (!rank || !total) return null
-  return RANK_REWARDS.find((tier) => (tier.top ? rank <= tier.top : rank <= Math.ceil(total * tier.share))) ?? null
-}
-
-/**
- * What a season pays: the league's reward plus the rank tier's.
- * Nothing for a player who did not score.
- */
-export function seasonReward({ score, rank, total }) {
-  const league = leagueFor(score)
-  if (!league) return null
-  const tier = rankTier(rank, total)
-  return {
-    league: league.id,
-    tier: tier?.id ?? null,
-    tokens: league.reward.tokens + (tier?.reward.tokens ?? 0),
-    items: tier?.reward.items ?? [],
-  }
 }

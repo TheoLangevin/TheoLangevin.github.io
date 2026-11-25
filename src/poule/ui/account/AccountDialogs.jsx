@@ -1,9 +1,11 @@
 import { useShallow } from 'zustand/react/shallow'
-import { LEAGUES, RANK_REWARDS } from '../../config/seasons.js'
+import { RANK_REWARDS } from '../../config/seasons.js'
 import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
-import { count, tokens } from '../format.js'
+import { divisionById, divisionFor } from '../../domain/leagues.js'
+import { count, multiplierLabel, tokens } from '../format.js'
 import { CoinIcon, GiftIcon } from '../icons.jsx'
+import LeagueBadge from '../league/LeagueBadge.jsx'
 import Dialog from './Dialog.jsx'
 import PseudoForm from './PseudoForm.jsx'
 import './account.css'
@@ -78,47 +80,88 @@ function PseudoDialog({ onClose }) {
   )
 }
 
-/** Last week's reward, waiting to be collected. */
+const signed = (value) => (value > 0 ? `+${count(value)}` : value < 0 ? `−${count(-value)}` : '0')
+
+/** Finished weeks (league points, rewards) and yesterday's daily challenge, waiting to be collected. */
 function RewardDialog({ onClose }) {
   const { pending, claim } = useAccount(
     useShallow((state) => ({ pending: state.pendingReward, claim: state.claimReward })),
   )
   if (!pending) return null
-  const { reward } = pending
-  const league = LEAGUES.find((entry) => entry.id === reward.league)
-  const tier = RANK_REWARDS.find((entry) => entry.id === reward.tier)
+  const { weeks, league, daily } = pending.preview
+  const before = weeks.length ? divisionById(weeks[0].before) : null
+  const after = divisionFor(league.lp)
+  const promoted = before && after.min > before.min
+  const demoted = before && after.min < before.min
+  const tokensTotal = weeks.reduce((sum, week) => sum + week.reward.tokens, 0) + (daily?.reward?.tokens ?? 0)
+  const items = [...new Set(weeks.flatMap((week) => week.reward.items))]
+  const title = weeks.length ? (promoted ? 'Promotion !' : demoted ? 'Relégation' : 'Semaine terminée') : 'Défi d’hier'
+
   return (
     <Dialog
-      title={`Saison ${pending.season.slice(-2)} terminée !`}
+      title={title}
       onClose={onClose}
       actions={
         <button type="button" className="big big--buy" onClick={claim}>
-          Récupérer
+          {tokensTotal > 0 ? `Récupérer ${tokens(tokensTotal)} jetons` : 'Continuer'}
         </button>
       }
     >
-      <div className="reward__hero">
-        <span className="league" style={{ '--league': league.color, width: 72, height: 72, fontSize: 32 }}>
-          {league.label.charAt(0)}
-        </span>
-        <p>
-          <b>
-            {pending.rank}
-            {pending.rank === 1 ? 're' : 'e'} sur {count(pending.total)}
-          </b>
-          <br />
-          Ligue {league.label} · {count(pending.score)} XP{tier ? ` · ${tier.label}` : ''}
+      {weeks.length > 0 && (
+        <div className="reward__hero">
+          <LeagueBadge division={after} size={72} />
+          <p>
+            <b>{after.label}</b>
+            <br />
+            {count(league.lp)} PL ({signed(weeks.reduce((sum, week) => sum + week.delta, 0))})
+            {promoted && before ? ` · depuis ${before.label}` : ''}
+            {demoted && before ? ` · descendu de ${before.label}` : ''}
+          </p>
+        </div>
+      )}
+      {weeks.length > 0 && (
+        <ul className="reward__weeks">
+          {weeks.map((week) => {
+            const tier = RANK_REWARDS.find((entry) => entry.id === week.reward.tier)
+            return (
+              <li key={week.season}>
+                <b>Semaine {week.season.slice(-2)}</b>
+                <span>
+                  {week.score
+                    ? `${count(week.score)} XP${week.rank ? ` · ${week.rank === 1 ? '1er' : `${week.rank}e`} sur ${count(week.total)}` : ''}${tier ? ` · ${tier.label}` : ''}`
+                    : 'Pas joué'}
+                </span>
+                <small>
+                  {week.score ? `+${week.perf} score` : ''}
+                  {week.bonus ? ` · +${week.bonus} rang` : ''}
+                  {week.upkeep ? ` · −${week.upkeep} entretien` : ''}
+                  {!week.score ? `${signed(week.delta)} inactivité` : ''}
+                </small>
+                <b className={week.delta >= 0 ? 'gain--up' : 'gain--down'}>{signed(week.delta)} PL</b>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {daily && (
+        <p className="reward__daily">
+          <b>Défi du {daily.date.slice(8, 10)}/{daily.date.slice(5, 7)}</b> :{' '}
+          {daily.best ? `${multiplierLabel(daily.best)}, ${daily.rank === 1 ? '1er' : `${daily.rank}e`} sur ${count(daily.total)}` : 'aucun encaissement'}
+          {daily.reward ? ` · ${daily.reward.label}` : ''}
         </p>
-      </div>
+      )}
       <ul className="reward__list">
-        <li>
-          <CoinIcon size={22} /> <b>{tokens(reward.tokens)}</b> jetons
-        </li>
-        {reward.items.map((id) => (
+        {tokensTotal > 0 && (
+          <li>
+            <CoinIcon size={22} /> <b>{tokens(tokensTotal)}</b> jetons
+          </li>
+        )}
+        {items.map((id) => (
           <li key={id}>
             <GiftIcon size={20} /> <b>{upgradeById(id).label}</b> (exclusif)
           </li>
         ))}
+        {tokensTotal === 0 && items.length === 0 && <li>Pas de récompense cette fois. Jouez cette semaine pour remonter !</li>}
       </ul>
     </Dialog>
   )

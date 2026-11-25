@@ -20,6 +20,7 @@ export const SLOTS = Object.freeze([
   { id: 'road', label: 'Routes' },
   { id: 'party', label: 'Confettis' },
   { id: 'title', label: 'Titres' },
+  { id: 'skin', label: 'Skins' },
   { id: 'perk', label: 'Atouts' },
 ])
 
@@ -261,6 +262,18 @@ export const UPGRADES = Object.freeze(
     { id: 'title-legend', slot: 'title', label: 'Légende', currency: 'tokens', cost: t(25000), level: 10 },
     { id: 'title-champion', slot: 'title', label: 'Championne de la semaine', exclusive: true, level: 1 },
     { id: 'title-podium', slot: 'title', label: 'Sur le podium', exclusive: true, level: 1 },
+
+    // Game skins: they change the hen and the traffic together.
+    {
+      id: 'skin-roadworks',
+      slot: 'skin',
+      label: 'Chantier',
+      description: 'La poule devient un plot, les voitures des bulldozers. Offert aux joueurs de la bêta.',
+      exclusive: true,
+      beta: true,
+      skin: 'roadworks',
+      level: 1,
+    },
 
     // Perks
     {

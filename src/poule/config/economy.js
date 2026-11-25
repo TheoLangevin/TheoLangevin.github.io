@@ -11,11 +11,15 @@ export const CENTS = 100
 export const STARTING_BALANCE = 1000 * CENTS
 
 export const MIN_BET = 1 * CENTS
-export const MAX_BET = 200 * CENTS
+/**
+ * A player may bet their whole balance (all-in). This is only a technical
+ * ceiling, far above any balance the game hands out.
+ */
+export const MAX_BET = 100_000_000 * CENTS
 export const DEFAULT_BET = 10 * CENTS
 
 /** No round can pay more than this, whatever the multiplier. */
-export const MAX_PAYOUT = 20000 * CENTS
+export const MAX_PAYOUT = 10_000_000 * CENTS
 
 /** Quick bet buttons, in tokens. */
 export const BET_PRESETS = [1, 10, 50, 200]

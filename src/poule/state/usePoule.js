@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { achievementById } from '../config/achievements.js'
-import { DEFAULT_BET } from '../config/economy.js'
+import { DEFAULT_BET, STARTING_BALANCE } from '../config/economy.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
 import { BREAK_REMINDER_MINUTES } from '../config/progression.js'
 import { TIMING } from '../config/timing.js'
@@ -108,9 +108,28 @@ export const usePoule = create((set, get) => {
       ? `+${progress.xp} XP (×2) · +${tokens(progress.bonusCents)} jetons de bonus`
       : `+${progress.xp} XP`
 
+  /** After a try of the daily challenge: how it went, and back to normal play when no try is left. */
+  function afterDaily(progress) {
+    if (!progress?.daily) return
+    const { multiplier, best, record } = progress.daily
+    const left = runtime.service.summary().daily.left
+    notify([
+      {
+        id: uid(),
+        kind: record ? 'level' : 'buy',
+        title: record ? `Défi du jour : nouveau record ${multiplierLabel(best)}` : 'Défi du jour',
+        detail: `${multiplier ? `Encaissé à ${multiplierLabel(multiplier)}` : 'Écrasée'} · ${
+          left ? `encore ${left} essai${left > 1 ? 's' : ''}` : `meilleur score ${best ? multiplierLabel(best) : 'aucun'}`
+        }`,
+      },
+    ])
+    if (!left) get().setChallenge(false)
+  }
+
   function finish(result) {
     const { round, progress } = result
     maybeEvent()
+    afterDaily(progress)
     refresh({
       busy: false,
       reveal: revealOf(result),
@@ -165,6 +184,12 @@ export const usePoule = create((set, get) => {
     event: null,
     celebration: null,
     doubleNext: false,
+    /** Playing the daily challenge (its mode and bet) rather than a free round. */
+    challenge: false,
+    /** Shown once when this device enters a new big season: { beta, previousBalanceCents }. */
+    seasonIntro: null,
+    league: null,
+    daily: null,
 
     /** Opens the database once, even if called twice (React StrictMode). */
     init() {
@@ -173,6 +198,7 @@ export const usePoule = create((set, get) => {
           onSaveError: (error) => set({ storageError: error.message }),
         })
         runtime.service = createGameService({ store: opened.store })
+        const season = runtime.service.startSeason()
         const round = await runtime.service.resume()
         const preferences = runtime.service.preferences()
         refresh({
@@ -185,6 +211,7 @@ export const usePoule = create((set, get) => {
           sound: preferences.sound,
           haptics: preferences.haptics,
           scene: { ...EMPTY_SCENE, lane: round?.lane ?? 0 },
+          seasonIntro: season && (season.beta || season.previousBalanceCents !== STARTING_BALANCE) ? season : null,
         })
       })()
       return runtime.ready
@@ -217,13 +244,13 @@ export const usePoule = create((set, get) => {
 
     /** Starts a round, or takes one more step if one is running. */
     async play() {
-      const { round, busy, modeId, betCents } = get()
+      const { round, busy, modeId, betCents, challenge } = get()
       if (busy || get().phase !== 'ready') return
       if (round) return get().step()
       maybeRemindBreak()
       set({ busy: true, toast: null, reveal: null })
       try {
-        await runtime.service.start({ modeId, betCents })
+        await runtime.service.start({ modeId, betCents, daily: challenge })
         refresh({ busy: false, scene: EMPTY_SCENE, ...fx('start') })
       } catch (error) {
         fail(error)
@@ -261,6 +288,7 @@ export const usePoule = create((set, get) => {
           },
         })
         notify(progressNotices(result.progress))
+        afterDaily(result.progress)
         maybeEvent()
         return
       }
@@ -339,12 +367,25 @@ export const usePoule = create((set, get) => {
     },
 
     /** Collects a season reward (found by the account layer). */
-    applySeasonReward(claim) {
+    applyResults(claim) {
       const reward = claim()
-      refresh(fx('win', { multiplier: 10 }))
+      refresh(reward.tokens > 0 ? fx('win', { multiplier: 10 }) : {})
       notify(progressNotices({ achievements: reward.achievements, levelUp: null }))
       return reward
     },
+
+    /** Switches play to the daily challenge (if a try is left), or back. */
+    setChallenge(on) {
+      if (get().round || get().busy) return
+      if (on && !(get().daily?.left > 0)) return
+      if (on === get().challenge) return
+      // The road shows the day's mode; the player's own mode comes back after.
+      const modeId = on ? get().daily.mode.id : (runtime.freeModeId ?? get().modeId)
+      if (on) runtime.freeModeId = get().modeId
+      set({ challenge: on, modeId, scene: EMPTY_SCENE, reveal: null, toast: null })
+    },
+
+    closeSeasonIntro: () => set({ seasonIntro: null }),
 
     toggleHaptics() {
       const haptics = !get().haptics

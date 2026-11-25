@@ -203,7 +203,9 @@ const OPS = {
   },
 }
 
-export const game = onCall({ region: 'europe-west1', maxInstances: 10, cors: true }, async (request) => {
+// A whole vCPU (the default 256 MiB gets a sixth of one): each action
+// rebuilds the player's game, so CPU is most of the answer time.
+export const game = onCall({ region: 'europe-west1', maxInstances: 10, cors: true, cpu: 1, memory: '512MiB' }, async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Connectez-vous')
   const { op, args = [] } = request.data ?? {}
@@ -270,7 +272,10 @@ export const game = onCall({ region: 'europe-west1', maxInstances: 10, cors: tru
         tx.delete(activeRef)
       }
 
-      if (pseudo) {
+      // A step that leaves the round running changes no public line: skip
+      // those writes, the transaction commits faster.
+      const midRound = op === 'step' && result?.round?.status === 'active'
+      if (pseudo && !midRound) {
         const stamp = FieldValue.serverTimestamp()
         tx.set(lineRef, { ...leaderboardEntry(save, pseudo), updatedAt: stamp })
         const { season, ...week } = seasonEntry(save, pseudo, now)

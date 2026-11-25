@@ -3,13 +3,10 @@ import { PseudoTakenError } from '../account/cloud.js'
 import { createSyncService } from '../account/createSyncService.js'
 import { createFirebaseAuth, describeAuthError } from '../account/firebase/createFirebaseAuth.js'
 import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.js'
-import { createRemoteGame } from '../account/firebase/createRemoteGame.js'
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
-import { warmServer } from '../account/firebase/warmServer.js'
 import { BOARD_SIZE } from '../config/seasons.js'
 import { computeAdminStats } from '../domain/adminStats.js'
 import { divisionById } from '../domain/leagues.js'
-import { isPristine } from '../domain/save.js'
 import { tokens } from '../ui/format.js'
 import { gameService, pushNotice, usePoule } from './usePoule.js'
 
@@ -25,41 +22,8 @@ const runtime = { auth: null, sync: null, ready: null, stopListening: null }
 export const useAccount = create((set, get) => {
   const sayError = (message) => message && pushNotice({ kind: 'error', title: 'Compte', detail: message })
 
-  /**
-   * Hands the player's game to the server, if it answers. Resolves to false
-   * when it does not (not deployed, offline): the device then syncs as before.
-   */
-  async function startServer(user) {
-    const { functions, functionsSdk, game } = runtime
-    if (!functions || game.round) return false
-    const remote = createRemoteGame({
-      call: functionsSdk.httpsCallable(functions, 'game'),
-      local: game,
-      onSaved: (rev) => game.markSynced(user.uid, rev),
-    })
-    // A guest's progress stays on this device, in case the account brings its own.
-    const local = game.exportSave()
-    if (game.syncState().linkedUid !== user.uid && !isPristine(local)) {
-      try {
-        localStorage.setItem('poule-guest-backup', JSON.stringify(local))
-      } catch {
-        /* storage full or blocked */
-      }
-    }
-    try {
-      await remote.run('load')
-    } catch (error) {
-      console.warn('[poule] game server unavailable, playing on this device', error)
-      return false
-    }
-    await runtime.sync.connectServer(user, remote, functionsSdk.httpsCallable(functions, 'pseudo'))
-    usePoule.getState().useServer(remote)
-    return true
-  }
-
   async function onUser(user) {
     if (!user) {
-      usePoule.getState().useServer(null)
       runtime.sync.disconnect()
       set({ status: 'signedOut', user: null, pseudo: null, conflict: null, dialog: null, pendingReward: null })
       get().loadBoard()
@@ -67,7 +31,7 @@ export const useAccount = create((set, get) => {
     }
     set({ status: 'signedIn', user })
     try {
-      const result = (await startServer(user)) ? { action: 'server' } : await runtime.sync.connect(user)
+      const result = await runtime.sync.connect(user)
       set({ pseudo: runtime.sync.pseudo })
       if (result.action === 'ask') set({ conflict: result.conflict, dialog: 'conflict' })
       else if (!runtime.sync.pseudo) set({ dialog: 'pseudo' })
@@ -101,12 +65,8 @@ export const useAccount = create((set, get) => {
       if (!accountsEnabled()) return Promise.resolve()
       runtime.ready ??= (async () => {
         try {
-          warmServer()
           const [firebase, game] = await Promise.all([loadFirebase(), gameService()])
           runtime.auth = createFirebaseAuth(firebase)
-          runtime.game = game
-          runtime.functions = firebase.functions
-          runtime.functionsSdk = firebase.functionsSdk
           runtime.sync = createSyncService({
             game,
             cloud: createFirestoreCloud(firebase),
@@ -265,11 +225,11 @@ export const useAccount = create((set, get) => {
       }
     },
 
-    async claimReward() {
+    claimReward() {
       const pending = get().pendingReward
       if (!pending) return
       try {
-        const result = await usePoule.getState().applyResults(() => runtime.sync.claimResults(pending))
+        const result = usePoule.getState().applyResults(() => runtime.sync.claimResults(pending))
         const before = pending.preview.weeks[0]?.before
         const after = result?.weeks?.at(-1)?.after
         if (before && after && divisionById(after).min > divisionById(before).min) {

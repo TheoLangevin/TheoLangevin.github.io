@@ -21,7 +21,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const EMPTY_SCENE = Object.freeze({ lane: 0, hop: 0, deadLane: null, threat: null })
 
 /** Services live outside React state: they are not data to render. */
-const runtime = { service: null, ready: null, lastBreak: Date.now(), roundsSinceEvent: 0 }
+const runtime = { service: null, remote: null, ready: null, lastBreak: Date.now(), roundsSinceEvent: 0 }
+
+/**
+ * Runs a game action: on the server for a signed-in player (runtime.remote,
+ * set by the account layer), on this device otherwise. Always a promise.
+ */
+const act = async (op, ...args) => (runtime.remote ? runtime.remote.run(op, args) : runtime.service[op](...args))
+
+/** The round in progress, wherever it is played. */
+const currentRound = () => (runtime.remote ? runtime.remote.round : runtime.service.round)
 
 /** The game service, once the database is open (for the account layer). */
 export const gameService = async () => {
@@ -79,7 +88,7 @@ function progressNotices(progress) {
  */
 export const usePoule = create((set, get) => {
   const refresh = (extra = {}) =>
-    set({ ...runtime.service.summary(), round: roundView(runtime.service.round), ...extra })
+    set({ ...runtime.service.summary(), round: roundView(currentRound()), ...extra })
 
   const fx = (type, detail = {}) => ({ fx: { id: uid(), type, ...detail } })
 
@@ -189,6 +198,12 @@ export const usePoule = create((set, get) => {
     ])
   }
 
+  /** Preferences apply here at once; a signed-in player's also go to the server. */
+  const savePrefs = (prefs) => {
+    runtime.service.savePreferences(prefs)
+    runtime.remote?.run('savePreferences', [prefs]).catch(() => {})
+  }
+
   const hopDuration = () => (runtime.service.owns('turbo') ? TIMING.hopTurbo : TIMING.hop)
 
   return {
@@ -265,25 +280,25 @@ export const usePoule = create((set, get) => {
     setMode(modeId) {
       if (get().round || get().busy) return
       const id = modeById(modeId).id
-      runtime.service.savePreferences({ modeId: id })
+      savePrefs({ modeId: id })
       set({ modeId: id, scene: EMPTY_SCENE, reveal: null, toast: null })
     },
 
     setBet(betCents) {
       if (get().round) return
-      runtime.service.savePreferences({ betCents })
+      savePrefs({ betCents })
       set({ betCents })
     },
 
     setAutocash(target) {
       const value = AUTOCASH_TARGETS.includes(target) ? target : null
-      runtime.service.savePreferences({ autocashTarget: value })
+      savePrefs({ autocashTarget: value })
       set({ autocashTarget: value })
     },
 
     toggleSound() {
       const sound = !get().sound
-      runtime.service.savePreferences({ sound })
+      savePrefs({ sound })
       set({ sound })
     },
 
@@ -295,7 +310,7 @@ export const usePoule = create((set, get) => {
       maybeRemindBreak()
       set({ busy: true, toast: null, reveal: null })
       try {
-        await runtime.service.start({ modeId, betCents, daily: challenge, duel })
+        await act('start', { modeId, betCents, daily: challenge, duel })
         refresh({ busy: false, scene: EMPTY_SCENE, ...fx('start') })
       } catch (error) {
         fail(error)
@@ -304,9 +319,10 @@ export const usePoule = create((set, get) => {
 
     async step() {
       if (get().busy || !get().round) return
+      set({ busy: true })
       let result
       try {
-        result = runtime.service.step()
+        result = await act('step')
       } catch (error) {
         return fail(error)
       }
@@ -350,20 +366,21 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    cashOut() {
+    async cashOut() {
       const { round, busy } = get()
       if (busy || !round?.canCashOut) return
+      set({ busy: true })
       try {
-        finish(runtime.service.cashOut())
+        finish(await act('cashOut'))
       } catch (error) {
         fail(error)
       }
     },
 
-    buy(upgradeId) {
+    async buy(upgradeId) {
       if (get().busy) return
       try {
-        const { upgrade, achievements } = runtime.service.buy(upgradeId)
+        const { upgrade, achievements } = await act('buy', upgradeId)
         // The hidden item gets its own party.
         refresh({ ...fx('buy'), celebration: upgrade.secret ? upgrade.id : get().celebration })
         notify([
@@ -380,29 +397,29 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    toggleEquip(upgradeId) {
+    async toggleEquip(upgradeId) {
       try {
-        runtime.service.toggleEquip(upgradeId)
+        await act('toggleEquip', upgradeId)
         refresh()
       } catch (error) {
         fail(error)
       }
     },
 
-    clearStats() {
+    async clearStats() {
       if (get().round || get().busy) return
       try {
-        runtime.service.clearStats()
+        await act('clearStats')
         refresh({ reveal: null, toast: null, scene: EMPTY_SCENE })
       } catch (error) {
         fail(error)
       }
     },
 
-    refill() {
+    async refill() {
       if (get().round || get().busy) return
       try {
-        const amount = runtime.service.refill()
+        const amount = await act('refill')
         refresh(fx('buy'))
         notify([
           { id: uid(), kind: 'buy', title: `+${tokens(amount)} jetons`, detail: 'Recharge offerte. Bonne route !' },
@@ -413,8 +430,9 @@ export const usePoule = create((set, get) => {
     },
 
     /** Collects a season reward (found by the account layer). */
-    applyResults(claim) {
-      const reward = claim()
+    async applyResults(claim) {
+      const reward = await claim()
+      if (!reward) return reward
       refresh(reward.tokens > 0 ? fx('win', { multiplier: 10 }) : {})
       notify(progressNotices({ achievements: reward.achievements, levelUp: null }))
       return reward
@@ -433,6 +451,12 @@ export const usePoule = create((set, get) => {
 
     closeSeasonIntro: () => set({ seasonIntro: null }),
 
+    /** From now on a signed-in player's actions run on the server (null: back on this device). */
+    useServer(remote) {
+      runtime.remote = remote
+      if (runtime.service) refresh({ scene: EMPTY_SCENE, reveal: null })
+    },
+
     /** Plays a duel's tries (its mode, fixed bet), or back to free play with null. */
     setDuel(duel) {
       if (get().round || get().busy) return
@@ -444,9 +468,9 @@ export const usePoule = create((set, get) => {
 
     openMissions: (open) => set({ missionsOpen: open }),
 
-    claimGift(eventId) {
+    async claimGift(eventId) {
       try {
-        const item = runtime.service.claimGift(eventId)
+        const item = await act('claimGift', eventId)
         refresh(fx('buy'))
         notify([{ id: uid(), kind: 'level', title: 'Cadeau !', detail: `${item.label} ajouté à votre collection` }])
       } catch (error) {
@@ -454,9 +478,9 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    claimSet(setId) {
+    async claimSet(setId) {
       try {
-        const result = runtime.service.claimSet(setId)
+        const result = await act('claimSet', setId)
         refresh(fx('buy'))
         notify([
           { id: uid(), kind: 'level', title: `+${tokens(result.tokens)} jetons`, detail: 'Série complète !' },
@@ -467,9 +491,9 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    openBox() {
+    async openBox() {
       try {
-        const result = runtime.service.openBox()
+        const result = await act('openBox')
         refresh({ ...fx('win', { multiplier: 5 }), boxResult: result.item })
         notify(progressNotices({ achievements: result.achievements, levelUp: null }))
       } catch (error) {
@@ -479,9 +503,9 @@ export const usePoule = create((set, get) => {
 
     closeBox: () => set({ boxResult: null }),
 
-    claimMission(id) {
+    async claimMission(id) {
       try {
-        const result = runtime.service.claimMission(id)
+        const result = await act('claimMission', id)
         refresh(fx('buy'))
         notify([
           { id: uid(), kind: 'buy', title: `+${tokens(result.tokens)} jetons`, detail: 'Mission accomplie' },
@@ -492,9 +516,9 @@ export const usePoule = create((set, get) => {
       }
     },
 
-    claimStreak() {
+    async claimStreak() {
       try {
-        const result = runtime.service.claimStreak()
+        const result = await act('claimStreak')
         refresh(fx('buy'))
         notify([
           {
@@ -514,7 +538,7 @@ export const usePoule = create((set, get) => {
 
     toggleHaptics() {
       const haptics = !get().haptics
-      runtime.service.savePreferences({ haptics })
+      savePrefs({ haptics })
       set({ haptics })
     },
 
@@ -539,9 +563,9 @@ export const usePoule = create((set, get) => {
     },
 
     /** Applies a random event's bonus (domain/events.js) and says what it gave. */
-    resolveEvent(bonus, notice) {
+    async resolveEvent(bonus, notice) {
       try {
-        const granted = runtime.service.grantBonus(bonus)
+        const granted = await act('grantBonus', bonus)
         refresh({ event: null, ...(bonus.tokens ? fx('buy') : {}) })
         notify([
           { id: uid(), kind: 'buy', ...notice },

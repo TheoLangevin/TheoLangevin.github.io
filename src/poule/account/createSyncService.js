@@ -17,7 +17,7 @@ import { dailyReward, dayId, previousDayId } from '../domain/daily.js'
 import { settleWeek, weeksBetween } from '../domain/leagues.js'
 import { previousSeasonId, seasonId } from '../domain/seasons.js'
 import { ADMIN_MAX_PLAYERS } from '../config/admin.js'
-import { CloudConflictError } from './cloud.js'
+import { CloudConflictError, PseudoTakenError } from './cloud.js'
 
 /**
  * Keeps this device's progress and the signed-in account's save in step.
@@ -46,6 +46,10 @@ export function createSyncService({
 }) {
   let uid = null
   let pseudo = null
+  // Set when the game server answers: actions then run there (see useServer).
+  let server = null
+  let callPseudo = null
+  const act = (op, ...args) => (server ? server.run(op, args) : Promise.resolve(game[op](...args)))
   let queue = Promise.resolve()
   let timer = null
   let waitingForRound = false
@@ -60,7 +64,7 @@ export function createSyncService({
   }
 
   async function publish(save) {
-    if (!uid || !pseudo) return
+    if (!uid || !pseudo || server) return
     await cloud.publishEntry(
       uid,
       leaderboardEntry(save, pseudo),
@@ -145,8 +149,33 @@ export function createSyncService({
       })
     },
 
+    /** Signs in with the game server already answering for this player (see useServer). */
+    async connectServer(user, remote, pseudoCall) {
+      uid = user.uid
+      pseudo = await cloud.myPseudo(uid)
+      service.useServer(remote, pseudoCall)
+      return { action: 'server' }
+    },
+
+    /**
+     * The game server is live for this player: progress now lives there, so
+     * this service stops uploading, and asks the server instead.
+     */
+    useServer(remote, pseudoCall) {
+      server = remote
+      callPseudo = pseudoCall
+      clearTimeout(timer)
+      status('synced')
+    },
+
+    get serverMode() {
+      return Boolean(server)
+    },
+
     disconnect() {
       clearTimeout(timer)
+      server = null
+      callPseudo = null
       uid = null
       pseudo = null
       waitingForRound = false
@@ -155,7 +184,7 @@ export function createSyncService({
 
     /** The game changed: push a moment later (or after the round). */
     changed() {
-      if (!uid) return
+      if (!uid || server) return
       clearTimeout(timer)
       if (game.round) {
         waitingForRound = true
@@ -177,6 +206,7 @@ export function createSyncService({
     /** Syncs now. A cloud that moved meanwhile leads back to reconcile. */
     syncNow() {
       if (!uid) return Promise.resolve({ action: 'none' })
+      if (server) return server.run('load').then(() => ({ action: 'download' }))
       clearTimeout(timer)
       status('syncing')
       return enqueue(async () => {
@@ -208,6 +238,7 @@ export function createSyncService({
     /** Checks the account for changes made on another device, and acts like on sign-in. */
     refresh() {
       if (!uid) return Promise.resolve({ action: 'none' })
+      if (server) return server.run('load').then(() => ({ action: 'download' }))
       return enqueue(() => reconcile()).catch((error) => {
         status('error', { error })
         throw error
@@ -235,6 +266,13 @@ export function createSyncService({
     choosePseudo(name) {
       const wanted = name.trim()
       if (!isValidPseudo(wanted)) return Promise.reject(new Error('invalid-pseudo'))
+      if (server) {
+        return callPseudo({ pseudo: wanted })
+          .then(() => (pseudo = wanted))
+          .catch((error) => {
+            throw error.code === 'functions/already-exists' ? new PseudoTakenError(wanted) : error
+          })
+      }
       return enqueue(async () => {
         // The leaderboard line may not claim more than the account's save holds.
         const { dirty, syncedRev, linkedUid } = game.syncState()
@@ -255,6 +293,7 @@ export function createSyncService({
     /** Leaves the leaderboard and frees the pseudo. */
     leaveLeaderboard() {
       if (!pseudo) return Promise.resolve()
+      if (server) return callPseudo({ leave: true }).then(() => (pseudo = null))
       return enqueue(async () => {
         await cloud.removeEntry(uid, pseudo, seasonId(now()))
         pseudo = null
@@ -302,7 +341,7 @@ export function createSyncService({
       const league = game.league()
       if (!league.settled) {
         // First time on this season's leagues: they start with the current week.
-        game.initLeague(last)
+        await act('initLeague', last)
         return null
       }
       const ids = weeksBetween(league.settled, last)
@@ -339,6 +378,8 @@ export function createSyncService({
 
     /** Settles what pendingResults found; it syncs like any change. */
     claimResults(pending) {
+      // On the server, ranks are computed there again, never taken from here.
+      if (server) return server.run('settleResults')
       return game.settleResults({ weeks: pending.weeks, daily: pending.daily })
     },
 
@@ -351,6 +392,10 @@ export function createSyncService({
       const at = now().getTime()
       const list = (await cloud.duelsOf(uid)).sort((a, b) => b.createdAt - a.createdAt)
       let paid = 0
+      if (server) {
+        paid = (await server.run('settleDuels'))?.paid ?? 0
+        return { duels: list.map((duel) => ({ ...duel, state: duelState(duel, at) })), paid }
+      }
       const ledger = game.duelLedger()
       for (const duel of list) {
         if (ledger[duel.id] !== 'staked') continue
@@ -364,6 +409,7 @@ export function createSyncService({
     async challenge(other, stake, modeId) {
       if (!uid || !pseudo) throw new Error('no-pseudo')
       if (!DUEL_STAKES.includes(stake) || other.uid === uid) throw new Error('invalid-duel')
+      if (server) return (await server.run('challenge', [{ to: other, stake, modeId }])).id
       const id = cloud.newDuelId()
       const at = now().getTime()
       game.stakeDuel(id, stake)
@@ -387,6 +433,7 @@ export function createSyncService({
 
     /** Accepts a duel: the same stake is put aside, and both have DUEL_HOURS to play. */
     async acceptDuel(duel) {
+      if (server) return server.run('acceptDuel', [duel.id])
       game.stakeDuel(duel.id, duel.stake)
       try {
         await cloud.updateDuel(duel.id, { status: 'accepted', expiresAt: now().getTime() + DUEL_MS })
@@ -399,7 +446,8 @@ export function createSyncService({
     declineDuel: (duel) => cloud.updateDuel(duel.id, { status: 'declined' }),
 
     /** Publishes the player's tries and best multiplier in a duel. */
-    pushDuelScore: (id, score) => cloud.updateDuel(id, { [`scores.${uid}`]: score }),
+    /** The server writes duel scores itself; this device only does it when playing locally. */
+    pushDuelScore: (id, score) => (server ? Promise.resolve() : cloud.updateDuel(id, { [`scores.${uid}`]: score })),
 
     /**
      * Poulaillers: every team with its members' league points summed, best
@@ -417,7 +465,7 @@ export function createSyncService({
         }))
         .sort((a, b) => b.lp - a.lp)
       const mine = uid ? (board.find((team) => team.members.includes(uid)) ?? null) : null
-      if (uid && (mine?.id ?? null) !== game.exportSave().team) game.setTeam(mine?.id ?? null)
+      if (uid && (mine?.id ?? null) !== game.exportSave().team) await act('setTeam', mine?.id ?? null)
       return { teams: board, mine }
     },
 
@@ -427,7 +475,7 @@ export function createSyncService({
       if (clean.length < 3 || clean.length > 20) throw new Error('Nom de 3 à 20 caractères.')
       const id = cloud.newTeamId()
       await cloud.createTeam(id, { name: clean, owner: uid, members: [uid], pseudos: { [uid]: pseudo }, createdAt: now().getTime() })
-      game.setTeam(id)
+      await act('setTeam', id)
       return id
     },
 
@@ -437,18 +485,20 @@ export function createSyncService({
       const current = game.exportSave().team
       if (current && current !== team.id) await cloud.leaveTeam(current, uid)
       await cloud.joinTeam(team.id, uid, pseudo)
-      game.setTeam(team.id)
+      await act('setTeam', team.id)
     },
 
     async leaveTeam() {
       const current = game.exportSave().team
-      game.setTeam(null)
+      await act('setTeam', null)
       if (current) await cloud.leaveTeam(current, uid)
     },
 
     /** Posts to the activity feed (only players with a pseudo appear there). */
     postFeed(item) {
       if (!uid || !pseudo) return Promise.resolve()
+      // The server announces big wins itself.
+      if (server && ['cash', 'finish'].includes(item.kind)) return Promise.resolve()
       return cloud.postFeed({ uid, pseudo, mult: 0, mode: null, lanes: 0, other: null, ...item, at: now().getTime() })
     },
 

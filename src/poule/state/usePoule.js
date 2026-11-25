@@ -106,9 +106,9 @@ export const usePoule = create((set, get) => {
   }
 
   const xpDetail = (progress) =>
-    progress.doubled
+    (progress.doubled
       ? `+${progress.xp} XP (×2) · +${tokens(progress.bonusCents)} jetons de bonus`
-      : `+${progress.xp} XP`
+      : `+${progress.xp} XP`) + (progress.talentCents ? ` · talents +${tokens(progress.talentCents)} jetons` : '')
 
   /** After a try of the daily challenge: how it went, and back to normal play when no try is left. */
   function afterDaily(progress) {
@@ -201,6 +201,7 @@ export const usePoule = create((set, get) => {
     autocashTarget: null,
     sound: true,
     haptics: true,
+    music: false,
     balanceCents: 0,
     history: [],
     stats: null,
@@ -232,6 +233,8 @@ export const usePoule = create((set, get) => {
     highlight: null,
     events: [],
     collection: null,
+    talents: {},
+    pass: null,
     team: null,
     boxResult: null,
     missionsOpen: false,
@@ -255,6 +258,7 @@ export const usePoule = create((set, get) => {
           autocashTarget: preferences.autocashTarget,
           sound: preferences.sound,
           haptics: preferences.haptics,
+          music: preferences.music,
           scene: { ...EMPTY_SCENE, lane: round?.lane ?? 0 },
           seasonIntro: season && (season.beta || season.previousBalanceCents !== STARTING_BALANCE) ? season : null,
         })
@@ -454,6 +458,37 @@ export const usePoule = create((set, get) => {
       }
     },
 
+    buyTalent(id) {
+      try {
+        const result = runtime.service.buyTalent(id)
+        refresh(fx('buy'))
+        return result
+      } catch (error) {
+        fail(error)
+        return null
+      }
+    },
+
+    claimPass() {
+      try {
+        const result = runtime.service.claimPass()
+        refresh(fx('win', { multiplier: 3 }))
+        notify([
+          {
+            id: uid(),
+            kind: 'level',
+            title: `Pass de saison : +${tokens(result.tokens)} jetons`,
+            detail: result.items.length
+              ? `${result.tiers} palier${result.tiers > 1 ? 's' : ''} · objet exclusif débloqué !`
+              : `${result.tiers} palier${result.tiers > 1 ? 's' : ''} récupéré${result.tiers > 1 ? 's' : ''}`,
+          },
+          ...progressNotices({ achievements: result.achievements, levelUp: null }),
+        ])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
     claimSet(setId) {
       try {
         const result = runtime.service.claimSet(setId)
@@ -511,6 +546,12 @@ export const usePoule = create((set, get) => {
 
     /** After the account layer changed the wallet (duel stakes and payouts). */
     sync: () => runtime.service && !get().round && refresh(),
+
+    toggleMusic() {
+      const music = !get().music
+      runtime.service.savePreferences({ music })
+      set({ music })
+    },
 
     toggleHaptics() {
       const haptics = !get().haptics

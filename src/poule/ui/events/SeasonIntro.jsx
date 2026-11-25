@@ -37,10 +37,10 @@ export default function SeasonIntro() {
       <ul className="season-intro__list">
         <li>
           <b>Ligues à divisions</b> : de Bronze III à Légende, avec des points de ligue qui montent et descendent chaque
-          semaine.
+          jour.
         </li>
         <li>
-          <b>Défi du jour</b> : même mode et même mise pour tous, 3 essais, les meilleurs sont payés.
+          <b>Défi du jour</b> : même mode et même mise pour tous, 3 essais, les meilleurs sont payés. Le week-end, il devient un tournoi.
         </li>
         <li>
           <b>Tapis</b> : vous pouvez désormais miser tous vos jetons d’un coup.

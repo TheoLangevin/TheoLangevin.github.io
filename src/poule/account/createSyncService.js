@@ -305,11 +305,11 @@ export function createSyncService({
         game.initLeague(last)
         return null
       }
-      const ids = weeksBetween(league.settled, last)
-      const fetched = new Set(ids.slice(-MAX_WEEKS_TO_FETCH))
+      // Only the last few days count: older ones are neither paid nor penalised.
+      const ids = weeksBetween(league.settled, last).slice(-MAX_WEEKS_TO_FETCH)
       const weeks = []
       for (const id of ids) {
-        const line = fetched.has(id) ? await cloud.seasonEntryOf(id, uid) : null
+        const line = await cloud.seasonEntryOf(id, uid)
         const score = line?.score ?? 0
         const standing = score > 0 ? await cloud.seasonRank(id, score) : { rank: null, total: null }
         weeks.push({ season: id, score, ...standing })

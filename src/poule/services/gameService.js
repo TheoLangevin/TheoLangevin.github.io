@@ -20,7 +20,10 @@ import {
 } from '../domain/progression.js'
 import { advance, cashOut, createRound, ROUND_STATUS } from '../domain/round.js'
 import { refillCheck } from '../domain/money.js'
-import { dailyReward, dailyStatus, dayId, isDayId, validDaily, validDailyClaims } from '../domain/daily.js'
+import { dailyReward, dailyStatus, dayId, isDayId, tournamentSeed, validDaily, validDailyClaims } from '../domain/daily.js'
+import { talentById } from '../config/talents.js'
+import { freshPass, passStatus, validPass } from '../domain/pass.js'
+import { nextTalentCost, talentEffects, validTalents } from '../domain/talents.js'
 import { activeEvents, isEventActive, xpMultiplier } from '../domain/calendar.js'
 import { BOX_PRICE, collectionStatus, drawBox } from '../domain/collection.js'
 import { validLedger } from '../domain/duels.js'
@@ -111,6 +114,13 @@ export function createGameService({
     return Object.fromEntries(Object.entries(raw).filter(([id]) => id in ledger()))
   }
   const today = () => dayId(new Date(clock()))
+  const talents = () => validTalents(readJson('talents'))
+  /** The season pass: the stored one, or a new one starting at the current XP. */
+  const storedPass = () => {
+    const pass = validPass(readJson('pass'))
+    return pass?.season === CURRENT_SEASON.id ? pass : null
+  }
+  const pass = () => storedPass() ?? freshPass(CURRENT_SEASON.id, store.profile.get().xp)
   const listOf = (key) => {
     const value = readJson(key)
     return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : []
@@ -199,10 +209,24 @@ export function createGameService({
    */
   function settle(round) {
     const levelBefore = levelFromXp(store.profile.get().xp)
+    // The pass starts counting from here, the first time XP comes in this season.
+    if (!storedPass()) writeJson('pass', pass())
+    // Challenge, tournament and duel rounds are equal for all: no talents there.
+    const special =
+      readJson('duel_round')?.roundId === round.id || Number(store.settings.get('daily_round', 0)) === round.id
+    const effects = talentEffects(special ? {} : talents())
     const paidBefore = Number(store.settings.get('level_paid', 0)) || levelBefore
     // "Double poule" (random event): this round's XP counts twice and every lane pays tokens.
     const doubled = store.settings.get('double_next', '0') === '1'
-    const xp = xpFor(round) * (doubled ? 2 : 1) * xpMultiplier(round.mode.id, new Date(round.startedAt))
+    const xp = Math.round(
+      xpFor(round) * (doubled ? 2 : 1) * xpMultiplier(round.mode.id, new Date(round.startedAt)) * effects.xp,
+    )
+    const talentCents =
+      round.status === ROUND_STATUS.won
+        ? Math.round(round.payoutCents * effects.payout)
+        : round.status === ROUND_STATUS.lost
+          ? Math.round(round.betCents * effects.refund)
+          : 0
     const bonusCents = doubled ? lanesCrossed(round) * DOUBLE_LANE_BONUS : 0
     if (doubled) store.settings.set('double_next', '0')
     store.rounds.update(toUpdate(round, xp))
@@ -230,6 +254,7 @@ export function createGameService({
       }
     }
     if (bonusCents > 0) store.wallet.credit(bonusCents)
+    if (talentCents > 0) store.wallet.credit(talentCents)
     if (xp > 0) store.profile.earn(xp)
     const levelAfter = levelFromXp(store.profile.get().xp)
     const levelCents = levelUpPay(paidBefore, levelAfter)
@@ -240,6 +265,7 @@ export function createGameService({
       xp,
       doubled,
       bonusCents,
+      talentCents,
       levelCents,
       achievements,
       levelUp: levelAfter > levelBefore ? levelAfter : null,
@@ -268,16 +294,18 @@ export function createGameService({
         autocashTarget: AUTOCASH_TARGETS.includes(target) ? target : null,
         sound: store.settings.get('sound', 'on') === 'on',
         haptics: store.settings.get('haptics', 'on') === 'on',
+        music: store.settings.get('music', 'off') === 'on',
       }
     },
 
-    savePreferences({ modeId, betCents, autocashTarget, sound, haptics }) {
+    savePreferences({ modeId, betCents, autocashTarget, sound, haptics, music }) {
       write(() => {
         if (modeId) store.settings.set('mode', modeId)
         if (betCents) store.settings.set('bet', betCents)
         if (autocashTarget !== undefined) store.settings.set('autocash', autocashTarget ?? '')
         if (sound !== undefined) store.settings.set('sound', sound ? 'on' : 'off')
         if (haptics !== undefined) store.settings.set('haptics', haptics ? 'on' : 'off')
+        if (music !== undefined) store.settings.set('music', music ? 'on' : 'off')
       })
     },
 
@@ -314,6 +342,8 @@ export function createGameService({
           gift: gift && !gifts().includes(id) ? gift : null,
         })),
         collection: collectionStatus(store.upgrades.owned(), setsClaimed()),
+        talents: talents(),
+        pass: passStatus(pass(), profile.xp),
         team: team(),
         progression: {
           xp: profile.xp,
@@ -347,7 +377,8 @@ export function createGameService({
         throw new GameError('invalid-bet', 'Mise invalide')
       }
       const mode = modeById(modeId)
-      const seed = seeds()
+      // Tournament: try n is the same road for every player.
+      const seed = challenge?.tournament ? tournamentSeed(challenge.date, challenge.tries + 1) : seeds()
       const [seedHash, outcomes] = await Promise.all([sha256Hex(seed), drawOutcomes(seed, mode)])
       const startedAt = clock()
 
@@ -463,11 +494,12 @@ export function createGameService({
       const { verdict } = service.refillStatus()
       if (verdict === 'not-broke') throw new GameError('refill-not-broke', 'Il vous reste des jetons')
       if (verdict === 'wait') throw new GameError('refill-wait', 'Recharge pas encore disponible')
+      const amount = Math.round(REFILL_AMOUNT * talentEffects(talents()).refill)
       write(() => {
-        store.wallet.credit(REFILL_AMOUNT)
+        store.wallet.credit(amount)
         store.settings.set('last_refill_at', Date.parse(clock()))
       })
-      return REFILL_AMOUNT
+      return amount
     },
 
     /**
@@ -530,6 +562,7 @@ export function createGameService({
           const reward = dailyReward(day)
           dailyResult = { ...day, reward }
           if (reward) tokensPaid += reward.tokens
+          if (reward?.item) items.push(reward.item)
           writeJson('daily_claims', validDailyClaims([...dailyClaims(), day.date]))
         }
 
@@ -563,6 +596,41 @@ export function createGameService({
     /** Flags the device as changed, so the sync sends it (after a season reset came from the cloud). */
     touch() {
       write(() => {})
+    },
+
+    /** Buys the next level of a talent. Resolves to { id, level, cost }. */
+    buyTalent(id) {
+      if (current) throw new GameError('round-in-progress', 'Terminez la partie en cours')
+      if (!talentById(id)) throw new GameError('talent-unknown', 'Talent inconnu')
+      const cost = nextTalentCost(talents(), id)
+      if (cost == null) throw new GameError('talent-max', 'Déjà au niveau maximum')
+      return write(() => {
+        if (!store.wallet.debit(cost)) throw new GameError('insufficient-funds', 'Pas assez de jetons')
+        const level = (talents()[id] ?? 0) + 1
+        writeJson('talents', { ...talents(), [id]: level })
+        return { id, level, cost }
+      })
+    },
+
+    /** Collects every tier of the season pass reached and not collected yet. */
+    claimPass() {
+      const status = passStatus(pass(), store.profile.get().xp)
+      if (status.ready.length === 0) throw new GameError('pass-none', 'Rien à récupérer pour l’instant')
+      return write(() => {
+        const mine = pass()
+        let tokens = 0
+        const items = []
+        for (const reward of status.ready) {
+          tokens += reward.tokens
+          if (reward.item) {
+            grantItem(reward.item)
+            items.push(reward.item)
+          }
+        }
+        store.wallet.credit(tokens)
+        writeJson('pass', { ...mine, claimed: [...mine.claimed, ...status.ready.map((reward) => reward.tier)] })
+        return { tokens, items, tiers: status.ready.length, achievements: unlockAchievements() }
+      })
     },
 
     /** Collects a finished daily mission, once. Resolves to the tokens paid (cents). */
@@ -688,6 +756,8 @@ export function createGameService({
         gifts: gifts(),
         setsClaimed: setsClaimed(),
         team: team(),
+        talents: talents(),
+        pass: storedPass(),
       }
     },
 
@@ -724,6 +794,8 @@ export function createGameService({
         writeJson('gifts', save.gifts)
         writeJson('sets_claimed', save.setsClaimed)
         store.settings.set('team', save.team ?? '')
+        writeJson('talents', save.talents)
+        writeJson('pass', save.pass)
         store.settings.set('daily_round', 0)
       })
       return save

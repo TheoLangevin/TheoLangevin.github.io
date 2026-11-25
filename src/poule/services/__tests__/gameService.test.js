@@ -289,25 +289,25 @@ describe('token shop and seasons', () => {
     expect(() => service.buy('bow-tie')).toThrow()
   })
 
-  it('settles weeks once: league points, division and rank rewards', () => {
+  it('settles days once: league points, division and rank rewards', () => {
     const { service, store } = serviceWith('s')
-    service.initLeague('2026-W46')
-    const result = service.settleResults({ weeks: [{ season: '2026-W47', score: 250, rank: 1, total: 9 }] })
-    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(250)) + 150)
+    service.initLeague('2026-11-23')
+    const result = service.settleResults({ weeks: [{ season: '2026-11-24', score: 250, rank: 1, total: 9 }] })
+    expect(result.league.lp).toBe(Math.round(6 * Math.sqrt(250)) + 80)
     expect(store.wallet.balance()).toBe(STARTING_BALANCE + result.tokens + achievementPay(service))
     const { progression, league } = service.summary()
     expect(league.lp).toBe(result.league.lp)
     expect(progression.owned).toContain('title-champion')
     expect(progression.equipped.title).toBe('title-champion')
-    expect(service.settleResults({ weeks: [{ season: '2026-W47', score: 250, rank: 1, total: 9 }] }).tokens).toBe(0)
-    expect(service.claimedSeasons()).toEqual(['2026-W47'])
+    expect(service.settleResults({ weeks: [{ season: '2026-11-24', score: 250, rank: 1, total: 9 }] }).tokens).toBe(0)
+    expect(service.claimedSeasons()).toEqual(['2026-11-24'])
   })
 
   it('carries claims, league, daily and the last refill in the save', () => {
     const first = serviceWith('s')
-    first.service.initLeague('2026-W46')
+    first.service.initLeague('2026-11-23')
     first.service.settleResults({
-      weeks: [{ season: '2026-W47', score: 30, rank: 2, total: 5 }],
+      weeks: [{ season: '2026-11-24', score: 30, rank: 2, total: 5 }],
       daily: { date: '2026-11-23', best: 2, rank: 1, total: 3 },
     })
     first.store.wallet.set(0)
@@ -316,7 +316,7 @@ describe('token shop and seasons', () => {
     expect(exported.dailyClaims).toEqual(['2026-11-23'])
     const second = serviceWith('t')
     second.service.importSave(exported)
-    expect(second.service.claimedSeasons()).toEqual(['2026-W47'])
+    expect(second.service.claimedSeasons()).toEqual(['2026-11-24'])
     expect(second.service.exportSave()).toEqual(exported)
   })
 })
@@ -458,5 +458,56 @@ describe('collection, gifts and boxes', () => {
     expect(service.claimGift('christmas').id).toBe('snow')
     expect(() => service.claimGift('christmas')).toThrow()
     expect(service.exportSave().gifts).toEqual(['christmas'])
+  })
+})
+
+describe('talents, season pass and tournament', () => {
+  it('sells talent levels and applies them to normal rounds only', async () => {
+    const seed = await seedFatalAt(1)
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => seed, clock: () => '2026-11-25T10:00:00Z' })
+    store.wallet.set(1_000_000)
+    const before = service.summary().balanceCents
+    expect(service.buyTalent('insurance')).toMatchObject({ level: 1, cost: 150000 })
+    expect(service.summary().talents).toEqual({ insurance: 1 })
+    expect(service.summary().balanceCents).toBe(before - 150000)
+    await service.start({ modeId: 'easy', betCents: 10000 })
+    const { progress } = service.step()
+    expect(progress.talentCents).toBe(800) // 8 % of the bet back
+    expect(() => service.buyTalent('nope')).toThrow()
+    for (let level = 2; level <= 3; level++) service.buyTalent('second-wind')
+    expect(service.exportSave().talents).toMatchObject({ insurance: 1, 'second-wind': 2 })
+  })
+
+  it('climbs the pass with XP and pays every tier reached once', async () => {
+    const seed = await seedSafeFor(24)
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => seed, clock: () => '2026-11-25T10:00:00Z' })
+    expect(service.summary().pass).toMatchObject({ tier: 0, earned: 0 })
+    expect(() => service.claimPass()).toThrow()
+    for (let i = 0; i < 6; i++) {
+      await service.start({ modeId: 'easy', betCents: 100 })
+      for (let lane = 0; lane < 24; lane++) service.step()
+    }
+    const status = service.summary().pass
+    expect(status.earned).toBe(service.summary().progression.xp)
+    expect(status.tier).toBeGreaterThanOrEqual(2)
+    const result = service.claimPass()
+    expect(result.tiers).toBe(status.tier)
+    expect(service.summary().pass.ready).toEqual([])
+    expect(service.exportSave().pass.claimed).toHaveLength(status.tier)
+  })
+
+  it('gives every player the same roads in the weekend tournament', async () => {
+    const roads = []
+    for (const name of ['a', 'b']) {
+      const service = startedGame({ store: createMemoryStore(), seeds: () => `random-${name}`, clock: () => '2026-11-28T10:00:00Z' })
+      const round = await service.start({ daily: true, modeId: 'easy', betCents: 100 })
+      roads.push(round.seed)
+      expect(round.mode.id).toBe('hard')
+      expect(round.betCents).toBe(DAILY_BET)
+      expect(service.summary().daily).toMatchObject({ tournament: true, left: 4, max: 5 })
+    }
+    expect(roads[0]).toBe(roads[1])
   })
 })

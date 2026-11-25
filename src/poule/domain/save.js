@@ -9,6 +9,8 @@ import { dayId, validDaily, validDailyClaims } from './daily.js'
 import { validLedger } from './duels.js'
 import { divisionFor, freshLeague, validLeague } from './leagues.js'
 import { validMissions, validStreak } from './missions.js'
+import { validPass } from './pass.js'
+import { validTalents } from './talents.js'
 import { isSeasonId, seasonId, weeklyStats } from './seasons.js'
 
 /**
@@ -136,6 +138,8 @@ export function validateSave(raw) {
     gifts: ids(raw.gifts, 20),
     setsClaimed: ids(raw.setsClaimed, 50),
     team: typeof raw.team === 'string' && /^[A-Za-z0-9]{6,40}$/.test(raw.team) ? raw.team : null,
+    talents: validTalents(raw.talents),
+    pass: validPass(raw.pass),
   }
   return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
 }

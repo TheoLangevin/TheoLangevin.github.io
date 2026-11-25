@@ -49,9 +49,9 @@ const save = (extra = {}) => ({
       endedAt: 't',
     },
   ],
-  claims: [{ season: '2026-W47', rank: 3, total: 20, score: 140 }],
+  claims: [{ season: '2026-11-24', rank: 3, total: 20, score: 140 }],
   lastRefillAt: 1764000000000,
-  league: { lp: 320, peak: 400, settled: '2026-W47', gates: { top10: true, first: false }, history: [] },
+  league: { lp: 320, peak: 400, settled: '2026-11-24', gates: { top10: true, first: false }, history: [] },
   daily: { date: '2026-11-25', tries: 2, best: 1.5 },
   dailyClaims: ['2026-11-24'],
   missions: null,
@@ -60,12 +60,20 @@ const save = (extra = {}) => ({
   gifts: [],
   setsClaimed: [],
   team: null,
+  talents: { instinct: 2 },
+  pass: { season: 1, startXp: 0, claimed: [1, 2] },
   ...extra,
 })
 
 describe('save format', () => {
   it('keeps a valid save as it is', () => {
     expect(validateSave(save())).toEqual(save())
+  })
+
+  it('repairs talents and the season pass', () => {
+    expect(validateSave(save({ talents: { instinct: 99, nope: 3, insurance: -1 } })).talents).toEqual({ instinct: 5 })
+    expect(validateSave(save({ pass: { season: 1, startXp: -5 } })).pass).toBeNull()
+    expect(validateSave(save({ pass: { season: 1, startXp: 10, claimed: [3, 3, 99, 1] } })).pass.claimed).toEqual([1, 3])
   })
 
   it('refuses wrong versions, types and negative amounts', () => {
@@ -163,14 +171,14 @@ describe('save format', () => {
     expect(dailyEntry(save(), 'Poulette', new Date('2026-11-26T01:00:00Z'))).toBeNull()
   })
 
-  it('builds the weekly season line from the rounds of the week', () => {
+  it('builds the day\'s league line from the rounds of the day', () => {
     const rounds = [
-      { ...save().rounds[0], endedAt: '2026-11-24T10:00:00Z' },
-      { ...save().rounds[1], endedAt: '2026-11-25T10:00:00Z' },
+      { ...save().rounds[0], endedAt: '2026-11-25T10:00:00Z' },
+      { ...save().rounds[1], endedAt: '2026-11-25T11:00:00Z' },
     ]
-    const entry = seasonEntry(save({ rounds }), 'Poulette', new Date('2026-11-26T00:00:00Z'))
+    const entry = seasonEntry(save({ rounds }), 'Poulette', new Date('2026-11-25T20:00:00Z'))
     expect(entry).toEqual({
-      season: '2026-W48',
+      season: '2026-11-25',
       pseudo: 'Poulette',
       title: null,
       level: 3,

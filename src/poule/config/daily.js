@@ -23,3 +23,14 @@ export const DAILY_REWARDS = Object.freeze([
 
 /** Days of daily rewards remembered as collected. */
 export const DAILY_CLAIMS_KEPT = 14
+
+/**
+ * The weekend tournament: on Saturdays and Sundays (UTC) the daily challenge
+ * becomes a tournament. More tries, and the same roads for everyone: try n
+ * of a day crosses the same lanes for every player. Bigger rewards, and the
+ * winner gets an exclusive title.
+ */
+export const TOURNAMENT_TRIES = 5
+export const TOURNAMENT_MODE = 'hard'
+export const TOURNAMENT_REWARD_FACTOR = 3
+export const TOURNAMENT_TITLE = 'title-tournament'

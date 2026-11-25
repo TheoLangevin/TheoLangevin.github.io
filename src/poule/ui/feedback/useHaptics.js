@@ -2,9 +2,12 @@ import { useEffect } from 'react'
 import { usePoule } from '../../state/usePoule.js'
 
 const PATTERNS = {
-  hop: 8,
-  crash: [70, 40, 120],
-  win: [25, 40, 25, 40, 60],
+  start: [12, 40, 12],
+  // Stronger the further the hen goes.
+  hop: (fx) => Math.min(30, 6 + 2 * (fx.lane ?? 1)),
+  crash: [90, 50, 40, 30, 160],
+  // Longer celebration for bigger wins.
+  win: (fx) => ((fx.multiplier ?? 1) >= 10 ? [30, 40, 30, 40, 30, 40, 120] : [25, 40, 25, 40, 60]),
   buy: [15, 30, 15],
 }
 
@@ -15,7 +18,8 @@ export function useHaptics() {
 
   useEffect(() => {
     if (!fx || !enabled || !('vibrate' in navigator)) return
-    const pattern = PATTERNS[fx.type]
+    const entry = PATTERNS[fx.type]
+    const pattern = typeof entry === 'function' ? entry(fx) : entry
     if (pattern) {
       try {
         navigator.vibrate(pattern)

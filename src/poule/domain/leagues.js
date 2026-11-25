@@ -90,7 +90,7 @@ export function rankTier(rank, total) {
 /** PL a week brings to a player at `lp`: { delta, perf, bonus, upkeep }. */
 export function weekDelta({ lp, score, rank = null, total = null }) {
   const { upkeep } = divisionFor(lp).tier
-  if (!score) return { delta: -Math.max(INACTIVE_PENALTY, upkeep * 2), perf: 0, bonus: 0, upkeep }
+  if (!score) return { delta: -Math.max(INACTIVE_PENALTY, upkeep), perf: 0, bonus: 0, upkeep }
   const perf = Math.min(PERF_CAP, Math.round(PERF_FACTOR * Math.sqrt(score)))
   const bonus = rankBonus(rank, total)
   return { delta: perf + bonus - upkeep, perf, bonus, upkeep }
@@ -145,21 +145,16 @@ export function settleWeek(league, week) {
   }
 }
 
-/** Monday 00:00 UTC of a season id ("2026-W48"). */
-export function weekStart(id) {
-  const [year, week] = id.split('-W').map(Number)
-  const jan4 = Date.UTC(year, 0, 4)
-  const monday1 = jan4 - ((new Date(jan4).getUTCDay() || 7) - 1) * DAY
-  return new Date(monday1 + (week - 1) * 7 * DAY)
-}
+/** 00:00 UTC of a period id ("2026-11-25"). */
+export const weekStart = (id) => new Date(`${id}T00:00:00Z`)
 
-/** Season ids after `settled`, up to `last` included, oldest first. */
+/** Period ids after `settled`, up to `last` included, oldest first. */
 export function weeksBetween(settled, last) {
   if (!isSeasonId(settled) || !isSeasonId(last)) return []
   const ids = []
-  for (let at = weekStart(settled).getTime() + 7 * DAY; at <= weekStart(last).getTime(); at += 7 * DAY) {
+  for (let at = weekStart(settled).getTime() + DAY; at <= weekStart(last).getTime(); at += DAY) {
     ids.push(seasonId(new Date(at)))
-    if (ids.length > 520) break
+    if (ids.length > 3660) break
   }
   return ids
 }

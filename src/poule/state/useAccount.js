@@ -140,7 +140,7 @@ export const useAccount = create((set, get) => {
           runtime.stopListening = runtime.auth.onUserChanged((user) => onUser(user))
         } catch (error) {
           console.warn('[poule] accounts unavailable:', error)
-          set({ status: 'unavailable', reason: String(error?.message ?? error) })
+          set({ status: 'unavailable' })
         }
       })()
       return runtime.ready

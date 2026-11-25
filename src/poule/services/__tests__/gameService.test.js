@@ -445,7 +445,7 @@ describe('collection, gifts and boxes', () => {
   it('opens a box once paid, pays a set once, gives the Christmas gift once', () => {
     const store = createMemoryStore()
     const service = startedGame({ store, seeds: () => 's', clock: () => '2026-12-05T10:00:00Z', rng: () => 0 })
-    store.wallet.set(10_000_000)
+    store.wallet.set(1_000_000)
     const { item } = service.openBox()
     expect(service.summary().progression.owned).toContain(item.id)
     expect(store.wallet.balance()).toBeLessThanOrEqual(1_000_000 - 150_000)

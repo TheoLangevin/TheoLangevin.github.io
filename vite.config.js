@@ -26,22 +26,28 @@ function folderRedirect(paths) {
 // User site (theolangevin.github.io) is served from the domain root.
 // Four pages: the portfolio (/), the 3D game (/game.html), the immersive
 // version of the portfolio (/new) and La Poule Traverse (/poule).
-export default defineConfig({
+// `vite build --mode app` builds only La Poule Traverse into dist-app/ for
+// the Android app (Capacitor), which serves it from its own root.
+export default defineConfig(({ mode }) => ({
   base: '/',
   plugins: [react(), folderRedirect(['/new', '/poule'])],
   build: {
     // three.js makes the 3D chunks big, but the portfolio never loads them.
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
-      input: {
-        main: page('./index.html'),
-        game: page('./game.html'),
-        matrix: page('./new/index.html'),
-        poule: page('./poule/index.html'),
-      },
+      input:
+        mode === 'app'
+          ? { poule: page('./poule/index.html') }
+          : {
+              main: page('./index.html'),
+              game: page('./game.html'),
+              matrix: page('./new/index.html'),
+              poule: page('./poule/index.html'),
+            },
     },
+    ...(mode === 'app' && { outDir: 'dist-app' }),
   },
   test: {
     include: ['src/**/*.test.js'],
   },
-})
+}))

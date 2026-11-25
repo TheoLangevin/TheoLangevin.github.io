@@ -1,11 +1,23 @@
+import { isNativeApp, nativePlugin } from '../../platform.js'
+
 /**
  * Sign-in with Google through Firebase Authentication. A popup is used: it
  * works on a site hosted outside Firebase (GitHub Pages) where the redirect
  * flow is blocked by browsers' third-party storage rules.
  */
 export function createFirebaseAuth({ auth, authSdk }) {
-  const { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, setPersistence, browserLocalPersistence } =
-    authSdk
+  const {
+    GoogleAuthProvider,
+    onAuthStateChanged,
+    signInWithPopup,
+    signInWithCredential,
+    signOut,
+    setPersistence,
+    browserLocalPersistence,
+  } = authSdk
+  // Android app: Google's own sign-in sheet (native plugin) gives an ID
+  // token, which signs in to Firebase here like the popup does on the web.
+  const native = isNativeApp() ? nativePlugin('FirebaseAuthentication') : null
 
   const toUser = (user) =>
     user && {
@@ -22,6 +34,13 @@ export function createFirebaseAuth({ auth, authSdk }) {
     },
 
     async signIn() {
+      if (native) {
+        const result = await native.signInWithGoogle({ skipNativeAuth: true })
+        const idToken = result?.credential?.idToken
+        if (!idToken) throw Object.assign(new Error('No Google token'), { code: 'auth/user-cancelled' })
+        const { user } = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken))
+        return toUser(user)
+      }
       await setPersistence(auth, browserLocalPersistence)
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
@@ -29,7 +48,10 @@ export function createFirebaseAuth({ auth, authSdk }) {
       return toUser(user)
     },
 
-    signOut: () => signOut(auth),
+    async signOut() {
+      await native?.signOut().catch(() => {})
+      await signOut(auth)
+    },
   }
 }
 

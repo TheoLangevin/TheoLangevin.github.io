@@ -68,9 +68,7 @@ export function describeAuthError(error) {
       return 'Pas de connexion réseau. Réessayez dans un instant.'
     case 'auth/unauthorized-domain':
       return 'Ce site n’est pas autorisé à se connecter à ce projet Firebase.'
-    default: {
-      const detail = error?.code ?? error?.message
-      return detail ? `La connexion a échoué (${detail}). Réessayez.` : 'La connexion a échoué. Réessayez.'
-    }
+    default:
+      return 'La connexion a échoué. Réessayez.'
   }
 }

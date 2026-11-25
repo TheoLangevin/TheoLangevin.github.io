@@ -53,11 +53,8 @@ jobs:
           printf '\next {\n    rgcfaIncludeGoogle = true\n}\n' >> android/variables.gradle
           # Icon: the game's own, on every density (no adaptive icon).
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
-          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            dir=android/app/src/main/res/mipmap-${d%%:*}; size=${d##*:}
-            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do
-              convert public/poule/icon-512.png -resize ${size}x${size} "$dir/$f.png"
-            done
+          for dir in android/app/src/main/res/mipmap-*dpi; do
+            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do cp public/poule/icon-192.png "$dir/$f.png"; done
           done
           npx cap sync android
       - name: Build the APK

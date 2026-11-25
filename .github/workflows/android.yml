@@ -63,17 +63,17 @@ jobs:
           # its SHA-1 stays the one registered in Firebase for Google sign-in.
           cat >> android/app/build.gradle <<'GRADLE'
 
-android {
-    signingConfigs {
-        debug {
-            storeFile rootProject.file('../app/debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-        }
-    }
-}
-GRADLE
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile rootProject.file('../app/debug.keystore')
+                      storePassword 'android'
+                      keyAlias 'androiddebugkey'
+                      keyPassword 'android'
+                  }
+              }
+          }
+          GRADLE
           (cd android && ./gradlew assembleDebug --no-daemon -q)
           apk=android/app/build/outputs/apk/debug/app-debug.apk
           # The APK must carry the SHA-1 registered in Firebase.

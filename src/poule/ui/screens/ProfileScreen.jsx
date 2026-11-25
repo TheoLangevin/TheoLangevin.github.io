@@ -35,6 +35,7 @@ function AccountCard() {
   const a = useAccount(
     useShallow((state) => ({
       status: state.status,
+      reason: state.reason,
       user: state.user,
       pseudo: state.pseudo,
       sync: state.sync,
@@ -55,6 +56,7 @@ function AccountCard() {
             ? 'Connexion au compte…'
             : 'Comptes indisponibles pour le moment : vous jouez en invité.'}
         </p>
+        {a.reason && <p className="muted small">Détail : {a.reason}</p>}
       </section>
     )
   }

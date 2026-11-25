@@ -5,5 +5,15 @@
  */
 export const isNativeApp = () => Boolean(globalThis.Capacitor?.isNativePlatform?.())
 
-/** A native plugin by name, or null outside the app. */
-export const nativePlugin = (name) => (isNativeApp() ? globalThis.Capacitor.registerPlugin(name) : null)
+/**
+ * A native plugin by name, or null outside the app. Without @capacitor/core
+ * in the page, the bridge may lack registerPlugin: calls then go straight
+ * through its nativePromise, which every Capacitor bridge has.
+ */
+export function nativePlugin(name) {
+  if (!isNativeApp()) return null
+  const cap = globalThis.Capacitor
+  if (typeof cap.registerPlugin === 'function') return cap.registerPlugin(name)
+  if (cap.Plugins?.[name]) return cap.Plugins[name]
+  return new Proxy({}, { get: (_, method) => (options = {}) => cap.nativePromise(name, method, options) })
+}

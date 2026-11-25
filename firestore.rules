@@ -111,8 +111,11 @@ service cloud.firestore {
 
       // Each write is the next revision, so two devices cannot silently
       // overwrite each other.
+      // `pseudo` is a leftover of the game server (Nov. 2026) on some
+      // accounts: kept as it is, never changed.
       allow update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['save', 'rev', 'createdAt', 'updatedAt', 'pseudo'])
+        && request.resource.data.get('pseudo', null) == resource.data.get('pseudo', null)
         && validSave(request.resource.data.save)
         && plausibleGain(resource.data, request.resource.data)
         && request.resource.data.rev == resource.data.rev + 1

@@ -1,0 +1,82 @@
+name: Android app (APK)
+
+# Builds La Poule Traverse as an Android app with Capacitor and publishes the
+# APK on the "android" release, ready to install from a phone.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'capacitor.config.json'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/poule/**'
+      - 'poule/**'
+      - 'public/poule/**'
+      - 'app/**'
+      - 'capacitor.config.json'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install
+        run: |
+          npm ci
+          npm install --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor-firebase/authentication@7
+      - name: Build the game
+        run: npm run build:app
+      - name: Android project
+        run: |
+          npx cap add android
+          # Google sign-in: Firebase's Android config and the plugin's Google provider.
+          if [ -f app/google-services.json ]; then cp app/google-services.json android/app/; else echo "::warning::app/google-services.json missing: Google sign-in will not work in the app"; fi
+          printf '\next {\n    rgcfaIncludeGoogle = true\n}\n' >> android/variables.gradle
+          # Icon: the game's own, on every density (no adaptive icon).
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            dir=android/app/src/main/res/mipmap-${d%%:*}; size=${d##*:}
+            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do
+              convert public/poule/icon-512.png -resize ${size}x${size} "$dir/$f.png"
+            done
+          done
+          npx cap sync android
+      - name: Build the APK
+        run: |
+          # A fixed signing key, so updates install over the previous APK and
+          # its SHA-1 stays the one registered in Firebase for Google sign-in.
+          mkdir -p ~/.android && cp app/debug.keystore ~/.android/debug.keystore
+          cd android && ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/la-poule-traverse.apk"
+      - name: Keep the APK (pull requests)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-poule-traverse-apk
+          path: ${{ runner.temp }}/la-poule-traverse.apk
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view android >/dev/null 2>&1 || gh release create android --title "La Poule Traverse — Android" --notes "Dernière version de l'app Android. Téléchargez la-poule-traverse.apk depuis votre téléphone et ouvrez-le pour l'installer." --prerelease
+          gh release upload android "$RUNNER_TEMP/la-poule-traverse.apk" --clobber

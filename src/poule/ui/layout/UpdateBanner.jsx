@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isNativeApp } from '../../platform.js'
 
 const BUNDLE = /assets\/poule-[\w-]+\.js/
 const EVERY = 5 * 60_000
@@ -12,7 +13,7 @@ export default function UpdateBanner() {
 
   useEffect(() => {
     const mine = [...document.scripts].map((script) => script.src.match(BUNDLE)?.[0]).find(Boolean)
-    if (!mine) return undefined // development build: no hashed bundle
+    if (!mine || isNativeApp()) return undefined // dev build, or the app (updated by its store)
     let last = 0
     const check = async () => {
       if (document.visibilityState !== 'visible' || Date.now() - last < 60_000) return

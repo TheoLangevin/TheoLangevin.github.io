@@ -16,20 +16,13 @@ let pending = null
 export function loadFirebase() {
   if (!FIREBASE_CONFIG) return Promise.reject(new Error('Accounts are turned off (no Firebase config)'))
   pending ??= (async () => {
-    const [app, auth, firestore, functions] = await Promise.all([
-      load('app'),
-      load('auth'),
-      load('firestore'),
-      load('functions'),
-    ])
+    const [app, auth, firestore] = await Promise.all([load('app'), load('auth'), load('firestore')])
     const firebaseApp = app.initializeApp(FIREBASE_CONFIG)
     return {
       auth: auth.getAuth(firebaseApp),
       db: firestore.getFirestore(firebaseApp),
       authSdk: auth,
       firestoreSdk: firestore,
-      functions: functions.getFunctions(firebaseApp, 'europe-west1'),
-      functionsSdk: functions,
     }
   })().catch((error) => {
     pending = null

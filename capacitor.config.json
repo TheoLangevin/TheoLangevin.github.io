@@ -1,9 +1,0 @@
-{
-  "appId": "io.github.theolangevin.poule",
-  "appName": "La Poule Traverse",
-  "webDir": "dist-app",
-  "android": { "backgroundColor": "#ffd23f" },
-  "plugins": {
-    "FirebaseAuthentication": { "skipNativeAuth": true, "providers": ["google.com"] }
-  }
-}

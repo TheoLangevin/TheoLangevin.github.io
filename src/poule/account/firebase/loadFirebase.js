@@ -1,5 +1,4 @@
 import { FIREBASE_CONFIG, FIREBASE_SDK_VERSION } from './config.js'
-import { isNativeApp } from '../../platform.js'
 
 /**
  * The Firebase SDK is loaded from Google's CDN when the game starts, as ES
@@ -25,11 +24,7 @@ export function loadFirebase() {
     ])
     const firebaseApp = app.initializeApp(FIREBASE_CONFIG)
     return {
-      // In the Android app there is no popup: skip the popup machinery
-      // (getAuth would load it) and keep the session in IndexedDB.
-      auth: isNativeApp()
-        ? auth.initializeAuth(firebaseApp, { persistence: auth.indexedDBLocalPersistence })
-        : auth.getAuth(firebaseApp),
+      auth: auth.getAuth(firebaseApp),
       db: firestore.getFirestore(firebaseApp),
       authSdk: auth,
       firestoreSdk: firestore,

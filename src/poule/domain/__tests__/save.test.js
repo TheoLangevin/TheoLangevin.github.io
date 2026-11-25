@@ -54,6 +54,9 @@ const save = (extra = {}) => ({
   league: { lp: 320, peak: 400, settled: '2026-W47', gates: { top10: true, first: false }, history: [] },
   daily: { date: '2026-11-25', tries: 2, best: 1.5 },
   dailyClaims: ['2026-11-24'],
+  missions: null,
+  streak: null,
+  duels: { ledger: {}, tries: {} },
   ...extra,
 })
 

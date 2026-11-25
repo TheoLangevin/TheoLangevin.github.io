@@ -6,7 +6,9 @@ import { BETA_SKIN, CURRENT_SEASON } from '../config/seasons.js'
 import { AUTOCASH_TARGETS, SLOTS, upgradeById } from '../config/upgrades.js'
 import { levelFromXp } from './progression.js'
 import { dayId, validDaily, validDailyClaims } from './daily.js'
+import { validLedger } from './duels.js'
 import { divisionFor, freshLeague, validLeague } from './leagues.js'
+import { validMissions, validStreak } from './missions.js'
 import { isSeasonId, seasonId, weeklyStats } from './seasons.js'
 
 /**
@@ -128,8 +130,23 @@ export function validateSave(raw) {
     league: validLeague(raw.league),
     daily: validDaily(raw.daily),
     dailyClaims: validDailyClaims(raw.dailyClaims),
+    missions: validMissions(raw.missions),
+    streak: validStreak(raw.streak),
+    duels: validDuels(raw.duels),
   }
   return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
+}
+
+function validDuels(raw) {
+  const ledger = validLedger(raw?.ledger)
+  const tries = {}
+  for (const [id, value] of Object.entries(raw?.tries ?? {})) {
+    if (!(id in ledger)) continue
+    const count = int(value?.tries, 0, 3)
+    const best = num(value?.best, 0, 5000)
+    if (count != null && best != null) tries[id] = { tries: count, best }
+  }
+  return { ledger, tries }
 }
 
 /** True for a save from before the big season in play: reading it resets it. */

@@ -8,6 +8,7 @@ import { CloudConflictError, PseudoTakenError } from '../cloud.js'
  *   leaderboard/{uid}    { pseudo, look, title, level, xp, tokens, bestMultiplier, bestLanes, updatedAt }  public,
  *                        also a player's public profile (look = what their hen wears)
  *   seasons/{week}/entries/{uid}  { pseudo, title, level, score, bestMultiplier, league, updatedAt }  public
+ *   duels/{id}                    { from, to, mode, stake, status, createdAt, expiresAt, scores }  its two players only
  *   daily/{day}/entries/{uid}     { pseudo, title, best, tries, updatedAt }  public, the daily challenge
  *
  * firestore.rules enforces who may write what.
@@ -26,6 +27,8 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
     getDocs,
     where,
     getCountFromServer,
+    setDoc,
+    updateDoc,
   } = firestoreSdk
 
   const userRef = (uid) => doc(db, 'users', uid)
@@ -133,6 +136,27 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
         getCountFromServer(entries),
       ])
       return { rank: above.data().count + 1, total: all.data().count }
+    },
+
+    newDuelId: () => doc(collection(db, 'duels')).id,
+
+    async createDuel(id, duel) {
+      await setDoc(doc(db, 'duels', id), duel)
+    },
+
+    /** Changes a duel: answer (status, expiresAt) or the player's own score. */
+    async updateDuel(id, patch) {
+      await updateDoc(doc(db, 'duels', id), patch)
+    },
+
+    /** The player's duels, both sides. */
+    async duelsOf(uid) {
+      const duels = collection(db, 'duels')
+      const [sent, received] = await Promise.all([
+        getDocs(query(duels, where('from.uid', '==', uid), limit(30))),
+        getDocs(query(duels, where('to.uid', '==', uid), limit(30))),
+      ])
+      return [...sent.docs, ...received.docs].map((entry) => ({ ...entry.data(), id: entry.id }))
     },
 
     async profileOf(uid) {

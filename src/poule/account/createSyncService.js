@@ -9,7 +9,9 @@ import {
   seasonEntry,
   validateSave,
 } from '../domain/save.js'
+import { DUEL_STAKES } from '../config/duels.js'
 import { MAX_WEEKS_TO_FETCH } from '../config/seasons.js'
+import { DUEL_MS, duelPayout, duelState } from '../domain/duels.js'
 import { dailyReward, dayId, previousDayId } from '../domain/daily.js'
 import { settleWeek, weeksBetween } from '../domain/leagues.js'
 import { previousSeasonId, seasonId } from '../domain/seasons.js'
@@ -338,6 +340,65 @@ export function createSyncService({
     claimResults(pending) {
       return game.settleResults({ weeks: pending.weeks, daily: pending.daily })
     },
+
+    /**
+     * The player's duels, newest first, after paying what finished ones give
+     * back (once each). Resolves to { duels, paid } (paid in cents).
+     */
+    async duels() {
+      if (!uid) return { duels: [], paid: 0 }
+      const at = now().getTime()
+      const list = (await cloud.duelsOf(uid)).sort((a, b) => b.createdAt - a.createdAt)
+      let paid = 0
+      const ledger = game.duelLedger()
+      for (const duel of list) {
+        if (ledger[duel.id] !== 'staked') continue
+        const payout = duelPayout(duel, uid, at)
+        if (payout != null && game.settleDuel(duel.id, payout)) paid += payout
+      }
+      return { duels: list.map((duel) => ({ ...duel, state: duelState(duel, at) })), paid }
+    },
+
+    /** Challenges another player: the stake is put aside, then the duel is sent. */
+    async challenge(other, stake, modeId) {
+      if (!uid || !pseudo) throw new Error('no-pseudo')
+      if (!DUEL_STAKES.includes(stake) || other.uid === uid) throw new Error('invalid-duel')
+      const id = cloud.newDuelId()
+      const at = now().getTime()
+      game.stakeDuel(id, stake)
+      try {
+        await cloud.createDuel(id, {
+          from: { uid, pseudo },
+          to: { uid: other.uid, pseudo: other.pseudo },
+          mode: modeId,
+          stake,
+          status: 'open',
+          createdAt: at,
+          expiresAt: at + DUEL_MS,
+          scores: {},
+        })
+      } catch (error) {
+        game.settleDuel(id, stake) // not sent: the stake comes back
+        throw error
+      }
+      return id
+    },
+
+    /** Accepts a duel: the same stake is put aside, and both have DUEL_HOURS to play. */
+    async acceptDuel(duel) {
+      game.stakeDuel(duel.id, duel.stake)
+      try {
+        await cloud.updateDuel(duel.id, { status: 'accepted', expiresAt: now().getTime() + DUEL_MS })
+      } catch (error) {
+        game.settleDuel(duel.id, duel.stake)
+        throw error
+      }
+    },
+
+    declineDuel: (duel) => cloud.updateDuel(duel.id, { status: 'declined' }),
+
+    /** Publishes the player's tries and best multiplier in a duel. */
+    pushDuelScore: (id, score) => cloud.updateDuel(id, { [`scores.${uid}`]: score }),
 
     /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
     adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),

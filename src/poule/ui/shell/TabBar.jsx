@@ -11,7 +11,11 @@ const TABS = [
 
 /** The four screens, at thumb height. A dot flags a reward waiting. */
 export default function TabBar({ route, go }) {
-  const reward = useAccount((state) => Boolean(state.pendingReward))
+  const reward = useAccount(
+    (state) =>
+      Boolean(state.pendingReward) ||
+      state.duels.list.some((duel) => duel.state === 'open' && duel.to.uid === state.user?.uid),
+  )
   const inRound = usePoule((state) => Boolean(state.round))
   const badges = { classement: reward, jouer: inRound && route !== 'jouer' }
 

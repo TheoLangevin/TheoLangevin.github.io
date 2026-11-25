@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { achievementById } from '../config/achievements.js'
 import { DEFAULT_BET, STARTING_BALANCE } from '../config/economy.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
+import { DUEL_TRIES } from '../config/duels.js'
 import { BREAK_REMINDER_MINUTES } from '../config/progression.js'
 import { TIMING } from '../config/timing.js'
 import { AUTOCASH_TARGETS } from '../config/upgrades.js'
@@ -126,10 +127,27 @@ export const usePoule = create((set, get) => {
     if (!left) get().setChallenge(false)
   }
 
+  /** After a duel try: publish it (the account layer listens), and leave duel mode when no try is left. */
+  function afterDuel(progress) {
+    if (!progress?.duel) return
+    const { id, tries, best } = progress.duel
+    set({ duelProgress: { id, tries, best, key: uid() } })
+    notify([
+      {
+        id: uid(),
+        kind: 'buy',
+        title: `Duel : essai ${tries}/${DUEL_TRIES}`,
+        detail: `Meilleur ${best ? multiplierLabel(best) : 'aucun'}${tries >= DUEL_TRIES ? ' · résultat quand votre adversaire aura joué' : ''}`,
+      },
+    ])
+    if (tries >= DUEL_TRIES) set({ duel: null })
+  }
+
   function finish(result) {
     const { round, progress } = result
     maybeEvent()
     afterDaily(progress)
+    afterDuel(progress)
     refresh({
       busy: false,
       reveal: revealOf(result),
@@ -190,6 +208,14 @@ export const usePoule = create((set, get) => {
     seasonIntro: null,
     league: null,
     daily: null,
+    missions: [],
+    streak: null,
+    duelTries: {},
+    /** The duel being played: { id, modeId, opponent } or null. */
+    duel: null,
+    /** Last duel try, for the account layer to publish. */
+    duelProgress: null,
+    missionsOpen: false,
 
     /** Opens the database once, even if called twice (React StrictMode). */
     init() {
@@ -244,13 +270,13 @@ export const usePoule = create((set, get) => {
 
     /** Starts a round, or takes one more step if one is running. */
     async play() {
-      const { round, busy, modeId, betCents, challenge } = get()
+      const { round, busy, modeId, betCents, challenge, duel } = get()
       if (busy || get().phase !== 'ready') return
       if (round) return get().step()
       maybeRemindBreak()
       set({ busy: true, toast: null, reveal: null })
       try {
-        await runtime.service.start({ modeId, betCents, daily: challenge })
+        await runtime.service.start({ modeId, betCents, daily: challenge, duel })
         refresh({ busy: false, scene: EMPTY_SCENE, ...fx('start') })
       } catch (error) {
         fail(error)
@@ -289,6 +315,7 @@ export const usePoule = create((set, get) => {
         })
         notify(progressNotices(result.progress))
         afterDaily(result.progress)
+        afterDuel(result.progress)
         maybeEvent()
         return
       }
@@ -386,6 +413,50 @@ export const usePoule = create((set, get) => {
     },
 
     closeSeasonIntro: () => set({ seasonIntro: null }),
+
+    /** Plays a duel's tries (its mode, fixed bet), or back to free play with null. */
+    setDuel(duel) {
+      if (get().round || get().busy) return
+      if (duel && get().challenge) get().setChallenge(false)
+      const modeId = duel ? duel.modeId : (runtime.freeModeId ?? get().modeId)
+      if (duel && !get().duel) runtime.freeModeId = get().modeId
+      set({ duel, modeId, scene: EMPTY_SCENE, reveal: null, toast: null })
+    },
+
+    openMissions: (open) => set({ missionsOpen: open }),
+
+    claimMission(id) {
+      try {
+        const result = runtime.service.claimMission(id)
+        refresh(fx('buy'))
+        notify([
+          { id: uid(), kind: 'buy', title: `+${tokens(result.tokens)} jetons`, detail: 'Mission accomplie' },
+          ...progressNotices({ achievements: result.achievements, levelUp: null }),
+        ])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    claimStreak() {
+      try {
+        const result = runtime.service.claimStreak()
+        refresh(fx('buy'))
+        notify([
+          {
+            id: uid(),
+            kind: 'level',
+            title: `+${tokens(result.bonus)} jetons`,
+            detail: `Série de ${result.days} jour${result.days > 1 ? 's' : ''} · revenez demain pour plus`,
+          },
+        ])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    /** After the account layer changed the wallet (duel stakes and payouts). */
+    sync: () => runtime.service && !get().round && refresh(),
 
     toggleHaptics() {
       const haptics = !get().haptics

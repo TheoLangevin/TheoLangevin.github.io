@@ -12,6 +12,7 @@ rules_version = '2';
 //                        also their public profile (what their hen wears).
 //   seasons/{week}/entries/{uid}  public line of that player for one week.
 //   daily/{day}/entries/{uid}     public line of that player on a day's challenge.
+//   duels/{id}           a duel between two players, seen and changed by them only.
 //
 // Saves are computed in the player's browser, so a determined player can
 // still fake their own numbers; these rules keep the data well formed, private
@@ -179,6 +180,40 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if isOwner(uid);
+    }
+
+    function inDuel(data) {
+      return signedIn() && (data.from.uid == request.auth.uid || data.to.uid == request.auth.uid);
+    }
+
+    match /duels/{id} {
+      allow read: if inDuel(resource.data);
+
+      // The challenger sends it, with one of the allowed stakes and no score yet.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'to', 'mode', 'stake', 'status', 'createdAt', 'expiresAt', 'scores'])
+        && request.resource.data.from.uid == request.auth.uid
+        && request.resource.data.to.uid != request.auth.uid
+        && ownsPseudo(request.resource.data.from.pseudo)
+        && request.resource.data.mode in ['easy', 'medium', 'hard', 'hardcore']
+        && request.resource.data.stake in [2500, 10000, 50000]
+        && request.resource.data.status == 'open'
+        && request.resource.data.scores == {};
+
+      // Each player changes only their own score (3 tries at most); only the
+      // challenged player answers an open duel.
+      allow update: if inDuel(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scores', 'expiresAt'])
+        && request.resource.data.scores.diff(resource.data.scores).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data.scores)
+          || (request.resource.data.scores[request.auth.uid].tries is int
+            && request.resource.data.scores[request.auth.uid].tries <= 3
+            && request.resource.data.scores[request.auth.uid].best is number
+            && request.resource.data.scores[request.auth.uid].best <= 5000))
+        && (request.resource.data.status == resource.data.status
+          || (resource.data.status == 'open'
+            && resource.data.to.uid == request.auth.uid
+            && request.resource.data.status in ['accepted', 'declined']));
     }
   }
 }

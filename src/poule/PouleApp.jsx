@@ -6,6 +6,8 @@ import PlayerSheet from './ui/account/PlayerSheet.jsx'
 import { useGameSounds } from './ui/audio/useGameSounds.js'
 import ConeParty from './ui/events/ConeParty.jsx'
 import SeasonIntro from './ui/events/SeasonIntro.jsx'
+import UpdateBanner from './ui/layout/UpdateBanner.jsx'
+import MissionsSheet from './ui/missions/MissionsSheet.jsx'
 import EventLayer from './ui/events/EventLayer.jsx'
 import { useHaptics } from './ui/feedback/useHaptics.js'
 import { useKeyboard } from './ui/hooks/useKeyboard.js'
@@ -56,6 +58,8 @@ export default function PouleApp() {
       <EventLayer />
       <ConeParty />
       <SeasonIntro />
+      <MissionsSheet />
+      <UpdateBanner />
     </div>
   )
 }

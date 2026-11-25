@@ -2,7 +2,7 @@
 
 .topbar {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  grid-template-columns: 48px minmax(0, 1fr) 40px 48px;
   align-items: center;
   gap: 10px;
   padding: calc(var(--safe-top) + 6px) 12px 6px;
@@ -175,4 +175,189 @@
 
 .app__screens > .screen {
   grid-row: 2;
+}
+
+.topbar__missions {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--asphalt);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.topbar__dot--reward {
+  background: #e8392c;
+}
+
+.update-banner {
+  position: fixed;
+  top: calc(var(--safe-top) + 8px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(440px, calc(100% - 24px));
+  padding: 8px 8px 8px 14px;
+  border-radius: 16px;
+  background: var(--asphalt);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 20px #0005;
+}
+
+.update-banner span {
+  flex: 1;
+}
+
+.update-banner button {
+  background: var(--gold);
+  color: #2b1f00;
+}
+
+/* Missions */
+
+.streak {
+  display: grid;
+  gap: 10px;
+}
+
+.streak__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.streak__days i {
+  height: 10px;
+  border-radius: 99px;
+  background: var(--line);
+}
+
+.streak__days i.is-done {
+  background: var(--green);
+}
+
+.streak__days i.is-today {
+  background: var(--gold);
+  box-shadow: 0 0 8px #ffc21a;
+}
+
+.missions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.missions li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+.missions li > div {
+  display: grid;
+  gap: 4px;
+}
+
+.missions small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.missions__bar {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.missions__bar i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.missions li.is-claimed {
+  opacity: 0.6;
+}
+
+.missions__done {
+  font: 400 22px/1 var(--display);
+  color: var(--green);
+}
+
+/* Duels */
+
+.duels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.duel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+.duel__head {
+  display: grid;
+}
+
+.duel__head small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.duel__score {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.duel__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.duel .big {
+  margin: 0;
+}
+
+.duel-offer {
+  display: grid;
+  gap: 8px;
+}
+
+.duels-card b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill-badge {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: #e8392c;
+  color: #fff;
+  font: 900 13px/22px var(--body);
+  text-align: center;
 }

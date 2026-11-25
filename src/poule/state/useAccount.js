@@ -6,6 +6,7 @@ import { createFirestoreCloud } from '../account/firebase/createFirestoreCloud.j
 import { accountsEnabled, loadFirebase } from '../account/firebase/loadFirebase.js'
 import { BOARD_SIZE } from '../config/seasons.js'
 import { computeAdminStats } from '../domain/adminStats.js'
+import { tokens } from '../ui/format.js'
 import { gameService, pushNotice, usePoule } from './usePoule.js'
 
 /** Account services, outside React state. */
@@ -34,6 +35,7 @@ export const useAccount = create((set, get) => {
       if (result.action === 'ask') set({ conflict: result.conflict, dialog: 'conflict' })
       else if (!runtime.sync.pseudo) set({ dialog: 'pseudo' })
       get().checkReward()
+      get().loadDuels()
       get().loadBoard(get().board.kind)
     } catch (error) {
       console.error('[poule] sync failed', error)
@@ -51,6 +53,7 @@ export const useAccount = create((set, get) => {
     pendingReward: null,
     player: null,
     admin: { status: 'idle', stats: null, error: null },
+    duels: { list: [], loading: false },
 
     /** Loads Firebase and starts following the signed-in user. Safe to call twice. */
     init() {
@@ -66,6 +69,15 @@ export const useAccount = create((set, get) => {
             onImported: () => usePoule.getState().reload(),
           })
           game.onChange(() => runtime.sync.changed())
+          // Duel tries go to the duel as soon as they are played.
+          usePoule.subscribe((state, previous) => {
+            const progress = state.duelProgress
+            if (!progress || progress === previous.duelProgress) return
+            runtime.sync
+              .pushDuelScore(progress.id, { tries: progress.tries, best: progress.best })
+              .then(() => get().loadDuels())
+              .catch((error) => console.error(error))
+          })
           // Pick up what another device saved when the player comes back here.
           let lastCheck = 0
           const check = () => {
@@ -236,6 +248,55 @@ export const useAccount = create((set, get) => {
     },
 
     closePlayer: () => set({ player: null }),
+
+    /** The player's duels; pays what finished ones give back. */
+    async loadDuels() {
+      if (!runtime.sync?.uid) return
+      set({ duels: { ...get().duels, loading: true } })
+      try {
+        const { duels, paid } = await runtime.sync.duels()
+        set({ duels: { list: duels, loading: false } })
+        if (paid > 0) {
+          usePoule.getState().sync()
+          pushNotice({ kind: 'level', title: `+${tokens(paid)} jetons`, detail: 'Résultat de vos duels' })
+        }
+      } catch (error) {
+        console.error(error)
+        set({ duels: { ...get().duels, loading: false } })
+      }
+    },
+
+    async challenge(other, stake) {
+      try {
+        await runtime.sync.challenge(other, stake, usePoule.getState().modeId)
+        usePoule.getState().sync()
+        pushNotice({ kind: 'buy', title: 'Défi envoyé !', detail: `${other.pseudo} a 24 h pour répondre.` })
+        get().loadDuels()
+        return true
+      } catch (error) {
+        console.error(error)
+        sayError(
+          error.message === 'no-pseudo'
+            ? 'Choisissez un pseudo pour défier.'
+            : error.name === 'FirebaseError' || !error.message
+              ? 'Défi impossible pour le moment.'
+              : error.message,
+        )
+        return false
+      }
+    },
+
+    async answerDuel(duel, accept) {
+      try {
+        if (accept) await runtime.sync.acceptDuel(duel)
+        else await runtime.sync.declineDuel(duel)
+        usePoule.getState().sync()
+        await get().loadDuels()
+      } catch (error) {
+        console.error(error)
+        sayError(error.name === 'FirebaseError' || !error.message ? 'Réponse impossible pour le moment.' : error.message)
+      }
+    },
 
     /** Admin stats screen: reads every save and counts (domain/adminStats.js). */
     async loadAdmin() {

@@ -3,7 +3,7 @@ import { upgradeById } from '../../config/upgrades.js'
 import { useAccount } from '../../state/useAccount.js'
 import { count, multiplierLabel, tokens } from '../format.js'
 import { divisionById } from '../../domain/leagues.js'
-import { ChallengeButtons } from '../duels/Duels.jsx'
+import { canChallenge } from '../duels/Duels.jsx'
 import Mannequin from '../road/Mannequin.jsx'
 import Dialog from './Dialog.jsx'
 
@@ -11,8 +11,14 @@ const NOTHING = {}
 
 /** Another player's public profile: their hen as dressed, and their records. */
 export default function PlayerSheet() {
-  const { player, me, close } = useAccount(
-    useShallow((state) => ({ player: state.player, me: state.user?.uid, close: state.closePlayer })),
+  const { player, me, close, openChallenge, challengeable } = useAccount(
+    useShallow((state) => ({
+      player: state.player,
+      me: state.user?.uid,
+      close: state.closePlayer,
+      openChallenge: state.openChallenge,
+      challengeable: canChallenge(state, state.player && { uid: state.player.uid, pseudo: state.player.profile.pseudo }),
+    })),
   )
   if (!player) return null
   const { profile, loading, error } = player
@@ -31,7 +37,21 @@ export default function PlayerSheet() {
   ]
 
   return (
-    <Dialog title={profile.pseudo ?? 'Joueur'} onClose={close}>
+    <Dialog
+      title={profile.pseudo ?? 'Joueur'}
+      onClose={close}
+      actions={
+        challengeable && (
+          <button
+            type="button"
+            className="big big--play"
+            onClick={() => openChallenge({ uid: player.uid, pseudo: profile.pseudo })}
+          >
+            ⚔️ Défier {profile.pseudo}
+          </button>
+        )
+      }
+    >
       <div className="player" aria-busy={loading}>
         <Mannequin equipped={look} size="large" />
         {player.uid === me && <p className="player__me">C’est vous !</p>}
@@ -55,7 +75,6 @@ export default function PlayerSheet() {
           </>
         )}
         {!loading && worn.length === 0 && !error && <p className="note">Une poule nature, sans accessoire.</p>}
-        <ChallengeButtons player={{ uid: player.uid, pseudo: profile.pseudo }} />
       </div>
     </Dialog>
   )

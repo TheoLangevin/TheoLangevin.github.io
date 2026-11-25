@@ -3,6 +3,7 @@ import { useAccount } from './state/useAccount.js'
 import { usePoule } from './state/usePoule.js'
 import AccountDialogs from './ui/account/AccountDialogs.jsx'
 import PlayerSheet from './ui/account/PlayerSheet.jsx'
+import { ChallengeSheet } from './ui/duels/Duels.jsx'
 import { useGameSounds } from './ui/audio/useGameSounds.js'
 import ConeParty from './ui/events/ConeParty.jsx'
 import SeasonIntro from './ui/events/SeasonIntro.jsx'
@@ -55,6 +56,7 @@ export default function PouleApp() {
       <Notices />
       <AccountDialogs />
       <PlayerSheet />
+      <ChallengeSheet />
       <EventLayer />
       <ConeParty />
       <SeasonIntro />

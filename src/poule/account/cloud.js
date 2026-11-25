@@ -16,6 +16,14 @@
  * @property {(day: string, size?: number) => Promise<object[]>} dailyBoard  by best multiplier
  * @property {(day: string, uid: string) => Promise<object | null>} dailyEntryOf
  * @property {(day: string, best: number) => Promise<{ rank: number, total: number }>} dailyRank
+ * @property {() => string} newTeamId
+ * @property {(id: string, team: object) => Promise<void>} createTeam
+ * @property {(id: string, uid: string, pseudo: string) => Promise<void>} joinTeam
+ * @property {(id: string, uid: string) => Promise<void>} leaveTeam  the last one out deletes it
+ * @property {(size?: number) => Promise<object[]>} teams
+ * @property {(size?: number) => Promise<object[]>} teamLines  leaderboard lines with a team
+ * @property {(item: object) => Promise<void>} postFeed
+ * @property {(size?: number) => Promise<object[]>} feed  newest first
  * @property {() => string} newDuelId
  * @property {(id: string, duel: object) => Promise<void>} createDuel
  * @property {(id: string, patch: object) => Promise<void>} updateDuel  dotted keys allowed (scores.uid)
@@ -52,6 +60,9 @@ export function createMemoryCloud() {
   const seasons = new Map()
   const days = new Map()
   const duels = new Map()
+  const teams = new Map()
+  const feedItems = []
+  let nextTeam = 1
   let nextDuel = 1
   const copy = (value) => structuredClone(value)
   const season = (id) => {
@@ -140,6 +151,36 @@ export function createMemoryCloud() {
         .filter((line) => line.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, size)
+    },
+    newTeamId: () => `team${String(nextTeam++).padStart(4, '0')}`,
+    async createTeam(id, team) {
+      teams.set(id, copy(team))
+    },
+    async joinTeam(id, uid, pseudo) {
+      const team = teams.get(id)
+      if (!team.members.includes(uid)) team.members.push(uid)
+      team.pseudos[uid] = pseudo
+    },
+    async leaveTeam(id, uid) {
+      const team = teams.get(id)
+      if (!team) return
+      if (team.members.length <= 1) teams.delete(id)
+      else {
+        team.members = team.members.filter((member) => member !== uid)
+        delete team.pseudos[uid]
+      }
+    },
+    async teams() {
+      return [...teams.entries()].map(([id, team]) => ({ ...copy(team), id }))
+    },
+    async teamLines() {
+      return [...entries.entries()].filter(([, entry]) => entry.team).map(([uid, entry]) => ({ uid, ...entry }))
+    },
+    async postFeed(item) {
+      feedItems.push(copy(item))
+    },
+    async feed(size = 15) {
+      return [...feedItems].sort((a, b) => b.at - a.at).slice(0, size)
     },
     newDuelId: () => `duel${String(nextDuel++).padStart(4, '0')}`,
     async createDuel(id, duel) {

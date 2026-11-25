@@ -8,6 +8,10 @@ export const MODES = Object.freeze([
   Object.freeze({ id: 'medium', label: 'Moyen', survival: 0.84, lanes: 22 }),
   Object.freeze({ id: 'hard', label: 'Difficile', survival: 0.72, lanes: 20 }),
   Object.freeze({ id: 'hardcore', label: 'Hardcore', survival: 0.6, lanes: 15 }),
+  // Night: the cars only show up close to the hen. Mystery: a lane's multiplier
+  // shows once crossed. Their odds are shown like the others'.
+  Object.freeze({ id: 'night', label: 'Nuit', survival: 0.76, lanes: 18, night: true }),
+  Object.freeze({ id: 'mystery', label: 'Mystère', survival: 0.84, lanes: 22, mystery: true }),
 ])
 
 export const DEFAULT_MODE_ID = 'easy'

@@ -3,6 +3,7 @@ import { achievementById } from '../config/achievements.js'
 import { DEFAULT_BET, STARTING_BALANCE } from '../config/economy.js'
 import { DEFAULT_MODE_ID, modeById } from '../config/modes.js'
 import { DUEL_TRIES } from '../config/duels.js'
+import { FEED_MIN_MULTIPLIER } from '../config/teams.js'
 import { BREAK_REMINDER_MINUTES } from '../config/progression.js'
 import { TIMING } from '../config/timing.js'
 import { AUTOCASH_TARGETS } from '../config/upgrades.js'
@@ -145,6 +146,18 @@ export const usePoule = create((set, get) => {
 
   function finish(result) {
     const { round, progress } = result
+    // Big moments go to the activity feed (the account layer posts them).
+    if (round.multiplier >= FEED_MIN_MULTIPLIER || round.lane === round.mode.lanes) {
+      set({
+        highlight: {
+          kind: round.lane === round.mode.lanes ? 'finish' : 'cash',
+          mult: round.multiplier,
+          mode: round.mode.id,
+          lanes: round.lane,
+          key: uid(),
+        },
+      })
+    }
     maybeEvent()
     afterDaily(progress)
     afterDuel(progress)
@@ -215,6 +228,12 @@ export const usePoule = create((set, get) => {
     duel: null,
     /** Last duel try, for the account layer to publish. */
     duelProgress: null,
+    /** Last big moment, for the activity feed. */
+    highlight: null,
+    events: [],
+    collection: null,
+    team: null,
+    boxResult: null,
     missionsOpen: false,
 
     /** Opens the database once, even if called twice (React StrictMode). */
@@ -424,6 +443,41 @@ export const usePoule = create((set, get) => {
     },
 
     openMissions: (open) => set({ missionsOpen: open }),
+
+    claimGift(eventId) {
+      try {
+        const item = runtime.service.claimGift(eventId)
+        refresh(fx('buy'))
+        notify([{ id: uid(), kind: 'level', title: 'Cadeau !', detail: `${item.label} ajouté à votre collection` }])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    claimSet(setId) {
+      try {
+        const result = runtime.service.claimSet(setId)
+        refresh(fx('buy'))
+        notify([
+          { id: uid(), kind: 'level', title: `+${tokens(result.tokens)} jetons`, detail: 'Série complète !' },
+          ...progressNotices({ achievements: result.achievements, levelUp: null }),
+        ])
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    openBox() {
+      try {
+        const result = runtime.service.openBox()
+        refresh({ ...fx('win', { multiplier: 5 }), boxResult: result.item })
+        notify(progressNotices({ achievements: result.achievements, levelUp: null }))
+      } catch (error) {
+        fail(error)
+      }
+    },
+
+    closeBox: () => set({ boxResult: null }),
 
     claimMission(id) {
       try {

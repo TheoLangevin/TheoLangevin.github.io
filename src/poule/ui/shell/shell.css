@@ -408,3 +408,69 @@
   flex-wrap: wrap;
   overflow: visible;
 }
+
+.events-now {
+  display: grid;
+  gap: 8px;
+}
+
+.events-now__item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2a2c35, #3b2a5e);
+  color: #fff;
+}
+
+.box {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.box__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.box__head > div {
+  display: grid;
+}
+
+.box__icon {
+  font-size: 36px;
+}
+
+.box__odds {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.box .big {
+  margin: 0;
+}
+
+.box__result {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.album {
+  display: grid;
+  gap: 12px;
+}
+
+.album__total {
+  display: grid;
+  gap: 4px;
+}
+
+.album__total b {
+  font: 400 24px/1 var(--display);
+}

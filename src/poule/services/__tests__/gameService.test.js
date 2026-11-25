@@ -440,3 +440,23 @@ describe('missions and duel tries', () => {
     await expect(service.start({ duel: { id: 'duel0001', modeId: 'easy' } })).rejects.toThrow()
   })
 })
+
+describe('collection, gifts and boxes', () => {
+  it('opens a box once paid, pays a set once, gives the Christmas gift once', () => {
+    const store = createMemoryStore()
+    const service = startedGame({ store, seeds: () => 's', clock: () => '2026-12-05T10:00:00Z', rng: () => 0 })
+    store.wallet.set(1_000_000)
+    const { item } = service.openBox()
+    expect(service.summary().progression.owned).toContain(item.id)
+    expect(store.wallet.balance()).toBeLessThanOrEqual(1_000_000 - 150_000)
+    for (const id of ['cap', 'scarf', 'russet', 'dust']) if (!service.owns(id)) store.upgrades.add(id)
+    const before = store.wallet.balance()
+    expect(service.claimSet('farm').tokens).toBe(40000)
+    expect(store.wallet.balance()).toBeGreaterThanOrEqual(before + 40000)
+    expect(() => service.claimSet('farm')).toThrow()
+    expect(service.summary().events.find((event) => event.id === 'christmas').gift).toBe('snow')
+    expect(service.claimGift('christmas').id).toBe('snow')
+    expect(() => service.claimGift('christmas')).toThrow()
+    expect(service.exportSave().gifts).toEqual(['christmas'])
+  })
+})

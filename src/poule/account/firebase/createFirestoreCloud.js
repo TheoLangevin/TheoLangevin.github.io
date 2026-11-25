@@ -9,6 +9,8 @@ import { CloudConflictError, PseudoTakenError } from '../cloud.js'
  *                        also a player's public profile (look = what their hen wears)
  *   seasons/{week}/entries/{uid}  { pseudo, title, level, score, bestMultiplier, league, updatedAt }  public
  *   duels/{id}                    { from, to, mode, stake, status, createdAt, expiresAt, scores }  its two players only
+ *   teams/{id}                    { name, owner, members, pseudos, createdAt }  public, members join and leave themselves
+ *   feed/{id}                     { uid, pseudo, kind, mult, mode, lanes, other, at }  public, the activity feed
  *   daily/{day}/entries/{uid}     { pseudo, title, best, tries, updatedAt }  public, the daily challenge
  *
  * firestore.rules enforces who may write what.
@@ -29,6 +31,11 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
     getCountFromServer,
     setDoc,
     updateDoc,
+    addDoc,
+    deleteDoc,
+    arrayUnion,
+    arrayRemove,
+    deleteField,
   } = firestoreSdk
 
   const userRef = (uid) => doc(db, 'users', uid)
@@ -136,6 +143,45 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
         getCountFromServer(entries),
       ])
       return { rank: above.data().count + 1, total: all.data().count }
+    },
+
+    newTeamId: () => doc(collection(db, 'teams')).id,
+
+    async createTeam(id, team) {
+      await setDoc(doc(db, 'teams', id), team)
+    },
+
+    async joinTeam(id, uid, pseudo) {
+      await updateDoc(doc(db, 'teams', id), { members: arrayUnion(uid), [`pseudos.${uid}`]: pseudo })
+    },
+
+    /** Leaves a team; the last member to leave deletes it. */
+    async leaveTeam(id, uid) {
+      const ref = doc(db, 'teams', id)
+      const snap = await getDoc(ref)
+      if (!snap.exists()) return
+      if ((snap.data().members ?? []).length <= 1) await deleteDoc(ref)
+      else await updateDoc(ref, { members: arrayRemove(uid), [`pseudos.${uid}`]: deleteField() })
+    },
+
+    async teams(size = 50) {
+      return (await getDocs(query(collection(db, 'teams'), limit(size)))).docs.map((entry) => ({ ...entry.data(), id: entry.id }))
+    },
+
+    /** Leaderboard lines of players in a team: { uid, team, lp, pseudo }. */
+    async teamLines(size = 500) {
+      return rows(await getDocs(query(collection(db, 'leaderboard'), where('team', '!=', null), limit(size))))
+    },
+
+    async postFeed(item) {
+      await addDoc(collection(db, 'feed'), item)
+    },
+
+    async feed(size = 15) {
+      return (await getDocs(query(collection(db, 'feed'), orderBy('at', 'desc'), limit(size)))).docs.map((entry) => ({
+        ...entry.data(),
+        id: entry.id,
+      }))
     },
 
     newDuelId: () => doc(collection(db, 'duels')).id,

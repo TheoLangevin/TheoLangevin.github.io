@@ -499,3 +499,33 @@
     display: none;
   }
 }
+
+/* Night mode: a dark road where cars only show up near the hen. */
+.road[data-mode='night'] {
+  --road-bg: #10131c;
+  --road-line: #ffffff33;
+}
+
+.road[data-mode='night'] .lane {
+  background-color: #10131c;
+}
+
+.road[data-mode='night'] .car {
+  opacity: 0.08;
+  transition: opacity 0.2s;
+}
+
+.road[data-mode='night'] .lane--next .car,
+.road[data-mode='night'] .road__threat .car {
+  opacity: 1;
+  filter: drop-shadow(0 6px 10px #fff6b088);
+}
+
+.road[data-mode='night'] .lane--next {
+  background-image: radial-gradient(ellipse at 50% 50%, #ffffff1c, transparent 70%);
+}
+
+.lane__cover--mystery {
+  color: var(--gold);
+  font-size: 1.4em;
+}

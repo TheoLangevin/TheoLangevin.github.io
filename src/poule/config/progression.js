@@ -6,7 +6,7 @@
  */
 
 /** XP per lane crossed, by mode. Harder modes cross fewer lanes. */
-export const XP_PER_LANE = Object.freeze({ easy: 2, medium: 3, hard: 5, hardcore: 8 })
+export const XP_PER_LANE = Object.freeze({ easy: 2, medium: 3, hard: 5, hardcore: 8, night: 6, mystery: 3 })
 
 /** Tokens paid (in cents) when a level is reached: 20 tokens at level 2, 30 at level 3... */
 export const levelUpBonus = (level) => level * 10 * 100

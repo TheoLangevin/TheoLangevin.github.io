@@ -1,6 +1,7 @@
 import { ACHIEVEMENTS } from '../config/achievements.js'
 import { MAX_LEVEL, XP_PER_LANE, levelUpBonus, xpForLevel } from '../config/progression.js'
 import { upgradeById } from '../config/upgrades.js'
+import { isEventActive } from './calendar.js'
 import { ROUND_STATUS } from './round.js'
 
 /** Lanes the hen actually got across in a finished round. */
@@ -33,13 +34,14 @@ export function levelProgress(xp) {
 
 /**
  * Whether an item can be bought: `ok`, or the reason it cannot (`unknown`,
- * `exclusive`, `owned`, `level`, `tokens`).
+ * `exclusive`, `owned`, `limited`, `level`, `tokens`).
  */
-export function purchaseCheck(upgradeId, { owned, level, balanceCents = 0 }) {
+export function purchaseCheck(upgradeId, { owned, level, balanceCents = 0, date = new Date() }) {
   const upgrade = upgradeById(upgradeId)
   if (!upgrade) return 'unknown'
   if (upgrade.exclusive) return 'exclusive'
   if (owned.includes(upgradeId)) return 'owned'
+  if (upgrade.limited && !isEventActive(upgrade.limited, date)) return 'limited'
   if (level < upgrade.level) return 'level'
   return balanceCents >= upgrade.cost ? 'ok' : 'tokens'
 }

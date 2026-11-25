@@ -357,3 +357,12 @@
     gap: 6px;
   }
 }
+
+.chips.modes button {
+  min-height: 44px;
+}
+
+.hud__event {
+  background: #3b2a5e;
+  color: #fff;
+}

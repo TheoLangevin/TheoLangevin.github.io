@@ -133,9 +133,14 @@ export function validateSave(raw) {
     missions: validMissions(raw.missions),
     streak: validStreak(raw.streak),
     duels: validDuels(raw.duels),
+    gifts: ids(raw.gifts, 20),
+    setsClaimed: ids(raw.setsClaimed, 50),
+    team: typeof raw.team === 'string' && /^[A-Za-z0-9]{6,40}$/.test(raw.team) ? raw.team : null,
   }
   return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
 }
+
+const ids = (raw, max) => [...new Set(Array.isArray(raw) ? raw.filter((id) => typeof id === 'string' && id.length <= 40) : [])].slice(0, max)
 
 function validDuels(raw) {
   const ledger = validLedger(raw?.ledger)
@@ -217,6 +222,7 @@ export function leaderboardEntry(save, pseudo) {
     division: divisionFor(save.league.lp).id,
     bestMultiplier: won.reduce((best, round) => Math.max(best, round.mult), 0),
     bestLanes: save.rounds.reduce((best, round) => Math.max(best, round.crossed), 0),
+    team: save.team ?? null,
   }
 }
 

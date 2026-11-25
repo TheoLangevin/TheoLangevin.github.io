@@ -107,6 +107,13 @@ const HATS = {
       <rect x="39" y="14" width="26" height="5" rx="1.5" fill="#e85d00" />
     </g>
   ),
+  santa: (
+    <g>
+      <path d="M40 21q4-16 18-14q8 2 12 12l-4 2q-3-7-9-8z" fill="#e8392c" />
+      <circle cx="68" cy="22" r="4" fill="#fff" />
+      <rect x="37" y="18" width="32" height="6" rx="3" fill="#fff" />
+    </g>
+  ),
   halo: <ellipse cx="52" cy="4" rx="12" ry="3.5" fill="none" stroke="#ffd84a" strokeWidth="3" />,
   laurel: (
     <g fill="#3c9a4a">
@@ -136,6 +143,13 @@ const HATS = {
 }
 
 const NECK = {
+  'xmas-scarf': (
+    <g>
+      <path d="M41 36q12 6 22-1l1 5q-11 8-23 1z" fill="#1f9d55" />
+      <path d="M44 38l3 1M50 39.5l3 0M56 38.5l3-1" stroke="#e8392c" strokeWidth="2.4" />
+      <path d="M46 41l-3 10 5 1 2-10z" fill="#e8392c" />
+    </g>
+  ),
   'bow-tie': (
     <g>
       <path d="M53 40l-8-5v10zM53 40l8-5v10z" fill="#e8392c" />

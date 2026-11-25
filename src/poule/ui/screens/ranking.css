@@ -475,3 +475,110 @@
   padding: 0 2px;
   font-size: 8px;
 }
+
+.feed {
+  display: grid;
+  gap: 8px;
+}
+
+.feed h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 20px/1.1 var(--display);
+}
+
+.feed__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e8392c;
+  animation: twin-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.feed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.feed li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.feed small {
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.team {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.team h2 {
+  margin: 0;
+  font: 400 22px/1.1 var(--display);
+}
+
+.team__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.team__lp {
+  font: 400 22px/1 var(--display);
+  color: var(--green);
+}
+
+.team__members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.team__members button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 99px;
+  font-size: 14px;
+}
+
+.team__create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.team__create input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+}
+
+.team__row {
+  grid-template-columns: 2.4em minmax(0, 1fr) auto auto;
+}
+
+.team__join {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}

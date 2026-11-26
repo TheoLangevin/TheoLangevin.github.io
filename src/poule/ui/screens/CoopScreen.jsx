@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   BUILDINGS,
+  BUILDING_TIERS,
   COOP_SKINS,
   HEN_MAX_LEVEL,
   HEN_RARITIES,
@@ -21,6 +22,7 @@ import Dialog from '../account/Dialog.jsx'
 import { tokens } from '../format.js'
 import { duration, eggs } from '../coop/format.js'
 import Mannequin from '../road/Mannequin.jsx'
+import CoopYard from '../coop/CoopYard.jsx'
 import './coop.css'
 
 /** What each unlock opens, in the order a player meets them. */
@@ -113,6 +115,7 @@ function Stage({ coop }) {
 
   return (
     <section ref={stage} className={`coop-stage coop-decor--${coop.skin.decor}${frenzy ? ' is-frenzy' : ''}`}>
+      <CoopYard coop={coop} />
       <div className="coop-count">
         <b>{eggs(coop.eggs)}</b> œufs
         <small>{pps > 0 ? `${eggs(pps)} par seconde` : 'Touche la poule pour pondre !'}</small>
@@ -174,13 +177,18 @@ function Buildings({ coop }) {
             <div className="coop-row__body">
               <b>
                 {b.label} <small className="muted">×{n}</small>
+                {n > 0 && (
+                  <small className="coop-tier" style={{ '--tier': BUILDING_TIERS[rules.buildingLevel(n) - 1].color }}>
+                    niv. {rules.buildingLevel(n)} · {BUILDING_TIERS[rules.buildingLevel(n) - 1].label}
+                  </small>
+                )}
               </b>
               <small>
-                {n ? `${eggs(pps)}/s · ${Math.round((pps / total) * 100)} % du total` : `+${eggs(b.pps * rules.globalMultiplier(coop))} œufs/s chacun`}
+                {n ? `${eggs(pps)}/s · ${pps / total < 0.01 ? '< 1' : Math.round((pps / total) * 100)} % du total` : `+${eggs(b.pps * rules.globalMultiplier(coop))} œufs/s chacun`}
               </small>
               {n > 0 && milestone && (
                 <small className="muted">
-                  À {milestone} : production doublée ({n}/{milestone})
+                  Niveau {rules.buildingLevel(n) + 1} à {milestone} : production doublée ({n}/{milestone})
                 </small>
               )}
             </div>

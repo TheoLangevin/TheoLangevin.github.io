@@ -98,6 +98,14 @@ export const BUILDING_REVEAL = 0.5
 
 /** Owning this many of one building doubles its eggs, for each step reached. */
 export const MILESTONES = Object.freeze([50, 100, 200, 400])
+/** A building's level: one more per milestone reached, each with its look. */
+export const BUILDING_TIERS = Object.freeze([
+  { label: 'Bois', color: '#a0703c' },
+  { label: 'Bronze', color: '#cd7f32' },
+  { label: 'Argent', color: '#c0c7d0' },
+  { label: 'Or', color: '#ffc21a' },
+  { label: 'Diamant', color: '#7fe3ff' },
+])
 
 /** Each trophy adds this share to production; trophies stay through moves. */
 export const TROPHY_BONUS = 0.02

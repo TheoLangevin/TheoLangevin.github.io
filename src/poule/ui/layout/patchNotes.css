@@ -1,0 +1,29 @@
+.notes {
+  display: grid;
+  gap: 14px;
+}
+.notes__entry h3 {
+  margin: 0 0 6px;
+  font: 400 18px/1.15 var(--display);
+}
+.notes__entry h3 small {
+  font: 700 12px/1 var(--body);
+}
+.notes__entry ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.notes__open {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  color: var(--ink);
+  font-weight: 800;
+  text-align: left;
+}

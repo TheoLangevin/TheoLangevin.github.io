@@ -83,7 +83,7 @@ test('paliers : 50 bâtiments doublent leur production', () => {
 })
 
 test('déménager donne des plumes, garde les poules et remet à zéro', () => {
-  const rich = { ...c.freshCoop(NOW), eggs: 5, lifetime: 4e9, total: 4e9, buildings: { rocket: 3 }, hens: { cocotte: 2 } }
+  const rich = { ...c.freshCoop(NOW), eggs: 5, lifetime: 8e9, total: 8e9, buildings: { rocket: 3 }, hens: { cocotte: 2 } }
   const { coop, gained } = c.moveHouse(rich)
   expect(gained).toBe(2)
   expect(coop.eggs).toBe(0)

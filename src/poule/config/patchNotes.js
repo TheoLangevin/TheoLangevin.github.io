@@ -5,6 +5,17 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-26-estate',
+    date: '26 nov. 2026',
+    title: '25 bâtiments et le domaine',
+    items: [
+      '18 nouveaux bâtiments, de la Botte de paille à la Poule originelle : il y en a maintenant 25.',
+      'Des nouveaux dès le début (paille, abreuvoir, cabane, verger, moulin…) et d’autres pour des mois de jeu.',
+      'Le domaine : une bande à faire défiler sous la cour, avec tous tes bâtiments et ceux qui restent à découvrir.',
+      'Les plumes d’or s’obtiennent plus lentement, pour que la progression dure.',
+    ],
+  },
+  {
     id: '2026-11-26-scene',
     date: '26 nov. 2026',
     title: 'Un vrai poulailler',

@@ -15,13 +15,31 @@ export const COST_GROWTH = 1.15
 export const BUILDINGS = Object.freeze(
   [
     { id: 'nest', icon: '🪺', label: 'Nid douillet', cost: 15, pps: 0.1 },
+    { id: 'straw', icon: '🌾', label: 'Botte de paille', cost: 50, pps: 0.4 },
     { id: 'perch', icon: '🪵', label: 'Perchoir', cost: 100, pps: 1 },
-    { id: 'feeder', icon: '🌾', label: 'Mangeoire automatique', cost: 1100, pps: 8 },
+    { id: 'waterer', icon: '🚰', label: 'Abreuvoir', cost: 400, pps: 3 },
+    { id: 'feeder', icon: '🥣', label: 'Mangeoire automatique', cost: 1100, pps: 8 },
+    { id: 'shed', icon: '🛖', label: 'Cabane de jardin', cost: 4000, pps: 22 },
     { id: 'incubator', icon: '🔆', label: 'Couveuse', cost: 12000, pps: 47 },
+    { id: 'orchard', icon: '🍎', label: 'Verger picoreur', cost: 40000, pps: 120 },
     { id: 'silo', icon: '🏭', label: 'Silo à grain', cost: 130000, pps: 260 },
+    { id: 'mill', icon: '🌬️', label: 'Moulin à vent', cost: 450000, pps: 650 },
     { id: 'farm', icon: '🚜', label: 'Élevage industriel', cost: 1400000, pps: 1400 },
+    { id: 'greenhouse', icon: '🌴', label: 'Serre tropicale', cost: 5000000, pps: 3500 },
     { id: 'rocket', icon: '🚀', label: 'Fusée à œufs', cost: 20000000, pps: 7800 },
-  ].map((building) => Object.freeze(building)),
+    { id: 'lab', icon: '🧪', label: 'Labo à omelettes', cost: 75000000, pps: 20000 },
+    { id: 'chocolate', icon: '🍫', label: 'Usine à œufs en chocolat', cost: 330000000, pps: 60000 },
+    { id: 'cloud', icon: '☁️', label: 'Perchoir dans les nuages', cost: 1.5e9, pps: 180000 },
+    { id: 'moon', icon: '🌕', label: 'Base lunaire', cost: 7e9, pps: 500000 },
+    { id: 'pyramid', icon: '🔺', label: 'Pyramide de l’œuf', cost: 3.5e10, pps: 1.4e6 },
+    { id: 'portal', icon: '🌀', label: 'Portail temporel', cost: 1.8e11, pps: 4e6 },
+    { id: 'volcano', icon: '🌋', label: 'Volcan à œufs durs', cost: 1e12, pps: 1.2e7 },
+    { id: 'dragon', icon: '🐉', label: 'Nid de dragon', cost: 6e12, pps: 3.5e7 },
+    { id: 'galaxy', icon: '🌌', label: 'Galaxie poulette', cost: 4e13, pps: 1.1e8 },
+    { id: 'blackhole', icon: '🕳️', label: 'Trou noir cocotte', cost: 3e14, pps: 3.5e8 },
+    { id: 'multiverse', icon: '🪐', label: 'Multivers du poulet', cost: 2.5e15, pps: 1.2e9 },
+    { id: 'origin', icon: '🐓', label: 'Poule originelle', cost: 2.5e16, pps: 4.5e9 },
+].map((building) => Object.freeze(building)),
 )
 
 /**

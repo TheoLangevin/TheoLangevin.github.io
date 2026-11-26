@@ -1,0 +1,336 @@
+/* Le Poulailler */
+
+.screen--coop {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.coop-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 14px 12px 18px;
+  border-radius: 22px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  background: linear-gradient(#bfe8ff 0 58%, #8fd16a 58% 100%);
+  color: #1d1a12;
+}
+.coop-decor--barn-night {
+  background: linear-gradient(#1b2446 0 58%, #6b3b24 58% 100%);
+  color: #f3efe4;
+}
+.coop-decor--station {
+  background: radial-gradient(circle at 20% 20%, #fff 0 1px, transparent 2px) 0 0 / 38px 38px,
+    radial-gradient(circle at 70% 60%, #fff8 0 1px, transparent 2px) 0 0 / 53px 53px, linear-gradient(#0b0f2a, #2b1d5c);
+  color: #f3efe4;
+}
+.coop-stage.is-frenzy {
+  box-shadow: inset 0 0 0 4px var(--gold), 0 0 24px #ffc21a99;
+}
+
+.coop-count {
+  display: grid;
+  justify-items: center;
+  font-weight: 800;
+  text-align: center;
+}
+.coop-count b {
+  font: 400 38px/1 var(--display);
+}
+.coop-count small {
+  font-size: 13px;
+  opacity: 0.8;
+}
+.coop-frenzy {
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: var(--gold);
+  color: #2b1f00;
+  font-size: 12px;
+}
+
+.coop-hen {
+  position: relative;
+  width: min(220px, 56vw, 30dvh);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff55;
+  animation: coop-squash 160ms ease-out;
+  cursor: pointer;
+}
+.coop-hen .mannequin {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+.coop-hen:active {
+  transform: scale(0.95);
+}
+.coop-hen--zombie .mannequin svg {
+  filter: hue-rotate(70deg) saturate(0.7) drop-shadow(0 4px 0 #0005);
+}
+.coop-hen--gold .mannequin svg {
+  filter: sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.05) drop-shadow(0 0 10px #ffc21a);
+}
+.coop-hen--ninja .mannequin svg {
+  filter: brightness(0.45) drop-shadow(0 4px 0 #0005);
+}
+.coop-hen__accessory {
+  position: absolute;
+  right: 8%;
+  top: 6%;
+  font-size: 34px;
+  pointer-events: none;
+}
+@keyframes coop-squash {
+  40% {
+    transform: scale(1.06, 0.92);
+  }
+}
+
+.coop-float {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font: 400 22px/1 var(--display);
+  color: #fff;
+  text-shadow: 0 2px 0 #0007;
+  pointer-events: none;
+  animation: coop-float 900ms ease-out forwards;
+}
+.coop-float.is-lucky {
+  color: var(--gold);
+  font-size: 30px;
+}
+@keyframes coop-float {
+  to {
+    transform: translate(-50%, -90px);
+    opacity: 0;
+  }
+}
+
+.coop-golden {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6 0 40%, transparent 70%);
+  font-size: 40px;
+  filter: sepia(1) saturate(6) hue-rotate(-15deg) drop-shadow(0 0 10px #ffc21a);
+  animation: coop-golden 1.2s ease-in-out infinite alternate;
+}
+@keyframes coop-golden {
+  to {
+    transform: translateY(-10px) rotate(14deg) scale(1.1);
+  }
+}
+
+.coop-next {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.coop-next i {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold) calc(var(--ratio) * 100%), var(--soft) 0);
+}
+
+.coop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.coop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 2px 0 #0001;
+}
+.coop-row.is-mystery {
+  opacity: 0.6;
+}
+.coop-row__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  font-size: 28px;
+}
+.coop-swatch {
+  border-radius: 10px;
+  font-size: 22px;
+}
+.coop-row__body {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+}
+.coop-row__body small {
+  font-size: 12px;
+}
+.coop-buy,
+.coop-sell {
+  flex: none;
+  min-width: 84px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--gold);
+  color: #2b1f00;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.coop-buy:disabled,
+.coop-sell:disabled {
+  opacity: 0.45;
+}
+.coop-sell {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+.coop-incubator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.coop-incubator > div {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+}
+.coop-hens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.coop-hencard {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 2px var(--line);
+  color: var(--ink);
+  text-align: center;
+}
+.coop-hencard.is-on {
+  box-shadow: inset 0 0 0 3px var(--rarity);
+  background: color-mix(in srgb, var(--rarity) 14%, var(--card));
+}
+.coop-hencard.is-locked {
+  opacity: 0.55;
+}
+.coop-hencard:disabled:not(.is-locked) {
+  opacity: 0.75;
+}
+.coop-hencard__icon {
+  font-size: 30px;
+}
+.coop-hencard small {
+  font-size: 11px;
+}
+.coop-stars {
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+.coop-trophies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.coop-trophies li {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--card);
+  opacity: 0.55;
+  font-size: 13px;
+}
+.coop-trophies li.is-done {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+.coop-trophies span {
+  font-size: 22px;
+}
+.coop-trophies small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.coop-trophies i {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold) calc(var(--ratio) * 100%), var(--soft) 0);
+}
+
+.coop-market h2,
+.coop-prestige h2 {
+  margin: 0 0 6px;
+  font: 400 20px/1.1 var(--display);
+}
+.coop-market p,
+.coop-prestige p {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.coop-market dl,
+.coop-prestige dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.coop-market dl div,
+.coop-prestige dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 14px;
+}
+.coop-market dt,
+.coop-prestige dt {
+  color: var(--muted);
+}
+.coop-market dd,
+.coop-prestige dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}

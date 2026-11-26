@@ -433,7 +433,7 @@ export function createSyncService({
 
     async joinTeam(team) {
       if (!uid || !pseudo) throw new Error('no-pseudo')
-      if (team.members.length >= TEAM_SIZE) throw new Error('Ce poulailler est complet.')
+      if (team.members.length >= TEAM_SIZE) throw new Error('Cette famille est complète.')
       const current = game.exportSave().team
       if (current && current !== team.id) await cloud.leaveTeam(current, uid)
       await cloud.joinTeam(team.id, uid, pseudo)

@@ -11,6 +11,7 @@ import { divisionFor, freshLeague, validLeague } from './leagues.js'
 import { validMissions, validStreak } from './missions.js'
 import { validPass } from './pass.js'
 import { validTalents } from './talents.js'
+import { validCoop } from './coop.js'
 import { isSeasonId, seasonId, weeklyStats } from './seasons.js'
 
 /**
@@ -140,6 +141,7 @@ export function validateSave(raw) {
     team: typeof raw.team === 'string' && /^[A-Za-z0-9]{6,40}$/.test(raw.team) ? raw.team : null,
     talents: validTalents(raw.talents),
     pass: validPass(raw.pass),
+    coop: validCoop(raw.coop) ? raw.coop : null,
   }
   return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
 }

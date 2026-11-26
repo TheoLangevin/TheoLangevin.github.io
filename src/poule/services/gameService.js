@@ -23,6 +23,8 @@ import { refillCheck } from '../domain/money.js'
 import { dailyReward, dailyStatus, dayId, isDayId, tournamentSeed, validDaily, validDailyClaims } from '../domain/daily.js'
 import { talentById } from '../config/talents.js'
 import { freshPass, passStatus, validPass } from '../domain/pass.js'
+import { freshCoop, offlineCap, offlineGain, refresh as refreshCoop, sellEggs, validCoop } from '../domain/coop.js'
+import { ONLINE_GAP } from '../config/coop.js'
 import { nextTalentCost, talentEffects, validTalents } from '../domain/talents.js'
 import { activeEvents, isEventActive, xpMultiplier } from '../domain/calendar.js'
 import { BOX_PRICE, collectionStatus, drawBox } from '../domain/collection.js'
@@ -115,6 +117,13 @@ export function createGameService({
   }
   const today = () => dayId(new Date(clock()))
   const talents = () => validTalents(readJson('talents'))
+  const nowMs = () => Date.parse(clock())
+  /** The coop as saved, or null. `coop_stamp` changes when a save from the account replaces it. */
+  const storedCoop = () => {
+    const value = readJson('coop')
+    return validCoop(value) ? value : null
+  }
+  const coopStamp = () => Number(store.settings.get('coop_stamp', 0))
   /** The season pass: the stored one, or a new one starting at the current XP. */
   const storedPass = () => {
     const pass = validPass(readJson('pass'))
@@ -612,6 +621,50 @@ export function createGameService({
       })
     },
 
+    /**
+     * Opens the coop: the saved one plus what it laid while the game was
+     * closed (a share of production, capped). Resolves to { coop, away, stamp }.
+     */
+    coopOpen() {
+      const now = nowMs()
+      const stored = storedCoop()
+      const stamp = coopStamp()
+      if (!stored) return { coop: freshCoop(now), away: null, stamp }
+      const seconds = (now - stored.seen) / 1000
+      if (!(seconds > ONLINE_GAP)) return { coop: { ...stored, seen: now }, away: null, stamp }
+      const eggs = offlineGain(stored, seconds)
+      const grown = { ...stored, eggs: stored.eggs + eggs, total: stored.total + eggs, lifetime: stored.lifetime + eggs, seen: now }
+      return { coop: refreshCoop(grown).coop, away: { seconds: Math.min(seconds, offlineCap(stored)), eggs }, stamp }
+    },
+
+    /**
+     * Keeps the coop. `sync` also flags it for the account (purchases, or
+     * now and then): taps alone do not send a write each time. Refused
+     * (resolves to false) when a save from the account replaced it meanwhile.
+     */
+    coopSave(coop, { stamp, sync = false } = {}) {
+      if (stamp !== coopStamp()) return false
+      if (!validCoop(coop)) throw new GameError('coop-invalid', 'Poulailler illisible')
+      const value = { ...coop, seen: nowMs() }
+      if (sync) write(() => writeJson('coop', value))
+      else store.transaction(() => writeJson('coop', value))
+      return true
+    },
+
+    /** Sells eggs on the market, up to the daily cap. Resolves to { coop, cents }. */
+    coopSell(coop, { stamp } = {}) {
+      if (stamp !== coopStamp()) throw new GameError('coop-stale', 'Poulailler mis à jour depuis ton compte, réessaie')
+      if (!validCoop(coop)) throw new GameError('coop-invalid', 'Poulailler illisible')
+      const now = nowMs()
+      const { coop: after, cents } = sellEggs(coop, now)
+      if (cents <= 0) throw new GameError('coop-market', 'Le marché ne prend plus rien aujourd’hui')
+      write(() => {
+        store.wallet.credit(cents)
+        writeJson('coop', { ...after, seen: now })
+      })
+      return { coop: after, cents }
+    },
+
     /** Collects every tier of the season pass reached and not collected yet. */
     claimPass() {
       const status = passStatus(pass(), store.profile.get().xp)
@@ -758,6 +811,7 @@ export function createGameService({
         team: team(),
         talents: talents(),
         pass: storedPass(),
+        coop: storedCoop(),
       }
     },
 
@@ -796,6 +850,8 @@ export function createGameService({
         store.settings.set('team', save.team ?? '')
         writeJson('talents', save.talents)
         writeJson('pass', save.pass)
+        writeJson('coop', save.coop)
+        store.settings.set('coop_stamp', coopStamp() + 1)
         store.settings.set('daily_round', 0)
       })
       return save

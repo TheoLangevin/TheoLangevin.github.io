@@ -511,3 +511,35 @@ describe('talents, season pass and tournament', () => {
     expect(roads[0]).toBe(roads[1])
   })
 })
+
+describe('the coop', () => {
+  const at = (iso) => () => iso
+  it('keeps the coop, adds what it laid while closed, sells up to the cap', async () => {
+    const { MARKET_DAILY_CAP } = await import('../../config/coop.js')
+    const store = createMemoryStore()
+    let time = '2026-11-26T10:00:00.000Z'
+    const game = startedGame({ store, clock: () => time })
+    const first = game.coopOpen()
+    expect(first.away).toBe(null)
+    const coop = { ...first.coop, eggs: 1e15, total: 1e15, lifetime: 1e15, buildings: { perch: 10 } }
+    expect(game.coopSave(coop, { stamp: first.stamp })).toBe(true)
+    time = '2026-11-26T12:00:00.000Z'
+    const back = game.coopOpen()
+    expect(back.away.seconds).toBe(7200)
+    expect(back.coop.eggs).toBeGreaterThan(1e15)
+    const before = game.summary().balanceCents
+    const sold = game.coopSell(back.coop, { stamp: back.stamp })
+    expect(sold.cents).toBe(MARKET_DAILY_CAP)
+    expect(game.summary().balanceCents).toBe(before + MARKET_DAILY_CAP)
+    expect(() => game.coopSell(sold.coop, { stamp: back.stamp })).toThrow()
+    expect(game.exportSave().coop.market.sold).toBe(MARKET_DAILY_CAP)
+  })
+
+  it('refuses to overwrite a coop that came from the account', () => {
+    const store = createMemoryStore()
+    const game = startedGame({ store, clock: at('2026-11-26T10:00:00.000Z') })
+    const opened = game.coopOpen()
+    game.importSave(game.exportSave())
+    expect(game.coopSave(opened.coop, { stamp: opened.stamp })).toBe(false)
+  })
+})

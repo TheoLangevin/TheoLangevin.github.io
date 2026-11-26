@@ -1,15 +1,16 @@
 import { useAccount } from '../../state/useAccount.js'
 import { usePoule } from '../../state/usePoule.js'
-import { BagIcon, PlayIcon, TrophyIcon, UserIcon } from '../icons.jsx'
+import { BagIcon, EggIcon, PlayIcon, TrophyIcon, UserIcon } from '../icons.jsx'
 
 const TABS = [
   { id: 'jouer', label: 'Jouer', Icon: PlayIcon },
+  { id: 'poulailler', label: 'Poulailler', Icon: EggIcon },
   { id: 'boutique', label: 'Boutique', Icon: BagIcon },
   { id: 'classement', label: 'Classement', Icon: TrophyIcon },
   { id: 'profil', label: 'Profil', Icon: UserIcon },
 ]
 
-/** The four screens, at thumb height. A dot flags a reward waiting. */
+/** The five screens, at thumb height. A dot flags a reward waiting. */
 export default function TabBar({ route, go }) {
   const reward = useAccount(
     (state) =>

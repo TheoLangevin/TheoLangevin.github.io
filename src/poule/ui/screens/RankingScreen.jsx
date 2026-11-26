@@ -21,7 +21,7 @@ const dayLabel = (id) => `${id.slice(8, 10)}/${id.slice(5, 7)}`
 const BOARDS = [
   { id: 'season', label: 'Aujourd’hui' },
   { id: 'daily', label: 'Défi du jour' },
-  { id: 'teams', label: 'Poulaillers' },
+  { id: 'teams', label: 'Familles poule' },
   { id: 'lp', label: 'Ligues' },
   { id: 'tokens', label: 'Jetons' },
   { id: 'xp', label: 'Niveau' },

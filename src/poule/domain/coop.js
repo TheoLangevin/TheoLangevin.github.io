@@ -329,12 +329,12 @@ export function refresh(coop) {
 
 /* ---------- Moving house (prestige) ---------- */
 
-export const feathersFor = (lifetime) => Math.floor(Math.sqrt(lifetime / FEATHER_BASE))
+export const feathersFor = (lifetime) => Math.floor(Math.cbrt(lifetime / FEATHER_BASE))
 export const featherGain = (coop) => Math.max(0, feathersFor(coop.lifetime) - coop.feathers)
 export const freeFeathers = (coop) => coop.feathers - coop.perks.reduce((acc, id) => acc + PERK.get(id).cost, 0)
 
 /** Eggs laid in all moves needed for the next feather. */
-export const nextFeatherAt = (coop) => (feathersFor(coop.lifetime) + 1) ** 2 * FEATHER_BASE
+export const nextFeatherAt = (coop) => (feathersFor(coop.lifetime) + 1) ** 3 * FEATHER_BASE
 
 export function moveHouse(coop) {
   const gained = featherGain(coop)

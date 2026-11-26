@@ -22,7 +22,7 @@ import Dialog from '../account/Dialog.jsx'
 import { tokens } from '../format.js'
 import { duration, eggs } from '../coop/format.js'
 import Mannequin from '../road/Mannequin.jsx'
-import CoopYard from '../coop/CoopYard.jsx'
+import CoopYard, { CoopEstate } from '../coop/CoopYard.jsx'
 import './coop.css'
 
 /** What each unlock opens, in the order a player meets them. */
@@ -60,6 +60,7 @@ export default function CoopScreen() {
   return (
     <main className="screen screen--coop">
       <Stage coop={coop} />
+      {Object.keys(coop.buildings).length > 0 && <CoopEstate coop={coop} />}
       {next && (
         <div className="coop-next" aria-label="Prochaine nouveauté">
           <span>

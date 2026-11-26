@@ -1,15 +1,16 @@
+import { useEffect, useRef } from 'react'
 import { BUILDINGS, BUILDING_TIERS, SPECIAL_HENS } from '../../config/coop.js'
-import { buildingLevel, owned } from '../../domain/coop.js'
+import { buildingLevel, owned, visibleBuildings } from '../../domain/coop.js'
+import { eggs } from './format.js'
 
 /** Where each building stands in the yard (percent of the scene). */
 const SPOTS = {
   nest: { left: '5%', bottom: '5%' },
   perch: { right: '5%', bottom: '5%' },
-  feeder: { left: '3%', bottom: '27%' },
-  incubator: { right: '3%', bottom: '27%' },
-  silo: { left: '7%', bottom: '47%' },
-  farm: { right: '6%', bottom: '47%' },
-  rocket: { right: '4%', bottom: '66%' },
+  straw: { left: '3%', bottom: '27%' },
+  waterer: { right: '3%', bottom: '27%' },
+  feeder: { left: '7%', bottom: '47%' },
+  shed: { right: '6%', bottom: '47%' },
 }
 const HEN = new Map(SPECIAL_HENS.map((hen) => [hen.id, hen]))
 
@@ -39,7 +40,7 @@ export default function CoopYard({ coop }) {
   return (
     <div className="coop-yard" aria-hidden="true">
       <House />
-      {BUILDINGS.map((building) => {
+      {BUILDINGS.filter((building) => SPOTS[building.id]).map((building) => {
         const count = owned(coop, building.id)
         if (!count) return null
         const level = buildingLevel(count)
@@ -72,5 +73,74 @@ export default function CoopYard({ coop }) {
         </span>
       ))}
     </div>
+  )
+}
+
+/** One building on its plot: copies drawn, base in the colour of its level. */
+function Plot({ building, count }) {
+  const level = buildingLevel(count)
+  const tier = BUILDING_TIERS[level - 1]
+  return (
+    <div className={`coop-spot coop-spot--lv${level}`} style={{ '--tier': tier.color, '--size': `${20 + level * 4}px` }}>
+      <span key={count} className="coop-spot__icons">
+        {Array.from({ length: Math.min(count, 3) }, (_, i) => (
+          <span key={i}>{building.icon}</span>
+        ))}
+      </span>
+      <i className="coop-spot__base" />
+      <span className="coop-spot__badge">
+        ×{count} · niv. {level}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * The estate: every building revealed, in order, on a strip to scroll
+ * sideways; the ones not bought yet are shadows, the next one a mystery.
+ * It scrolls to the newest building bought.
+ */
+export function CoopEstate({ coop }) {
+  const { shown, next } = visibleBuildings(coop)
+  const strip = useRef(null)
+  const last = [...shown].reverse().find((b) => owned(coop, b.id) > 0)?.id
+  useEffect(() => {
+    const plot = last && strip.current?.querySelector(`[data-id="${last}"]`)
+    plot?.scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+  }, [last])
+  return (
+    <section className={`coop-estate coop-decor--${coop.skin.decor}`} aria-label="Le domaine">
+      <div className="coop-estate__head">
+        <b>Le domaine</b>
+        <small>
+          {shown.filter((b) => owned(coop, b.id) > 0).length}/{BUILDINGS.length} bâtiments
+        </small>
+      </div>
+      <div ref={strip} className="coop-estate__strip">
+        {shown.map((building) => {
+          const count = owned(coop, building.id)
+          return (
+            <div key={building.id} data-id={building.id} className={`coop-estate__plot${count ? '' : ' is-shadow'}`}>
+              {count ? (
+                <Plot building={building} count={count} />
+              ) : (
+                <span className="coop-estate__shadow" aria-hidden="true">
+                  {building.icon}
+                </span>
+              )}
+              <small>{building.label}</small>
+            </div>
+          )
+        })}
+        {next && (
+          <div className="coop-estate__plot is-mystery">
+            <span className="coop-estate__shadow" aria-hidden="true">
+              ❔
+            </span>
+            <small>à {eggs(next.cost / 2)} œufs</small>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

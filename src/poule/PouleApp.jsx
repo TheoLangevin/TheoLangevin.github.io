@@ -15,6 +15,7 @@ import { useKeyboard } from './ui/hooks/useKeyboard.js'
 import Notices from './ui/layout/Notices.jsx'
 import StorageNotice from './ui/layout/StorageNotice.jsx'
 import AdminScreen from './ui/screens/AdminScreen.jsx'
+import CoopScreen from './ui/screens/CoopScreen.jsx'
 import PlayScreen from './ui/screens/PlayScreen.jsx'
 import ProfileScreen from './ui/screens/ProfileScreen.jsx'
 import RankingScreen from './ui/screens/RankingScreen.jsx'
@@ -47,6 +48,7 @@ export default function PouleApp() {
       <div className="app__screens">
         <StorageNotice />
         <PlayScreen hidden={route !== 'jouer'} />
+        {route === 'poulailler' && <CoopScreen />}
         {route === 'boutique' && <ShopScreen />}
         {route === 'classement' && <RankingScreen go={go} />}
         {route === 'profil' && <ProfileScreen go={go} />}

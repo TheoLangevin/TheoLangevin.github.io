@@ -48,6 +48,14 @@ export function PlayIcon({ size = 24 }) {
   )
 }
 
+export function EggIcon({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="icon">
+      <path d="M12 3c-4 0-7 6.5-7 11a7 7 0 0 0 14 0c0-4.5-3-11-7-11z" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
 export function BagIcon({ size = 24 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="icon">

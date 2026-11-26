@@ -51,7 +51,7 @@ export function LiveFeed() {
   )
 }
 
-/** Poulaillers: the player's team (or how to get one) and the team board. */
+/** Familles poule: the player's team (or how to get one) and the team board. Its creator is the papa poule. */
 export function TeamsPanel({ openPlayer }) {
   const a = useAccount(
     useShallow((state) => ({
@@ -83,7 +83,7 @@ export function TeamsPanel({ openPlayer }) {
         <section className="card team">
           <div className="team__head">
             <div>
-              <small className="muted">Mon poulailler</small>
+              <small className="muted">Ma famille poule</small>
               <h2>{mine.name}</h2>
             </div>
             <b className="team__lp">{count(mine.lp)} PL</b>
@@ -93,6 +93,7 @@ export function TeamsPanel({ openPlayer }) {
               <li key={uid}>
                 <button type="button" onClick={() => openPlayer(uid, { pseudo: mine.pseudos?.[uid] })}>
                   {mine.pseudos?.[uid] ?? '?'}
+                  {uid === mine.owner ? ' · 🐓 papa poule' : ''}
                   {uid === a.me ? ' (vous)' : ''}
                 </button>
               </li>
@@ -102,15 +103,15 @@ export function TeamsPanel({ openPlayer }) {
             {mine.size}/{TEAM_SIZE} membres · invitez vos amis : ils rejoignent depuis cet onglet.
           </small>
           <button type="button" className="link-button" disabled={busy} onClick={() => run('leave')}>
-            Quitter le poulailler
+            Quitter la famille
           </button>
         </section>
       ) : (
         canAct && (
           <section className="card team">
-            <h2>Rejoignez un poulailler</h2>
+            <h2>Rejoignez une famille poule</h2>
             <p className="muted">
-              Jusqu’à {TEAM_SIZE} joueurs : vos points de ligue s’additionnent dans le classement des poulaillers.
+              Jusqu’à {TEAM_SIZE} joueurs : vos points de ligue s’additionnent dans le classement des familles. Celui qui crée la famille en est le papa poule.
             </p>
             <form
               className="team__create"
@@ -122,9 +123,9 @@ export function TeamsPanel({ openPlayer }) {
               <input
                 value={name}
                 maxLength={20}
-                placeholder="Nom de votre poulailler"
+                placeholder="Nom de votre famille"
                 onChange={(event) => setName(event.target.value)}
-                aria-label="Nom du poulailler"
+                aria-label="Nom de la famille"
               />
               <button type="submit" disabled={busy || name.trim().length < 3}>
                 Créer
@@ -133,10 +134,10 @@ export function TeamsPanel({ openPlayer }) {
           </section>
         )
       )}
-      {!canAct && <p className="note">Connectez-vous et choisissez un pseudo pour rejoindre un poulailler.</p>}
+      {!canAct && <p className="note">Connectez-vous et choisissez un pseudo pour rejoindre une famille poule.</p>}
 
       {loading && list.length === 0 && <p className="note">Chargement…</p>}
-      {!loading && list.length === 0 && <p className="note">Aucun poulailler pour l’instant. Créez le premier !</p>}
+      {!loading && list.length === 0 && <p className="note">Aucune famille pour l’instant. Créez la première et devenez papa poule !</p>}
       <ol className="board">
         {list.map((team, index) => (
           <li key={team.id} className={team.id === mine?.id ? 'is-me' : undefined}>

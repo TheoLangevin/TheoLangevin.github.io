@@ -62,6 +62,7 @@ const save = (extra = {}) => ({
   team: null,
   talents: { instinct: 2 },
   pass: { season: 1, startXp: 0, claimed: [1, 2] },
+  coop: null,
   ...extra,
 })
 
@@ -214,5 +215,14 @@ describe('sync decision', () => {
     expect(decideSync({ ...base, dirty: true })).toBe('upload')
     expect(decideSync({ ...base, cloud: { rev: 4 } })).toBe('download')
     expect(decideSync({ ...base, cloud: { rev: 4 }, dirty: true })).toBe('ask')
+  })
+})
+
+describe('save of the coop', () => {
+  it('keeps a valid coop and drops a broken one', async () => {
+    const { freshCoop } = await import('../coop.js')
+    const coop = { ...freshCoop(1764000000000), eggs: 12, total: 12, lifetime: 12 }
+    expect(validateSave(save({ coop })).coop).toEqual(coop)
+    expect(validateSave(save({ coop: { ...coop, eggs: -1 } })).coop).toEqual(null)
   })
 })

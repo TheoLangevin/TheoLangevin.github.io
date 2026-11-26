@@ -138,6 +138,8 @@ export function henScale(coop, id) {
 }
 
 export const milestoneCount = (count) => MILESTONES.filter((m) => count >= m).length
+/** Level of a building (1 to 5): one more per milestone reached. */
+export const buildingLevel = (count) => 1 + milestoneCount(count)
 
 export function buildingPps(coop, id) {
   const count = owned(coop, id)

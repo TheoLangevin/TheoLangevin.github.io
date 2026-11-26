@@ -12,6 +12,7 @@ import { CollectionAlbum } from '../collection/Collection.jsx'
 import SeasonPass from '../progress/SeasonPass.jsx'
 import { count, multiplierLabel, percent, signedTokens, tokens } from '../format.js'
 import { CoinIcon } from '../icons.jsx'
+import { AllNotes } from '../layout/PatchNotes.jsx'
 import './profile.css'
 
 const NONE = []
@@ -271,6 +272,7 @@ export default function ProfileScreen({ hidden, go }) {
       </section>
 
       <h2 className="section-title">À savoir</h2>
+      <AllNotes />
       <Fairness />
       <details className="card details">
         <summary>Jeu responsable</summary>

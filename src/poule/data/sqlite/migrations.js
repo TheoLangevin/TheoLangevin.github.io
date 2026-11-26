@@ -115,6 +115,28 @@ export const MIGRATIONS = Object.freeze([
       UPDATE profile SET feathers = 0;
     `,
   },
+  {
+    version: 5,
+    name: 'daily league claims',
+    up: `
+      -- Leagues are settled every day now: a claim is for a day ("2026-11-25")
+      -- as well as for an older week ("2026-W48"). SQLite cannot change a
+      -- CHECK, so the table is rebuilt with its rows.
+      CREATE TABLE season_claims_v5 (
+        season     TEXT    PRIMARY KEY CHECK (
+          season GLOB '[0-9][0-9][0-9][0-9]-W[0-9][0-9]'
+          OR season GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+        ),
+        rank       INTEGER,
+        total      INTEGER,
+        score      INTEGER NOT NULL DEFAULT 0,
+        claimed_at TEXT    NOT NULL
+      );
+      INSERT INTO season_claims_v5 SELECT season, rank, total, score, claimed_at FROM season_claims;
+      DROP TABLE season_claims;
+      ALTER TABLE season_claims_v5 RENAME TO season_claims;
+    `,
+  },
 ])
 
 export const LATEST_VERSION = MIGRATIONS.at(-1).version

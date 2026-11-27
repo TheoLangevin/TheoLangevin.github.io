@@ -40,9 +40,9 @@ test('hors ligne : plafonné à 8 h', () => {
   expect(c.offlineGain(s, 99 * 3600)).toBe(c.offlineGain(s, 8 * 3600))
 })
 
-test('la frénésie multiplie par 7 pendant sa durée', () => {
+test('la frénésie multiplie par 3 pendant sa durée', () => {
   const s = { ...c.freshCoop(NOW), buildings: { perch: 1 }, frenzyUntil: NOW }
-  expect(c.tick(s, 10, NOW).eggs).toBe(70)
+  expect(c.tick(s, 10, NOW).eggs).toBe(30)
 })
 
 test('tirage de poule et doublon', () => {
@@ -140,10 +140,13 @@ test('calendrier : série, remise à zéro après un jour manqué, tickets au jo
   expect(c.calendarToday(s, NOW + 5 * 86400000).streak).toBe(1)
 })
 
-test('collections : bonus quand toute une rareté est réunie', () => {
+test('collections : bonus quand toute une rareté est réunie', async () => {
+  const { SPECIAL_HENS } = await import('../config/coop.js')
   const s = { ...c.freshCoop(NOW), buildings: { perch: 10 } }
-  const all = { ...s, hens: { cocotte: 1, poulette: 1, grisette: 1, rousse: 1 } }
-  expect(Math.abs(c.production(all) / c.production(s) - 1.05) < 1e-9).toBe(true)
+  const commons = SPECIAL_HENS.filter((h) => h.rarity === 'common' && !h.event)
+  expect(c.production({ ...s, hens: Object.fromEntries(commons.slice(1).map((h) => [h.id, 1])) })).toBe(c.production(s))
+  const all = { ...s, hens: Object.fromEntries(commons.map((h) => [h.id, 1])) }
+  expect(Math.abs(c.production(all) / c.production(s) - 1.03) < 1e-9).toBe(true)
 })
 
 test('objectif de famille : paliers une fois par semaine', () => {
@@ -221,4 +224,29 @@ test('déménagement : les poules s’installent, leurs bonus reviennent peu à 
   expect(c.settling({ ...moved, total: 4e8 })).toBe(0.5)
   expect(c.settling({ ...moved, total: 8e8 })).toBe(1)
   expect(full > 0).toBe(true)
+})
+
+test('nouvelles poules : effets et équilibre', async () => {
+  const w = await import('./worlds.js')
+  const { SPECIAL_HENS } = await import('../config/coop.js')
+  expect(SPECIAL_HENS.filter((h) => !h.event).length).toBe(32)
+  const base = { ...c.freshCoop(NOW), buildings: { perch: 10 }, eggs: 1e9 }
+  const eq = (ids, levels = 1) => ({ ...base, hens: Object.fromEntries(ids.map((id) => [id, levels])), equipped: ids })
+  expect(c.orderReward(eq(['bavarde'])) / c.orderReward(base)).toBe(1.25)
+  expect(c.hatchCost(eq(['mere'])) < c.hatchCost({ ...eq(['mere']), equipped: [] })).toBe(true)
+  const pack = c.production(eq(['meneuse', 'cocotte', 'rousse']))
+  expect(Math.abs(pack / c.production(base) - 1.09) < 1e-9).toBe(true)
+  // the incubator gets dearer as the collection grows
+  const all = { ...base, hens: Object.fromEntries(SPECIAL_HENS.filter((h) => !h.event).map((h) => [h.id, 5])) }
+  expect(c.hatchCost(all) / c.hatchCost(base) > 15).toBe(true)
+  // a full collection at max level stays reasonable: best 3 production hens + collections well under ×4
+  const best = { ...all, equipped: ['doree', 'savante', 'meneuse'] }
+  expect(c.production(best) / c.production(base) < 4).toBe(true)
+  // world hens
+  let s = w.openPortal(eq(['plongeuse']), 'island')
+  s = { ...s, worlds: { island: { ...s.worlds.island, buildings: { 'shell-beach': 10 } } } }
+  expect(Math.abs(w.worldPps(s, 'island') / w.worldPps({ ...s, equipped: [] }, 'island') - 1.25) < 1e-9).toBe(true)
+  // the Déménageuse halves the settling
+  const moved = { ...c.moveHouse({ ...eq(['demenageuse']), lifetime: 8e9, total: 8e9 }).coop, total: 4e8 }
+  expect(c.settling(moved)).toBe(1)
 })

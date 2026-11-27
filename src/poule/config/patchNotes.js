@@ -5,6 +5,18 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-27-hens',
+    date: '27 nov. 2026',
+    title: '20 nouvelles poules et rééquilibrage',
+    items: [
+      '20 nouvelles poules spéciales (32 en tout) : poules des mondes, Meneuse, Déménageuse, Phénix, Licorne, Reine des mondes, Oracle…',
+      'Nouveaux bonus : commandes, calendrier, pluie d’œufs, couveuse, mondes, trophées, plumes d’or, installation après un déménagement.',
+      'Œuf doré rééquilibré : il passe moins souvent, la frénésie est ×3 pendant 20 s et la pluie d’œufs plus petite.',
+      'Couveuse : plus chère à chaque poule et à chaque niveau obtenus ; un doublon au maximum rapporte moins.',
+      'Bonus des poules réduits : niveaux (+25 % par niveau), collections (+3 à +12 %) et quelques poules trop fortes.',
+    ],
+  },
+  {
     id: '2026-11-27-move',
     date: '27 nov. 2026',
     title: 'Déménagement réparé',

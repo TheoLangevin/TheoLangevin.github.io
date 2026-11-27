@@ -106,3 +106,68 @@ test('équilibre : le ticket quotidien reste borné même avec tout acheté', ()
   let s = { ...c.freshCoop(NOW), eggs: 1e30 }
   expect(c.sellEggs(s, NOW).cents <= MARKET_DAILY_CAP).toBe(true)
 })
+
+test('achat ×10 et max : prix cumulé, compteur d’achats', () => {
+  const s = { ...c.freshCoop(NOW), eggs: 1e6 }
+  const ten = c.buyBuildings(s, 'nest', 10)
+  expect(ten.buildings.nest).toBe(10)
+  expect(ten.bought).toBe(10)
+  expect(Math.round(s.eggs - ten.eggs)).toBe(c.buildingCostN('nest', 0, 10))
+  const max = c.buyBuildings(s, 'nest', 'max')
+  expect(max.eggs >= 0).toBe(true)
+  expect(max.eggs < c.buildingCost('nest', max.buildings.nest)).toBe(true)
+  expect(c.buyBuildings({ ...s, eggs: 10 }, 'nest', 10)).toEqual({ ...s, eggs: 10 })
+})
+
+test('commandes du jour : progression, livraison, ticket à la troisième', () => {
+  let s = c.rollDay({ ...c.freshCoop(NOW), lifetime: 5000 }, NOW)
+  expect(s.orders.list.length).toBe(3)
+  expect(c.rollDay(s, NOW).orders).toBe(s.orders)
+  expect(c.claimOrder(s, 0, NOW)).toBe(null)
+  s = { ...s, lifetime: 1e12, taps: 1e6, golden: 99, hatched: 99, bought: 999 }
+  for (const i of [0, 1, 2]) s = c.claimOrder(s, i, NOW).coop
+  expect(s.tickets).toBe(1)
+  expect(c.claimOrder(s, 0, NOW)).toBe(null)
+  expect(c.validCoop(s)).toBe(true)
+})
+
+test('calendrier : série, remise à zéro après un jour manqué, tickets au jour 3', () => {
+  let s = c.freshCoop(NOW)
+  for (let d = 0; d < 3; d++) s = c.claimCalendar(s, NOW + d * 86400000).coop
+  expect(s.calendar.streak).toBe(3)
+  expect(s.tickets).toBe(1)
+  expect(c.claimCalendar(s, NOW + 2 * 86400000)).toBe(null)
+  expect(c.calendarToday(s, NOW + 5 * 86400000).streak).toBe(1)
+})
+
+test('collections : bonus quand toute une rareté est réunie', () => {
+  const s = { ...c.freshCoop(NOW), buildings: { perch: 10 } }
+  const all = { ...s, hens: { cocotte: 1, poulette: 1, grisette: 1, rousse: 1 } }
+  expect(Math.abs(c.production(all) / c.production(s) - 1.05) < 1e-9).toBe(true)
+})
+
+test('objectif de famille : paliers une fois par semaine', () => {
+  let s = c.rollDay({ ...c.freshCoop(NOW), lifetime: 10 }, NOW)
+  s = { ...s, lifetime: 20 }
+  const r = c.claimFamily(s, 0, 2e6)
+  expect(r.tickets).toBe(1)
+  expect(c.claimFamily(r.coop, 0, 2e6)).toBe(null)
+  expect(c.claimFamily(r.coop, 1, 2e6)).toBe(null)
+  expect(c.rollDay(r.coop, NOW + 8 * 86400000).family.claimed).toEqual([])
+})
+
+test('événement : poule et décor seulement pendant Noël', () => {
+  const dec = Date.UTC(2026, 11, 10)
+  const s = { ...c.freshCoop(NOW), eggs: 1e6 }
+  expect(c.buySkin(s, 'snow', NOW).skins.includes('snow')).toBe(false)
+  expect(c.buySkin(s, 'snow', dec).skins.includes('snow')).toBe(true)
+  expect(c.drawHen(0.95, 0.99).id === 'neige').toBe(false)
+  expect(c.caughtGolden(s, dec, 0.99, 0.5, 0.1).hen.id).toBe('neige')
+})
+
+test('une ancienne sauvegarde du poulailler est mise à niveau', () => {
+  const old = { ...c.freshCoop(NOW) }
+  for (const key of ['hatched', 'bought', 'bestPps', 'played', 'tickets', 'orders', 'calendar', 'week', 'family']) delete old[key]
+  expect(c.validCoop(old)).toBe(false)
+  expect(c.validCoop(c.upgradeCoop(old))).toBe(true)
+})

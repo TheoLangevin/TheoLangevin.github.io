@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { ADMIN_EMAIL } from '../../config/admin.js'
 import { useAccount } from '../../state/useAccount.js'
 import { count, multiplierLabel, percent, tokens } from '../format.js'
+import { eggs } from '../coop/format.js'
 import './admin.css'
 
 const dayLabel = (day) => `${day.slice(8, 10)}/${day.slice(5, 7)}`
@@ -198,6 +199,8 @@ function Dashboard({ stats }) {
         </p>
       </Section>
 
+      {stats.coop && <CoopSection coop={stats.coop} />}
+
       <Section title="Ligues">
         <Rows rows={(leagues ?? []).map((tier) => ({ label: tier.label, value: tier.count }))} />
         <p className="muted admin__note">Joueurs par ligue · {count(stats.beta ?? 0)} joueurs de la bêta (skin Chantier).</p>
@@ -247,6 +250,64 @@ function Dashboard({ stats }) {
         </p>
       </Section>
     </>
+  )
+}
+
+function CoopSection({ coop }) {
+  return (
+    <Section title="Poulailler">
+      <div className="kpis">
+        <Kpi
+          label="Joueurs"
+          value={count(coop.players)}
+          hint={coop.share == null ? undefined : `${percent(coop.share)} des comptes`}
+        />
+        <Kpi label="Œufs pondus" value={eggs(coop.eggs)} hint={`${count(coop.taps)} touchers`} />
+        <Kpi label="Marché aujourd’hui" value={`${tokens(coop.soldToday)} jetons`} hint={`${count(coop.sellersToday)} vendeurs`} />
+        <Kpi label="Déménagements" value={count(coop.moves)} hint={`${count(coop.moved)} joueurs · ${count(coop.feathers)} plumes`} />
+        <Kpi label="Œufs dorés" value={count(coop.golden)} />
+        <Kpi label="Trophées" value={`${coop.trophiesAvg.toFixed(1).replace('.', ',')} / ${coop.trophiesTotal}`} hint="en moyenne" />
+      </div>
+      <h3>Jusqu’où vont les joueurs</h3>
+      <Rows rows={coop.funnel.map((step) => ({ label: step.label, value: step.count }))} />
+      <h3>Sortes de bâtiments possédées</h3>
+      <Rows rows={coop.kinds.map((bucket) => ({ label: bucket.label, value: bucket.count }))} />
+      <h3>Bâtiments</h3>
+      <Rows
+        rows={coop.buildings
+          .filter((b) => b.owners > 0)
+          .map((b) => ({ label: b.label, value: b.owners, note: `${count(b.total)} au total` }))}
+      />
+      <h3>Poules spéciales</h3>
+      <Rows rows={coop.hens.map((hen) => ({ label: hen.label, value: hen.owners, note: `${count(hen.equipped)} installées` }))} />
+      <h3>Looks achetés</h3>
+      <Rows rows={coop.skins.map((skin) => ({ label: skin.label, value: skin.owners }))} />
+      <h3>Meilleurs poulaillers</h3>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Joueur</th>
+            <th>Œufs</th>
+            <th>Par s</th>
+            <th>Bât.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {coop.top.map((line) => (
+            <tr key={line.uid}>
+              <td>{line.pseudo}</td>
+              <td>{eggs(line.eggs)}</td>
+              <td>{eggs(line.pps)}</td>
+              <td>
+                {line.kinds}
+                {line.moves ? ` · 🚚${line.moves}` : ''}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted admin__note">D’après la dernière sauvegarde envoyée par chaque joueur connecté.</p>
+    </Section>
   )
 }
 

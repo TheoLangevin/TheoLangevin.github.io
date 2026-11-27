@@ -5,6 +5,21 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-27-goals',
+    date: '27 nov. 2026',
+    title: 'Objectifs du Poulailler',
+    items: [
+      'Calendrier de la ferme : une récompense chaque jour, de plus en plus grosse jusqu’au 7ᵉ jour.',
+      'Commandes du fermier : 3 missions par jour, et un ticket de couveuse si tu fais les trois.',
+      'Objectif de famille : les œufs de ta famille poule s’additionnent chaque semaine, chaque palier donne des tickets.',
+      'Collections de poules : réunis toutes les poules d’une rareté pour un bonus permanent.',
+      'Achat ×10, ×100 et Max pour les bâtiments.',
+      'Classement des poulaillers (Classement → Poulailler) et statistiques dans Trophées.',
+      'Gagner une partie à ×3 ou plus donne 20 s de frénésie au Poulailler.',
+      'Dès le 1ᵉʳ décembre : Noël à la ferme, avec la neige, la Poule des Neiges et la Ferme enneigée.',
+    ],
+  },
+  {
     id: '2026-11-26-estate',
     date: '26 nov. 2026',
     title: '25 bâtiments et le domaine',

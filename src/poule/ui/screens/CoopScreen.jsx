@@ -12,10 +12,12 @@ import {
   TROPHIES,
   TROPHY_BONUS,
   FEATHER_BONUS,
+  CALENDAR,
   MARKET_DAILY_CAP,
   UNLOCKS,
 } from '../../config/coop.js'
 import * as rules from '../../domain/coop.js'
+import { useAccount } from '../../state/useAccount.js'
 import { useCoop } from '../../state/useCoop.js'
 import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
@@ -54,7 +56,15 @@ export default function CoopScreen() {
 
   if (!coop) return <main className="screen" aria-busy="true" />
 
-  const tabs = [{ id: 'build', label: 'Bâtiments' }, ...PARTS.filter((p) => p.tab && rules.unlocked(coop, p.id)).map((p) => ({ id: p.id, label: p.tab }))]
+  const now = Date.now()
+  const claimable =
+    Boolean(rules.calendarToday(coop, now)) ||
+    (coop.orders?.list ?? []).some((order, i) => !coop.orders.claimed.includes(i) && rules.orderProgress(coop, order).done >= order.goal)
+  const tabs = [
+    { id: 'build', label: 'Bâtiments' },
+    ...(rules.unlocked(coop, 'upgrades') ? [{ id: 'goals', label: claimable ? 'Objectifs •' : 'Objectifs' }] : []),
+    ...PARTS.filter((p) => p.tab && rules.unlocked(coop, p.id)).map((p) => ({ id: p.id, label: p.tab })),
+  ]
   const next = PARTS.find((p) => !rules.unlocked(coop, p.id))
 
   return (
@@ -79,6 +89,7 @@ export default function CoopScreen() {
         </div>
       )}
       {tab === 'build' && <Buildings coop={coop} />}
+      {tab === 'goals' && <Goals coop={coop} />}
       {tab === 'upgrades' && <Upgrades coop={coop} />}
       {tab === 'hens' && <Hens coop={coop} />}
       {tab === 'trophies' && <Trophies coop={coop} />}
@@ -103,6 +114,7 @@ function Stage({ coop }) {
   const frenzy = now < coop.frenzyUntil
   const skin = COOP_SKINS.find((s) => s.id === coop.skin.hen)
   const pps = rules.production(coop) * rules.eventMultiplier(coop, now)
+  const event = rules.activeEvent(now)
 
   const onTap = (event) => {
     event.preventDefault()
@@ -117,9 +129,11 @@ function Stage({ coop }) {
   return (
     <section ref={stage} className={`coop-stage coop-decor--${coop.skin.decor}${frenzy ? ' is-frenzy' : ''}`}>
       <CoopYard coop={coop} />
+      {event && <div className="coop-snow" aria-hidden="true" />}
       <div className="coop-count">
         <b>{eggs(coop.eggs)}</b> œufs
         <small>{pps > 0 ? `${eggs(pps)} par seconde` : 'Touche la poule pour pondre !'}</small>
+        {event && <span className="coop-event">🎄 {event.label}</span>}
         {frenzy && <span className="coop-frenzy">Frénésie ×7 · {Math.ceil((coop.frenzyUntil - now) / 1000)} s</span>}
       </div>
       <button
@@ -153,23 +167,36 @@ function Stage({ coop }) {
   )
 }
 
-function Buy({ cost, have, onClick, label }) {
+function Buy({ cost, have, onClick, label, qty = 1 }) {
   return (
     <button type="button" className="coop-buy" disabled={have < cost} onClick={onClick} aria-label={label}>
-      🥚 {eggs(cost)}
+      {qty > 1 && <small>×{qty}</small>}🥚 {eggs(cost)}
     </button>
   )
 }
 
+const MODES = [1, 10, 100, 'max']
+
 function Buildings({ coop }) {
-  const buy = useCoop((s) => s.buyBuilding)
+  const { buy, mode, setMode } = useCoop(useShallow((s) => ({ buy: s.buyBuilding, mode: s.buyMode, setMode: s.setBuyMode })))
   const { shown, next } = rules.visibleBuildings(coop)
   const total = rules.production(coop) || 1
   return (
+    <>
+    {coop.bought >= 10 && (
+      <div className="segmented coop-modes" role="group" aria-label="Quantité à acheter">
+        {MODES.map((m) => (
+          <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
+            {m === 'max' ? 'Max' : `×${m}`}
+          </button>
+        ))}
+      </div>
+    )}
     <ul className="coop-list">
       {shown.map((b) => {
         const n = rules.owned(coop, b.id)
-        const cost = rules.buildingCost(b.id, n)
+        const qty = mode === 'max' ? Math.max(1, rules.affordable(coop, b.id)) : mode
+        const cost = rules.buildingCostN(b.id, n, qty)
         const pps = rules.buildingPps(coop, b.id) * rules.globalMultiplier(coop)
         const milestone = MILESTONES.find((m) => n < m)
         return (
@@ -193,7 +220,7 @@ function Buildings({ coop }) {
                 </small>
               )}
             </div>
-            <Buy cost={cost} have={coop.eggs} onClick={() => buy(b.id)} label={`Acheter ${b.label}`} />
+            <Buy cost={cost} have={coop.eggs} onClick={() => buy(b.id)} label={`Acheter ${qty} ${b.label}`} qty={qty} />
           </li>
         )
       })}
@@ -207,6 +234,7 @@ function Buildings({ coop }) {
         </li>
       )}
     </ul>
+    </>
   )
 }
 
@@ -244,14 +272,35 @@ function Hens({ coop }) {
             Un doublon fait monter sa poule de niveau.
           </small>
         </div>
-        <Buy cost={cost} have={coop.eggs} onClick={s.hatch} label="Faire éclore un œuf" />
+        {coop.tickets > 0 ? (
+          <button type="button" className="coop-buy" onClick={s.hatch}>
+            🎟️ Gratuit <small>({coop.tickets})</small>
+          </button>
+        ) : (
+          <Buy cost={cost} have={coop.eggs} onClick={s.hatch} label="Faire éclore un œuf" />
+        )}
+      </section>
+      <section className="card coop-collections">
+        <b>Collections</b>
+        <small className="muted">Toutes les poules d’une rareté : un bonus de production pour toujours.</small>
+        <ul>
+          {rules.collections(coop).map((c) => (
+            <li key={c.id} className={c.done ? 'is-done' : ''} style={{ '--rarity': c.color }}>
+              <span>{c.label}</span>
+              <span>
+                {c.got}/{c.total}
+              </span>
+              <b>+{Math.round(c.bonus * 100)} %</b>
+            </li>
+          ))}
+        </ul>
       </section>
       <p className="note">
         Places au perchoir : {coop.equipped.length}/{slots}. Touche une poule pour l’installer ou la retirer. Les poules
         n’agissent que sur le poulailler.
       </p>
       <ul className="coop-hens">
-        {SPECIAL_HENS.map((hen) => {
+        {SPECIAL_HENS.filter((hen) => !hen.event || coop.hens[hen.id] || rules.activeEvent(Date.now())?.hen === hen.id).map((hen) => {
           const level = coop.hens[hen.id]
           const on = coop.equipped.includes(hen.id)
           const rarity = RARITY.get(hen.rarity)
@@ -267,7 +316,7 @@ function Hens({ coop }) {
               >
                 <span className="coop-hencard__icon" aria-hidden="true">{level ? hen.icon : '❔'}</span>
                 <b>{level ? hen.label : '???'}</b>
-                <small style={{ color: rarity.color }}>{rarity.label}</small>
+                <small style={{ color: rarity.color }}>{hen.event ? 'Événement' : rarity.label}</small>
                 {level ? (
                   <>
                     <small>
@@ -293,8 +342,31 @@ function Hens({ coop }) {
 
 function Trophies({ coop }) {
   const got = coop.trophies.length
+  const stats = [
+    ['Œufs pondus en tout', eggs(coop.lifetime)],
+    ['Depuis le dernier déménagement', eggs(coop.total)],
+    ['Cette semaine', eggs(rules.weekEggs(coop))],
+    ['Record de production', `${eggs(coop.bestPps)}/s`],
+    ['Temps de jeu', duration(coop.played)],
+    ['Touchers', eggs(coop.taps)],
+    ['Bâtiments achetés', eggs(coop.bought)],
+    ['Œufs éclos', eggs(coop.hatched)],
+    ['Œufs dorés attrapés', eggs(coop.golden)],
+    ['Déménagements', eggs(coop.moves)],
+  ]
   return (
     <>
+      <section className="card coop-prestige">
+        <h2>Statistiques</h2>
+        <dl>
+          {stats.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
       <p className="note">
         {got}/{TROPHIES.length} trophées · +{Math.round(got * TROPHY_BONUS * 100)} % de production. Ils restent même après un
         déménagement.
@@ -352,7 +424,9 @@ function Skins({ coop }) {
     <>
       <h2 className="section-title">{title}</h2>
       <ul className="coop-list">
-        {COOP_SKINS.filter((skin) => skin.kind === kind).map((skin) => {
+        {COOP_SKINS.filter(
+          (skin) => skin.kind === kind && (!skin.event || coop.skins.includes(skin.id) || rules.activeEvent(Date.now())?.id === skin.event),
+        ).map((skin) => {
           const has = coop.skins.includes(skin.id)
           const worn = coop.skin[kind] === skin.id
           return (
@@ -362,7 +436,9 @@ function Skins({ coop }) {
               </span>
               <div className="coop-row__body">
                 <b>{skin.label}</b>
-                <small className="muted">{worn ? 'Porté' : has ? 'À toi' : 'À acheter'}</small>
+                <small className="muted">
+                  {worn ? 'Porté' : has ? 'À toi' : skin.event ? 'Événement : seulement pendant les fêtes' : 'À acheter'}
+                </small>
               </div>
               {has ? (
                 <button type="button" className="coop-buy" disabled={worn} onClick={() => s.wear(skin.id)}>
@@ -461,6 +537,114 @@ function Prestige({ coop }) {
         </Dialog>
       )}
     </>
+  )
+}
+
+/** Daily calendar, the farmer's orders and the family goal. */
+function Goals({ coop }) {
+  const s = useCoop(useShallow((st) => ({ cal: st.claimCalendar, order: st.claimOrder, family: st.claimFamily })))
+  const now = Date.now()
+  const today = rules.calendarToday(coop, now)
+  const streak = today ? today.streak - 1 : coop.calendar.streak
+  const current = today ? today.day : ((coop.calendar.streak - 1) % CALENDAR.length) + 1
+  return (
+    <>
+      <section className="card coop-goal">
+        <h2>📅 Calendrier de la ferme</h2>
+        <p className="muted">Reviens chaque jour : la récompense grandit jusqu’au 7ᵉ jour. Un jour manqué, et ça repart à 1.</p>
+        <ol className="coop-calendar">
+          {CALENDAR.map((step) => (
+            <li
+              key={step.day}
+              className={step.day < current || (!today && step.day === current) ? 'is-done' : step.day === current && today ? 'is-today' : ''}
+            >
+              <b>J{step.day}</b>
+              <span>{step.tickets ? `🎟️×${step.tickets}` : '🥚'}</span>
+            </li>
+          ))}
+        </ol>
+        <button type="button" className="coop-sell" disabled={!today} onClick={s.cal}>
+          {today ? `Récupérer le jour ${today.day}` : `Déjà récupéré · série de ${streak} jour${streak > 1 ? 's' : ''}`}
+        </button>
+      </section>
+
+      <section className="card coop-goal">
+        <h2>📦 Commandes du fermier</h2>
+        <p className="muted">
+          Trois commandes par jour. Chacune rapporte {eggs(rules.orderReward(coop))} œufs ; les trois ensemble, un ticket de
+          couveuse{rules.activeEvent(now) ? ' et une Poule des Neiges' : ''}.
+        </p>
+        <ul className="coop-list">
+          {(coop.orders?.list ?? []).map((order, index) => {
+            const p = rules.orderProgress(coop, order)
+            const claimed = coop.orders.claimed.includes(index)
+            return (
+              <li key={index} className="coop-row">
+                <div className="coop-row__body">
+                  <b>{p.label.replace(String(order.goal), eggs(order.goal))}</b>
+                  <i className="coop-progress" style={{ '--ratio': p.done / p.goal }} />
+                  <small className="muted">
+                    {eggs(p.done)} / {eggs(p.goal)}
+                  </small>
+                </div>
+                <button type="button" className="coop-buy" disabled={claimed || p.done < p.goal} onClick={() => s.order(index)}>
+                  {claimed ? 'Livrée' : 'Livrer'}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <Family coop={coop} claim={s.family} />
+    </>
+  )
+}
+
+function Family({ coop, claim }) {
+  const { signedIn, mine, loadTeams } = useAccount(
+    useShallow((st) => ({ signedIn: st.status === 'signedIn' && Boolean(st.pseudo), mine: st.teams?.mine ?? null, loadTeams: st.loadTeams })),
+  )
+  useEffect(() => {
+    if (signedIn) loadTeams()
+  }, [signedIn, loadTeams])
+  const total = mine?.coopWeek ?? 0
+  return (
+    <section className="card coop-goal">
+      <h2>👨‍👩‍👧 Objectif de famille</h2>
+      {!mine ? (
+        <p className="muted">
+          Rejoins une famille poule (Classement → Familles poule) : chaque semaine, vos œufs s’additionnent et chaque palier
+          donne des tickets de couveuse à tous.
+        </p>
+      ) : (
+        <>
+          <p className="muted">
+            {mine.name} · {eggs(total)} œufs pondus ensemble cette semaine (mis à jour à chaque synchronisation).
+          </p>
+          <ul className="coop-list">
+            {rules.familySteps(coop, total).map((step) => (
+              <li key={step.index} className="coop-row">
+                <div className="coop-row__body">
+                  <b>
+                    {step.label} · {eggs(step.eggs)} œufs
+                  </b>
+                  <i className="coop-progress" style={{ '--ratio': Math.min(1, total / step.eggs) }} />
+                </div>
+                <button
+                  type="button"
+                  className="coop-buy"
+                  disabled={!step.reached || step.claimed || rules.weekEggs(coop) <= 0}
+                  onClick={() => claim(step.index, total)}
+                >
+                  {step.claimed ? 'Reçu' : `🎟️×${step.tickets}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   )
 }
 

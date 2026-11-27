@@ -136,12 +136,23 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // The coop's public numbers cannot exceed the player's own saved coop.
+    function validCoopLine(uid, data) {
+      let eggs = data.get('coopEggs', 0);
+      let week = data.get('coopWeek', { 'week': '', 'eggs': 0 });
+      return eggs is number && eggs >= 0
+        && week is map && week.keys().hasOnly(['week', 'eggs'])
+        && week.week is string && week.week.size() <= 10
+        && week.eggs is number && week.eggs >= 0 && week.eggs <= eggs
+        && (eggs == 0 || eggs <= get(/databases/$(database)/documents/users/$(uid)).data.save.coop.lifetime);
+    }
+
     match /leaderboard/{uid} {
       allow read: if true;
 
       // The experience and tokens shown cannot exceed the player's own save.
       allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['pseudo', 'look', 'title', 'level', 'xp', 'tokens', 'lp', 'division', 'bestMultiplier', 'bestLanes', 'team', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['pseudo', 'look', 'title', 'level', 'xp', 'tokens', 'lp', 'division', 'bestMultiplier', 'bestLanes', 'team', 'coopEggs', 'coopWeek', 'updatedAt'])
         && (request.resource.data.get('team', null) == null
           || request.auth.uid in get(/databases/$(database)/documents/teams/$(request.resource.data.team)).data.members)
         && request.resource.data.lp is int && request.resource.data.lp >= 0
@@ -159,6 +170,7 @@ service cloud.firestore {
         && request.resource.data.bestMultiplier >= 0 && request.resource.data.bestMultiplier <= 5000
         && request.resource.data.bestLanes is int
         && request.resource.data.bestLanes >= 0 && request.resource.data.bestLanes <= 24
+        && validCoopLine(uid, request.resource.data)
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if isOwner(uid);

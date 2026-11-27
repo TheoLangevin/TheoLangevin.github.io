@@ -145,6 +145,8 @@ describe('save format', () => {
       bestMultiplier: 1.22,
       bestLanes: 3,
       team: null,
+      coopEggs: 0,
+      coopWeek: { week: '', eggs: 0 },
     })
   })
 

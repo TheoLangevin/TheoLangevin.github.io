@@ -58,6 +58,9 @@ function progressNotices(progress) {
       detail: `Succès débloqué · +${tokens(achievement.reward)} jetons`,
     }
   })
+  if (progress.coopBoost) {
+    notices.push({ id: uid(), kind: 'level', title: `🐔 +${progress.coopBoost} s de frénésie`, detail: 'Elle t’attend au Poulailler' })
+  }
   if (progress.levelUp) {
     notices.push({
       id: uid(),

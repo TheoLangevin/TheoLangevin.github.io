@@ -26,7 +26,7 @@ export const useCoop = create((set, get) => {
 
   /** Applies a change, then trophies/reveals; tells about what is new. */
   function apply(next, { sync = false } = {}) {
-    const { coop, trophies } = rules.refresh(next)
+    const { coop, trophies } = rules.refresh(rules.rollDay(next, Date.now()))
     set({ coop })
     for (const trophy of trophies) {
       pushNotice({ kind: 'achievement', title: `${trophy.icon} ${trophy.label}`, detail: 'Trophée du poulailler · +2 % de production' })
@@ -50,7 +50,8 @@ export const useCoop = create((set, get) => {
   function reopen() {
     const opened = runtime.service.coopOpen()
     set({ coop: opened.coop, stamp: opened.stamp, away: opened.away })
-    if (opened.away) keep(true)
+    if (opened.boost > 0) pushNotice({ kind: 'level', title: `🔥 Frénésie de la route : ${opened.boost} s`, detail: 'Gagnée en traversant à ×3 ou plus' })
+    if (opened.away || opened.boost > 0) keep(true)
   }
 
   function loop() {
@@ -135,9 +136,14 @@ export const useCoop = create((set, get) => {
       return { laid, lucky: laid > rules.tapValue(coop, now) * count * 2 }
     },
 
+    buyMode: 1,
+    setBuyMode(mode) {
+      set({ buyMode: mode })
+    },
+
     buyBuilding(id) {
-      const { coop } = get()
-      const next = rules.buyBuilding(coop, id)
+      const { coop, buyMode } = get()
+      const next = rules.buyBuildings(coop, id, buyMode)
       if (next === coop) return
       fxBuy()
       apply(next, { sync: true })
@@ -156,7 +162,7 @@ export const useCoop = create((set, get) => {
       if (!result) return
       fxBuy()
       apply(result.coop, { sync: true })
-      hatchedNotice(result, 'Couveuse')
+      hatchedNotice(result, result.ticket ? 'Ticket de couveuse' : 'Couveuse')
       return result
     },
 
@@ -205,6 +211,41 @@ export const useCoop = create((set, get) => {
         pushNotice({ kind: 'break', title: error.message, detail: null })
         if (error.code === 'coop-stale') reopen()
       }
+    },
+
+    claimOrder(index) {
+      const result = rules.claimOrder(get().coop, index, Date.now())
+      if (!result) return
+      usePoule.setState({ fx: { id: Date.now(), type: 'win', multiplier: 3 } })
+      apply(result.coop, { sync: true })
+      pushNotice({
+        kind: 'level',
+        title: `📦 Commande livrée : +${eggLabel(result.eggs)} œufs`,
+        detail: result.ticket ? 'Les 3 commandes du jour : +1 ticket de couveuse' : 'Commande du fermier',
+      })
+      if (result.hen) {
+        pushNotice({ kind: 'achievement', title: `${result.hen.icon} ${result.hen.label}`, detail: `Cadeau de l’événement · niveau ${get().coop.hens[result.hen.id]}` })
+      }
+    },
+
+    claimCalendar() {
+      const result = rules.claimCalendar(get().coop, Date.now())
+      if (!result) return
+      usePoule.setState({ fx: { id: Date.now(), type: 'win', multiplier: result.day === 7 ? 10 : 2 } })
+      apply(result.coop, { sync: true })
+      pushNotice({
+        kind: 'level',
+        title: `📅 Jour ${result.day} : +${eggLabel(result.eggs)} œufs`,
+        detail: result.tickets ? `+${result.tickets} ticket${result.tickets > 1 ? 's' : ''} de couveuse` : 'Reviens demain pour la suite',
+      })
+    },
+
+    claimFamily(index, familyEggs) {
+      const result = rules.claimFamily(get().coop, index, familyEggs)
+      if (!result) return
+      fxBuy()
+      apply(result.coop, { sync: true })
+      pushNotice({ kind: 'level', title: `👨‍👩‍👧 Objectif de famille`, detail: `+${result.tickets} ticket${result.tickets > 1 ? 's' : ''} de couveuse` })
     },
 
     moveHouse() {

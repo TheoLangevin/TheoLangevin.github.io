@@ -272,6 +272,9 @@ export default function ProfileScreen({ hidden, go }) {
       </section>
 
       <h2 className="section-title">À savoir</h2>
+      <button type="button" className="card notes__open" onClick={() => go('idees')}>
+        💡 Boîte à idées <small className="muted">Propose la suite du jeu</small>
+      </button>
       <AllNotes />
       <Fairness />
       <details className="card details">

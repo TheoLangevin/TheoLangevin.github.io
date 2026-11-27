@@ -23,7 +23,8 @@ import { refillCheck } from '../domain/money.js'
 import { dailyReward, dailyStatus, dayId, isDayId, tournamentSeed, validDaily, validDailyClaims } from '../domain/daily.js'
 import { talentById } from '../config/talents.js'
 import { freshPass, passStatus, validPass } from '../domain/pass.js'
-import { freshCoop, offlineCap, offlineGain, refresh as refreshCoop, rollDay, sellEggs, upgradeCoop, validCoop } from '../domain/coop.js'
+import { advanceWorlds } from '../domain/worlds.js'
+import { freshCoop, offlineCap, offlineGain, offlineShare, refresh as refreshCoop, rollDay, sellEggs, upgradeCoop, validCoop } from '../domain/coop.js'
 import { BOOST_CAP, BOOST_MULTIPLIER, BOOST_SECONDS, ONLINE_GAP } from '../config/coop.js'
 import { nextTalentCost, talentEffects, validTalents } from '../domain/talents.js'
 import { activeEvents, isEventActive, xpMultiplier } from '../domain/calendar.js'
@@ -644,7 +645,8 @@ export function createGameService({
       const seconds = (now - stored.seen) / 1000
       if (!(seconds > ONLINE_GAP)) return { coop: boosted(rollDay({ ...stored, seen: now }, now)), away: null, stamp, boost }
       const eggs = offlineGain(stored, seconds)
-      const grown = { ...stored, eggs: stored.eggs + eggs, total: stored.total + eggs, lifetime: stored.lifetime + eggs, seen: now }
+      const away = advanceWorlds(stored, Math.min(seconds, offlineCap(stored)), offlineShare(stored))
+      const grown = { ...away, eggs: stored.eggs + eggs, total: stored.total + eggs, lifetime: stored.lifetime + eggs, seen: now }
       return { coop: boosted(rollDay(refreshCoop(grown).coop, now)), away: { seconds: Math.min(seconds, offlineCap(stored)), eggs }, stamp, boost }
     },
 

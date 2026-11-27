@@ -284,3 +284,22 @@ describe('teams and feed', () => {
     await expect(a.sync.createTeam('x')).rejects.toThrow()
   })
 })
+
+describe('idea box', () => {
+  it('posts up to three ideas a day and counts one vote per player', async () => {
+    const cloud = createMemoryCloud()
+    const phone = await device(cloud)
+    await phone.sync.connect(user)
+    await expect(phone.sync.postSuggestion('Un monde sous-marin')).rejects.toThrow('no-pseudo')
+    await phone.sync.choosePseudo('Poulette')
+    await expect(phone.sync.postSuggestion('abc')).rejects.toThrow('invalid-suggestion')
+    for (let i = 0; i < 3; i++) await phone.sync.postSuggestion(`Idée numéro ${i}`)
+    await expect(phone.sync.postSuggestion('Une de trop')).rejects.toThrow('suggestion-limit')
+    const list = await phone.sync.suggestions()
+    expect(list).toHaveLength(3)
+    expect(list[0].pseudo).toBe('Poulette')
+    await phone.sync.voteSuggestion(list[0].id)
+    await phone.sync.voteSuggestion(list[0].id)
+    expect((await phone.sync.suggestions()).find((idea) => idea.id === list[0].id).votes).toEqual(['u1'])
+  })
+})

@@ -38,6 +38,7 @@ import {
   TROPHY_BONUS,
   UNLOCKS,
 } from '../config/coop.js'
+import { advanceWorlds, validWorlds, worldsFarmBonus } from './worlds.js'
 
 /** Pure rules of the coop. State is plain data; every function returns a new state. */
 
@@ -96,6 +97,8 @@ const LATER_FIELDS = () => ({
   calendar: { last: null, streak: 0 },
   week: { id: '', start: 0 },
   family: { week: '', claimed: [] },
+  worlds: {},
+  world: 'farm',
 })
 
 /** A saved coop from an older version, with the fields added since. */
@@ -138,6 +141,8 @@ export function validCoop(value) {
   const fam = value.family
   if (!isMap(fam) || typeof fam.week !== 'string' || !Array.isArray(fam.claimed) || fam.claimed.length > FAMILY_TIERS.length) return false
   if (!fam.claimed.every((i) => int(i, FAMILY_TIERS.length - 1))) return false
+  if (!validWorlds(value.worlds)) return false
+  if (value.world !== 'farm' && !value.worlds[value.world]) return false
   const o = value.orders
   if (o === null) return true
   return (
@@ -202,7 +207,8 @@ export function globalMultiplier(coop) {
     (1 + sum(henBonuses(coop), 'production')) *
     (1 + TROPHY_BONUS * coop.trophies.length) *
     (1 + FEATHER_BONUS * coop.feathers) *
-    (1 + collectionBonus(coop))
+    (1 + collectionBonus(coop)) *
+    (1 + worldsFarmBonus(coop))
   )
 }
 
@@ -260,7 +266,7 @@ export function tick(coop, seconds, now) {
   if (seconds <= 0) return coop
   const boosted = Math.max(0, Math.min(now, coop.frenzyUntil) - Math.max(now - seconds * 1000, 0)) / 1000
   const rate = production(coop)
-  const grown = gain(coop, rate * (seconds + boosted * (FRENZY_MULTIPLIER - 1)))
+  const grown = gain(advanceWorlds(coop, seconds), rate * (seconds + boosted * (FRENZY_MULTIPLIER - 1)))
   return { ...grown, played: coop.played + seconds, bestPps: Math.max(coop.bestPps, rate * eventMultiplier(coop, now)) }
 }
 
@@ -401,6 +407,7 @@ export function caughtGolden(coop, now, roll, rollRarity, rollHen) {
 function statOf(coop, stat) {
   if (stat.startsWith('building:')) return owned(coop, stat.slice(9))
   if (stat === 'hens') return Object.keys(coop.hens).length
+  if (stat === 'worlds') return Object.keys(coop.worlds ?? {}).length
   if (stat === 'henMax') return Object.values(coop.hens).some((level) => level >= HEN_MAX_LEVEL) ? 1 : 0
   return coop[stat] ?? 0
 }

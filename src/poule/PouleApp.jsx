@@ -17,6 +17,7 @@ import Notices from './ui/layout/Notices.jsx'
 import StorageNotice from './ui/layout/StorageNotice.jsx'
 import AdminScreen from './ui/screens/AdminScreen.jsx'
 import CoopScreen from './ui/screens/CoopScreen.jsx'
+import IdeasScreen from './ui/screens/IdeasScreen.jsx'
 import PlayScreen from './ui/screens/PlayScreen.jsx'
 import ProfileScreen from './ui/screens/ProfileScreen.jsx'
 import RankingScreen from './ui/screens/RankingScreen.jsx'
@@ -54,6 +55,7 @@ export default function PouleApp() {
         {route === 'classement' && <RankingScreen go={go} />}
         {route === 'profil' && <ProfileScreen go={go} />}
         {route === 'admin' && <AdminScreen go={go} />}
+        {route === 'idees' && <IdeasScreen go={go} />}
       </div>
       <TabBar route={route} go={go} />
       <Notices />

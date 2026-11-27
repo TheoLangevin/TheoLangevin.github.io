@@ -25,6 +25,7 @@ import { tokens } from '../format.js'
 import { duration, eggs } from '../coop/format.js'
 import Mannequin from '../road/Mannequin.jsx'
 import CoopYard, { CoopEstate } from '../coop/CoopYard.jsx'
+import { PortalOverlay, WorldBar, WorldView } from '../coop/Worlds.jsx'
 import './coop.css'
 
 /** What each unlock opens, in the order a player meets them. */
@@ -67,8 +68,20 @@ export default function CoopScreen() {
   ]
   const next = PARTS.find((p) => !rules.unlocked(coop, p.id))
 
+  if (coop.world !== 'farm') {
+    return (
+      <main className="screen screen--coop">
+        <WorldBar coop={coop} />
+        <WorldView coop={coop} />
+        <PortalOverlay />
+        <Away />
+      </main>
+    )
+  }
+
   return (
     <main className="screen screen--coop">
+      <WorldBar coop={coop} />
       <Stage coop={coop} />
       {Object.keys(coop.buildings).length > 0 && <CoopEstate coop={coop} />}
       {next && (
@@ -96,6 +109,7 @@ export default function CoopScreen() {
       {tab === 'market' && <Market coop={coop} />}
       {tab === 'skins' && <Skins coop={coop} />}
       {tab === 'prestige' && <Prestige coop={coop} />}
+      <PortalOverlay />
       <Away />
     </main>
   )

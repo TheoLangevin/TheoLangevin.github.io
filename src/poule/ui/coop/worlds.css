@@ -1,0 +1,288 @@
+/* Worlds: bar, themed stages, portal. */
+
+.worldbar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px;
+}
+.worldbar::-webkit-scrollbar {
+  display: none;
+}
+.worldbar button {
+  position: relative;
+  flex: none;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 2px var(--line);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 13px;
+  overflow: hidden;
+}
+.worldbar button[aria-pressed='true'] {
+  background: var(--asphalt);
+  color: var(--gold);
+  box-shadow: 0 2px 0 #0003;
+}
+.worldbar__portal {
+  background: linear-gradient(120deg, #7c5cff, #ff5cc8, #ffc21a) !important;
+  background-size: 200% 100% !important;
+  color: #fff !important;
+  animation: portal-shift 3s linear infinite;
+}
+.worldbar__portal i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: calc(var(--ratio) * 100%);
+  background: #fff;
+}
+@keyframes portal-shift {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Themed skies */
+.coop-stage.worldstage--island,
+.portal-card.worldstage--island,
+.portal-fx.worldstage--island {
+  background: linear-gradient(#5ed6ff 0 40%, #2bb3d9 40% 55%, #f6d38b 55% 100%);
+}
+.coop-stage.worldstage--pole,
+.portal-card.worldstage--pole,
+.portal-fx.worldstage--pole {
+  background: linear-gradient(#0d1b3d 0 45%, #dfeefa 45% 100%);
+  color: #f3efe4;
+}
+.coop-stage.worldstage--desert,
+.portal-card.worldstage--desert,
+.portal-fx.worldstage--desert {
+  background: linear-gradient(#ff9a3c 0 30%, #ffd27a 30% 52%, #e8b35c 52% 100%);
+}
+.coop-stage.worldstage--city,
+.portal-card.worldstage--city,
+.portal-fx.worldstage--city {
+  background: linear-gradient(#1a1f2e 0 55%, #3a4256 55% 100%);
+  color: #e8f6ff;
+}
+.coop-stage.worldstage--nebula,
+.portal-card.worldstage--nebula,
+.portal-fx.worldstage--nebula {
+  background: radial-gradient(circle at 30% 30%, #ff5cc855, transparent 45%), radial-gradient(circle at 75% 60%, #5cc8ff55, transparent 45%),
+    linear-gradient(#0a0420, #24104a);
+  color: #f6eaff;
+}
+.coop-stage.worldstage::before {
+  display: none;
+}
+
+/* Living backgrounds */
+.worldstage__fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.worldstage--island .worldstage__fx {
+  background: radial-gradient(circle at 85% 14%, #fff6b0 0 22px, #fff6b000 60px),
+    repeating-linear-gradient(90deg, #ffffff40 0 18px, transparent 18px 46px) 0 41% / 200% 6px no-repeat;
+  animation: waves 6s linear infinite;
+}
+@keyframes waves {
+  to {
+    background-position: 0 0, -92px 41%;
+  }
+}
+.worldstage--pole .worldstage__fx {
+  background: linear-gradient(100deg, transparent 20%, #4dffb455 35%, #6a5cff55 50%, transparent 65%) 0 6% / 220% 30% no-repeat,
+    radial-gradient(#fff 0 1.5px, transparent 2.5px) 0 0 / 40px 40px;
+  animation: aurora 8s ease-in-out infinite alternate, snowfall 7s linear infinite;
+}
+@keyframes aurora {
+  to {
+    background-position: 100% 10%, 0 0;
+  }
+}
+@keyframes snowfall {
+  to {
+    background-position: 0 6%, 20px 400px;
+  }
+}
+.worldstage--desert .worldstage__fx {
+  background: radial-gradient(circle at 80% 18%, #fff3c4 0 26px, #fff3c400 70px),
+    repeating-linear-gradient(180deg, transparent 0 6px, #ffffff14 6px 8px);
+  animation: heat 1.8s ease-in-out infinite alternate;
+}
+@keyframes heat {
+  to {
+    filter: blur(0.6px);
+    transform: translateY(-2px);
+  }
+}
+.worldstage--city .worldstage__fx {
+  background: repeating-linear-gradient(90deg, #2c3448 0 26px, #232a3b 26px 44px, transparent 44px 58px) 0 100% / 100% 48% no-repeat,
+    radial-gradient(#ffd36a 0 2px, transparent 3px) 0 0 / 18px 22px;
+  -webkit-mask: linear-gradient(transparent 0 30%, #000 30% 56%, transparent 56%);
+  mask: linear-gradient(transparent 0 30%, #000 30% 56%, transparent 56%);
+  animation: blink 2.4s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.75;
+  }
+}
+.worldstage--nebula .worldstage__fx {
+  background: radial-gradient(#fff 0 1px, transparent 2px) 0 0 / 31px 31px, radial-gradient(#fff9 0 1.5px, transparent 2.5px) 0 0 / 53px 53px;
+  animation: drift 20s linear infinite;
+}
+@keyframes drift {
+  to {
+    background-position: 310px 62px, -265px 106px;
+  }
+}
+
+.worldstage__bonus {
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: #ffffffd9;
+  color: #1d1a12;
+  font-size: 12px;
+}
+
+/* The world's buildings, around the hen */
+.worldstage__props {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.worldprop {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+}
+.worldprop--0 { left: 5%; bottom: 6%; }
+.worldprop--1 { right: 5%; bottom: 6%; }
+.worldprop--2 { left: 4%; bottom: 30%; }
+.worldprop--3 { right: 4%; bottom: 30%; }
+.worldprop--4 { left: 8%; bottom: 52%; }
+.worldprop--5 { right: 8%; bottom: 52%; }
+
+.coop-row.is-factory {
+  box-shadow: inset 0 0 0 2px #7c5cff;
+}
+
+/* Portal dialog and full-screen opening */
+.portal-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 18px 12px;
+  border-radius: 16px;
+  text-align: center;
+}
+.portal-card__icon {
+  font-size: 56px;
+  animation: coop-golden 1.4s ease-in-out infinite alternate;
+}
+.portal-card b,
+.portal-card small {
+  color: #fff;
+  text-shadow: 0 2px 4px #000a;
+}
+.portal-card b {
+  font: 400 22px/1.1 var(--display);
+}
+.portal-facts {
+  margin: 12px 0 8px;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.portal-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  animation: portal-fade 2.6s ease-in-out forwards;
+}
+.portal-fx__swirl {
+  position: absolute;
+  width: 220vmax;
+  height: 220vmax;
+  background: repeating-conic-gradient(from 0deg, #7c5cff 0 10deg, #ff5cc8 10deg 20deg, #ffc21a 20deg 30deg, #5cc8ff 30deg 40deg);
+  border-radius: 50%;
+  animation: portal-spin 2.6s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+  opacity: 0.85;
+}
+.portal-fx__text {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: #0a0420cc;
+  color: #fff;
+  text-align: center;
+  animation: portal-pop 2.6s ease-out forwards;
+}
+.portal-fx__text span {
+  font-size: 72px;
+}
+.portal-fx__text small {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 800;
+  color: var(--gold);
+}
+.portal-fx__text b {
+  font: 400 28px/1.1 var(--display);
+}
+@keyframes portal-spin {
+  from {
+    transform: rotate(0) scale(0);
+  }
+  to {
+    transform: rotate(540deg) scale(1);
+  }
+}
+@keyframes portal-pop {
+  0%,
+  25% {
+    transform: scale(0);
+  }
+  45% {
+    transform: scale(1.1);
+  }
+  60%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes portal-fade {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .worldstage__fx,
+  .portal-fx__swirl,
+  .worldbar__portal {
+    animation: none;
+  }
+}

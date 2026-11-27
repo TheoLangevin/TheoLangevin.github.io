@@ -160,6 +160,13 @@ export const TROPHIES = Object.freeze(
       [50, 'Midas'],
     ].map(([n, label]) => ({ id: `golden-${n}`, icon: '🌟', label, detail: `${n} œufs dorés attrapés`, stat: 'golden', at: n })),
     ...[
+      [1, 'Passe-muraille'],
+      [2, 'Globe-trotteuse'],
+      [3, 'Exploratrice'],
+      [4, 'Cosmopoule'],
+      [5, 'Maîtresse des mondes'],
+    ].map(([n, label]) => ({ id: `worlds-${n}`, icon: '🌀', label, detail: `${n} monde${n > 1 ? 's' : ''} ouvert${n > 1 ? 's' : ''}`, stat: 'worlds', at: n })),
+    ...[
       [1, 'Nouveau départ'],
       [5, 'Nomade'],
       [20, 'Éternel retour'],

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { GOLDEN_EVERY, GOLDEN_STAYS, MAX_TAPS_PER_CALL, RARE_EGG_CHANCE } from '../config/coop.js'
 import * as rules from '../domain/coop.js'
+import * as worlds from '../domain/worlds.js'
 import { GameError } from '../services/gameService.js'
 import { tokens } from '../ui/format.js'
 import { eggs as eggLabel } from '../ui/coop/format.js'
@@ -123,6 +124,11 @@ export const useCoop = create((set, get) => {
       if (!coop) return 0
       const count = Math.min(MAX_TAPS_PER_CALL, n)
       const now = Date.now()
+      if (coop.world !== 'farm') {
+        const next = worlds.tapWorld(coop, coop.world, count)
+        set({ coop: next })
+        return { laid: next.worlds[coop.world].amount - coop.worlds[coop.world].amount, lucky: false }
+      }
       const rolls = Array.from({ length: count }, Math.random)
       let next = rules.tap(coop, count, now, rolls)
       const laid = next.eggs - coop.eggs
@@ -134,6 +140,31 @@ export const useCoop = create((set, get) => {
       }
       apply(next)
       return { laid, lucky: laid > rules.tapValue(coop, now) * count * 2 }
+    },
+
+    portalFx: null,
+
+    selectWorld(id) {
+      const { coop } = get()
+      if (id !== 'farm' && !worlds.isOpen(coop, id)) return
+      apply({ ...coop, world: id })
+    },
+
+    openPortal(id) {
+      const next = worlds.openPortal(get().coop, id)
+      if (!next) return
+      usePoule.setState({ fx: { id: Date.now(), type: 'win', multiplier: 20 } })
+      set({ portalFx: { id, at: Date.now() } })
+      apply({ ...next, world: id }, { sync: true })
+      setTimeout(() => set({ portalFx: null }), 2600)
+    },
+
+    buyWorldBuilding(bid) {
+      const { coop, buyMode } = get()
+      const next = worlds.buyWorldBuildings(coop, coop.world, bid, buyMode)
+      if (next === coop) return
+      fxBuy()
+      apply(next, { sync: true })
     },
 
     buyMode: 1,

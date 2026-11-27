@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { GOLDEN_EVERY, GOLDEN_STAYS, MAX_TAPS_PER_CALL, RARE_EGG_CHANCE } from '../config/coop.js'
+import { GOLDEN_EVERY, GOLDEN_STAYS, RARE_EGG_CHANCE } from '../config/coop.js'
 import * as rules from '../domain/coop.js'
 import * as worlds from '../domain/worlds.js'
+import { createTapGuard } from '../domain/tapGuard.js'
 import { GameError } from '../services/gameService.js'
 import { tokens } from '../ui/format.js'
 import { eggs as eggLabel } from '../ui/coop/format.js'
@@ -12,7 +13,7 @@ const TICK = 250
 const KEEP = 5_000
 const SYNC = 60_000
 
-const runtime = { service: null, timer: null, lastTick: 0, lastKeep: 0, lastSync: 0 }
+const runtime = { guard: createTapGuard(), service: null, timer: null, lastTick: 0, lastKeep: 0, lastSync: 0 }
 
 const nextGoldenAt = (coop, now) =>
   now + ((GOLDEN_EVERY.min + Math.random() * (GOLDEN_EVERY.max - GOLDEN_EVERY.min)) * 1000) / rules.goldenSpeed(coop)
@@ -63,6 +64,9 @@ export const useCoop = create((set, get) => {
     runtime.lastTick = now
     let next = rules.tick(coop, seconds, now)
     const patch = {}
+    // The tap verdict shown relaxes on its own once the player pauses.
+    const rested = runtime.guard.tiredness(now)
+    if (get().tapShare !== rested && (get().tapShare > 0 || now - (runtime.lastRefused ?? 0) > 1500)) patch.tapShare = rested
     if (golden && now > golden.until) patch.golden = null
     if (!golden && rules.unlocked(next, 'golden') && now >= get().goldenAt) {
       patch.golden = { x: 10 + Math.random() * 75, y: 15 + Math.random() * 55, until: now + GOLDEN_STAYS * 1000, id: now }
@@ -119,30 +123,36 @@ export const useCoop = create((set, get) => {
     },
 
     /** Taps on the big hen; returns the eggs laid (for the floating number). */
-    tap(n = 1) {
+    /** One tap of a person on the big hen (the screen ignores taps made by scripts). */
+    tap() {
       const { coop } = get()
-      if (!coop) return 0
-      const count = Math.min(MAX_TAPS_PER_CALL, n)
+      if (!coop) return { laid: 0, lucky: false }
       const now = Date.now()
+      const share = runtime.guard.accept(now)
+      if (share !== get().tapShare) set({ tapShare: share })
+      if (share <= 0) runtime.lastRefused = now
+      if (share <= 0) return { laid: 0, lucky: false }
+      const count = 1
       if (coop.world !== 'farm') {
-        const next = worlds.tapWorld(coop, coop.world, count)
+        const next = worlds.tapWorld(coop, coop.world, count, share)
         set({ coop: next })
         return { laid: next.worlds[coop.world].amount - coop.worlds[coop.world].amount, lucky: false }
       }
       const rolls = Array.from({ length: count }, Math.random)
-      let next = rules.tap(coop, count, now, rolls)
+      let next = rules.tap(coop, count, now, rolls, share)
       const laid = next.eggs - coop.eggs
-      if (rules.unlocked(next, 'hens') && Math.random() < RARE_EGG_CHANCE * count) {
+      if (rules.unlocked(next, 'hens') && Math.random() < RARE_EGG_CHANCE * count * share) {
         const hen = rules.drawHen(Math.random(), Math.random())
         const result = rules.receiveHen(next, hen)
         next = result.coop
         hatchedNotice({ ...result, hen }, 'Œuf rare')
       }
       apply(next)
-      return { laid, lucky: laid > rules.tapValue(coop, now) * count * 2 }
+      return { laid, lucky: laid > rules.tapValue(coop, now) * count * share * 2 }
     },
 
     portalFx: null,
+    tapShare: 1,
 
     selectWorld(id) {
       const { coop } = get()

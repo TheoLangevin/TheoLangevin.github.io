@@ -8,6 +8,7 @@ import { useCoop } from '../../state/useCoop.js'
 import { usePoule } from '../../state/usePoule.js'
 import Dialog from '../account/Dialog.jsx'
 import Mannequin from '../road/Mannequin.jsx'
+import TapState from './TapState.jsx'
 import { eggs } from './format.js'
 import './worlds.css'
 
@@ -89,6 +90,7 @@ export function WorldView({ coop }) {
   const w = coop.worlds[world.id]
   const s = useCoop(useShallow((st) => ({ tap: st.tap, buy: st.buyWorldBuilding, mode: st.buyMode, setMode: st.setBuyMode })))
   const equipped = usePoule((st) => st.equipped)
+  const tapShare = useCoop((st) => st.tapShare)
   const [floaters, setFloaters] = useState([])
   const [squash, setSquash] = useState(0)
   const stage = useRef(null)
@@ -98,6 +100,8 @@ export function WorldView({ coop }) {
 
   const onTap = (event) => {
     event.preventDefault()
+    // Taps made by a script (dispatched events) do not count.
+    if (!event.isTrusted) return
     const { laid } = s.tap(1)
     const box = stage.current.getBoundingClientRect()
     const id = Math.random()
@@ -116,6 +120,7 @@ export function WorldView({ coop }) {
           </b>
           {cur.label}
           <small>{pps > 0 ? `${eggs(pps)} par seconde` : 'Touche la poule pour commencer'}</small>
+          <TapState share={tapShare} />
           <span className="worldstage__bonus">🐔 Ferme +{Math.round(rules.worldFarmBonus(coop, world.id) * 100)} %</span>
         </div>
         <div className="worldstage__props" aria-hidden="true">
@@ -144,7 +149,7 @@ export function WorldView({ coop }) {
             {world.hat}
           </span>
         </button>
-        {floaters.map((f) => (
+        {floaters.filter((f) => f.laid > 0).map((f) => (
           <span key={f.id} className="coop-float" style={{ left: f.x, top: f.y }} aria-hidden="true">
             +{eggs(f.laid)} {cur.icon}
           </span>

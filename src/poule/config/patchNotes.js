@@ -5,6 +5,15 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-27-fair',
+    date: '27 nov. 2026',
+    title: 'Poulailler sans bots',
+    items: [
+      'Au plus 12 touchers comptés par seconde, et les rythmes trop réguliers (auto-clickers) ne comptent plus.',
+      'Après 2 minutes à tapoter sans pause, la poule fatigue et pond moins à chaque toucher ; une pause de 5 s et c’est reparti.',
+    ],
+  },
+  {
     id: '2026-11-27-hens',
     date: '27 nov. 2026',
     title: '20 nouvelles poules et rééquilibrage',

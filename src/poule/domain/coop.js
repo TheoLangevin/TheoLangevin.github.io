@@ -277,13 +277,13 @@ export const offlineShare = (coop) => OFFLINE_SHARE + sum(henBonuses(coop), 'off
 
 const gain = (coop, eggs) => ({ ...coop, eggs: coop.eggs + eggs, total: coop.total + eggs, lifetime: coop.lifetime + eggs })
 
-/** `n` taps at `now`; `rolls` are random numbers in [0,1) for lucky taps (injectable for tests). */
-export function tap(coop, n, now, rolls = []) {
+/** `n` taps at `now`, each counting for `share` (the tap guard's verdict); `rolls` are random numbers in [0,1) for lucky taps. */
+export function tap(coop, n, now, rolls = [], share = 1) {
   const count = Math.max(0, Math.floor(n))
   const chance = goldenTapChance(coop)
   let earned = 0
   for (let i = 0; i < count; i += 1) earned += tapValue(coop, now, { lucky: chance > 0 && (rolls[i] ?? 1) < chance })
-  return { ...gain(coop, earned), taps: coop.taps + count }
+  return { ...gain(coop, earned * share), taps: coop.taps + count }
 }
 
 /** Production over the `seconds` before `now`, honouring the frenzy window. */

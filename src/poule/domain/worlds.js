@@ -70,7 +70,8 @@ const add = (coop, id, amount) => {
   return { ...coop, worlds: { ...coop.worlds, [id]: { ...w, amount: w.amount + amount, lifetime: w.lifetime + amount } } }
 }
 
-export const tapWorld = (coop, id, n) => (isOpen(coop, id) ? add(coop, id, worldTapValue(coop, id) * Math.max(0, Math.floor(n))) : coop)
+export const tapWorld = (coop, id, n, share = 1) =>
+  isOpen(coop, id) ? add(coop, id, worldTapValue(coop, id) * Math.max(0, Math.floor(n)) * share) : coop
 
 /** Every opened world produces for `seconds` (times `share`, for the time away). */
 export function advanceWorlds(coop, seconds, share = 1) {

@@ -130,3 +130,14 @@ describe('coop stats', () => {
     expect(stats.coop.top[0].kinds).toBe(2)
   })
 })
+
+describe('coop watch list', () => {
+  it('flags bursts of taps and impossible eggs', async () => {
+    const { freshCoop } = await import('../coop.js')
+    const fair = { ...freshCoop(NOW), lifetime: 5e4, total: 5e4, taps: 3000, played: 1200, bestPps: 10 }
+    const bot = { ...fair, taps: 60000 }
+    const forged = { ...fair, lifetime: 1e15, total: 1e15 }
+    const stats = computeAdminStats({ users: [user('a', { coop: fair }), user('b', { coop: bot }), user('c', { coop: forged })], now: NOW })
+    expect(stats.coop.flagged.map((line) => line.uid).sort()).toEqual(['b', 'c'])
+  })
+})

@@ -308,7 +308,33 @@ function CoopSection({ coop }) {
           ))}
         </tbody>
       </table>
-      <p className="muted admin__note">D’après la dernière sauvegarde envoyée par chaque joueur connecté.</p>
+      <h3>Poulaillers à surveiller</h3>
+      {(coop.flagged ?? []).length === 0 ? (
+        <p className="muted">Rien d’anormal : pas de touchers en rafale, pas d’œufs impossibles.</p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Joueur</th>
+              <th>Œufs</th>
+              <th>Pourquoi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {coop.flagged.map((line) => (
+              <tr key={line.uid}>
+                <td>{line.pseudo}</td>
+                <td>{eggs(line.eggs)}</td>
+                <td>{line.reasons.join(' · ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="muted admin__note">
+        D’après la dernière sauvegarde envoyée par chaque joueur connecté. Plus de 10 touchers par seconde de jeu en
+        moyenne, ou plus d’œufs que la meilleure production ne permet : à vérifier.
+      </p>
     </Section>
   )
 }

@@ -292,6 +292,20 @@ function coopStats(players, named, now) {
       label: skin.label,
       owners: list.filter((coop) => coop.skins.includes(skin.id)).length,
     })),
+    flagged: coops
+      .map((player) => {
+        const coop = player.save.coop
+        const tapRate = coop.played >= 600 ? coop.taps / coop.played : 0
+        // Eggs cannot exceed the best production over the time played, plus a month away at most, with room to spare.
+        const ceiling = Math.max(1e6, coop.bestPps * (coop.played + 30 * 86_400) * 5)
+        const reasons = []
+        if (tapRate > 10) reasons.push(`${tapRate.toFixed(1).replace('.', ',')} touchers/s`)
+        if (coop.lifetime > ceiling) reasons.push('œufs au-delà du possible')
+        return { uid: player.uid, pseudo: player.pseudo ?? 'Sans pseudo', eggs: coop.lifetime, reasons }
+      })
+      .filter((line) => line.reasons.length > 0)
+      .sort((a, b) => b.eggs - a.eggs)
+      .slice(0, 10),
     top: [...coops]
       .sort((a, b) => b.save.coop.lifetime - a.save.coop.lifetime)
       .slice(0, 5)

@@ -27,6 +27,7 @@ import { duration, eggs } from '../coop/format.js'
 import Mannequin from '../road/Mannequin.jsx'
 import CoopYard, { CoopEstate } from '../coop/CoopYard.jsx'
 import { PortalOverlay, WorldBar, WorldView } from '../coop/Worlds.jsx'
+import TapState from '../coop/TapState.jsx'
 import './coop.css'
 
 /** What each unlock opens, in the order a player meets them. */
@@ -121,6 +122,7 @@ function Stage({ coop }) {
   const tap = useCoop((s) => s.tap)
   const golden = useCoop((s) => s.golden)
   const catchGolden = useCoop((s) => s.catchGolden)
+  const tapShare = useCoop((s) => s.tapShare)
   const equipped = usePoule((s) => s.equipped)
   const [floaters, setFloaters] = useState([])
   const [squash, setSquash] = useState(0)
@@ -133,6 +135,8 @@ function Stage({ coop }) {
 
   const onTap = (event) => {
     event.preventDefault()
+    // Taps made by a script (dispatched events) do not count.
+    if (!event.isTrusted) return
     const { laid, lucky } = tap(1)
     const box = stage.current.getBoundingClientRect()
     const id = Math.random()
@@ -149,6 +153,7 @@ function Stage({ coop }) {
         <b>{eggs(coop.eggs)}</b> œufs
         <small>{pps > 0 ? `${eggs(pps)} par seconde` : 'Touche la poule pour pondre !'}</small>
         {event && <span className="coop-event">🎄 {event.label}</span>}
+        <TapState share={tapShare} />
         {rules.settling(coop) < 1 && (
           <span className="coop-settle">🚚 Les poules s’installent : {Math.floor(rules.settling(coop) * 100)} %</span>
         )}
@@ -164,7 +169,7 @@ function Stage({ coop }) {
         <Mannequin equipped={equipped ?? {}} size="large" />
         {skin.accessory && <span className="coop-hen__accessory" aria-hidden="true">{skin.accessory}</span>}
       </button>
-      {floaters.map((f) => (
+      {floaters.filter((f) => f.laid > 0).map((f) => (
         <span key={f.id} className={`coop-float${f.lucky ? ' is-lucky' : ''}`} style={{ left: f.x, top: f.y }} aria-hidden="true">
           +{eggs(f.laid)}
         </span>

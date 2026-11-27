@@ -8,6 +8,7 @@ import { levelFromXp } from './progression.js'
 import { validateSave } from './save.js'
 import { BUILDINGS, COOP_SKINS, SPECIAL_HENS, TROPHIES, UNLOCKS } from '../config/coop.js'
 import { production, unlocked } from './coop.js'
+import { WORLDS } from '../config/worlds.js'
 
 /**
  * The numbers of the admin screen, computed from every player's save (the
@@ -282,6 +283,10 @@ function coopStats(players, named, now) {
       label: `${hen.icon} ${hen.label}`,
       owners: list.filter((coop) => coop.hens[hen.id]).length,
       equipped: list.filter((coop) => coop.equipped.includes(hen.id)).length,
+    })),
+    worlds: WORLDS.map((world) => ({
+      label: `${world.icon} ${world.label}`,
+      count: list.filter((coop) => coop.worlds?.[world.id]).length,
     })),
     skins: COOP_SKINS.filter((skin) => skin.cost > 0).map((skin) => ({
       label: skin.label,

@@ -54,6 +54,7 @@ export const useAccount = create((set, get) => {
     pendingReward: null,
     player: null,
     admin: { status: 'idle', stats: null, error: null },
+    ideas: { list: [], loading: false, error: null },
     duels: { list: [], loading: false },
     /** The player being challenged (challenge sheet open), or null. */
     challengeTarget: null,
@@ -371,6 +372,52 @@ export const useAccount = create((set, get) => {
         console.error(error)
         sayError(error.name === 'FirebaseError' || !error.message ? 'Réponse impossible pour le moment.' : error.message)
         return false
+      }
+    },
+
+    /** The idea box. */
+    async loadIdeas() {
+      if (!runtime.sync) return
+      set({ ideas: { ...get().ideas, loading: true, error: null } })
+      try {
+        set({ ideas: { list: await runtime.sync.suggestions(60), loading: false, error: null } })
+      } catch (error) {
+        console.error(error)
+        set({ ideas: { ...get().ideas, loading: false, error: 'Boîte à idées indisponible pour le moment.' } })
+      }
+    },
+
+    async postIdea(text) {
+      try {
+        await runtime.sync.postSuggestion(text)
+        await get().loadIdeas()
+        return null
+      } catch (error) {
+        if (error.message === 'suggestion-limit') return 'Trois idées par jour maximum : reviens demain !'
+        if (error.message === 'invalid-suggestion') return 'Ton idée doit faire entre 5 et 500 caractères.'
+        if (error.message === 'no-pseudo') return 'Choisis un pseudo pour proposer une idée.'
+        console.error(error)
+        return 'Envoi impossible pour le moment.'
+      }
+    },
+
+    async voteIdea(id) {
+      const me = get().user?.uid
+      set({ ideas: { ...get().ideas, list: get().ideas.list.map((idea) => (idea.id === id && !idea.votes.includes(me) ? { ...idea, votes: [...idea.votes, me] } : idea)) } })
+      try {
+        await runtime.sync.voteSuggestion(id)
+      } catch (error) {
+        console.error(error)
+        get().loadIdeas()
+      }
+    },
+
+    async answerIdea(id, status, reply) {
+      try {
+        await runtime.sync.answerSuggestion(id, { status, reply: reply?.trim() ? reply.trim().slice(0, 300) : null })
+        get().loadIdeas()
+      } catch (error) {
+        console.error(error)
       }
     },
 

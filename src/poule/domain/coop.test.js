@@ -171,3 +171,24 @@ test('une ancienne sauvegarde du poulailler est mise à niveau', () => {
   expect(c.validCoop(old)).toBe(false)
   expect(c.validCoop(c.upgradeCoop(old))).toBe(true)
 })
+
+test('mondes : portail, monnaie, usine, bonus pour la ferme, hors ligne', async () => {
+  const w = await import('./worlds.js')
+  let s = { ...c.freshCoop(NOW), eggs: 1e9, buildings: { perch: 10 } }
+  expect(w.openPortal(s, 'pole')).toBe(null)
+  s = w.openPortal(s, 'island')
+  expect(s.eggs).toBe(5e8)
+  expect(c.validCoop(s)).toBe(true)
+  s = w.tapWorld(s, 'island', 10)
+  s = w.buyWorldBuildings(s, 'island', 'shell-beach', 1)
+  expect(w.worldPps(s, 'island') > 0).toBe(true)
+  const before = w.worldPps(s, 'island')
+  s = { ...s, worlds: { island: { ...s.worlds.island, amount: 1e9, lifetime: 1e9, buildings: { ...s.worlds.island.buildings, 'shell-factory': 4 } } } }
+  expect(Math.abs(w.worldPps(s, 'island') / before - 1.2) < 1e-9).toBe(true)
+  const t = c.tick(s, 10, NOW)
+  expect(t.worlds.island.amount > s.worlds.island.amount).toBe(true)
+  const big = { ...s, worlds: { island: { ...s.worlds.island, lifetime: 2e9 } } }
+  expect(c.production(big) > c.production({ ...s, worlds: {} })).toBe(true)
+  expect(c.validCoop({ ...s, world: 'island' })).toBe(true)
+  expect(c.validCoop({ ...s, world: 'pole' })).toBe(false)
+})

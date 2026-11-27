@@ -465,6 +465,27 @@ export function createSyncService({
 
     feed: (size) => cloud.feed(size),
 
+    /** The idea box: anyone reads; a player with a pseudo posts up to 3 ideas a day and votes once per idea. */
+    suggestions: (size) => cloud.suggestions(size),
+    async postSuggestion(text) {
+      if (!uid || !pseudo) throw new Error('no-pseudo')
+      const clean = text.trim().replace(/\s+/g, ' ')
+      if (clean.length < 5 || clean.length > 500) throw new Error('invalid-suggestion')
+      const day = now().toISOString().slice(0, 10).replaceAll('-', '')
+      for (let n = 1; n <= 3; n++) {
+        const id = `${uid}_${day}_${n}`
+        if (await cloud.suggestionExists(id)) continue
+        await cloud.postSuggestion(id, { uid, pseudo, text: clean, votes: [], status: 'new', reply: null })
+        return id
+      }
+      throw new Error('suggestion-limit')
+    },
+    voteSuggestion(id) {
+      if (!uid) return Promise.reject(new Error('signed-out'))
+      return cloud.voteSuggestion(id, uid)
+    },
+    answerSuggestion: (id, answer) => cloud.answerSuggestion(id, answer),
+
     /** Every player's save, for the admin's stats (refused by the cloud for anyone else). */
     adminOverview: () => cloud.adminOverview(ADMIN_MAX_PLAYERS),
   }

@@ -5,6 +5,18 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-27-worlds',
+    date: '27 nov. 2026',
+    title: '5 nouveaux mondes',
+    items: [
+      'Ouvre des portails avec tes œufs : L’Île aux Coquillages 🏝️, Le Pôle Plumé 🏔️, Le Désert d’Or 🏜️, La Cité Mécanique 🏙️ et La Nébuleuse 🌌.',
+      'Chaque monde a sa monnaie (coquillages, cristaux de givre, pépites, engrenages, poussières d’étoile), ses 6 bâtiments et son ambiance animée.',
+      'Les usines boostent tout leur monde, et chaque monde booste les œufs de ta ferme pour toujours.',
+      'Les mondes restent après un déménagement.',
+      'Nouveau : la Boîte à idées (Profil) pour proposer la suite du jeu et voter pour les idées des autres.',
+    ],
+  },
+  {
     id: '2026-11-27-goals',
     date: '27 nov. 2026',
     title: 'Objectifs du Poulailler',

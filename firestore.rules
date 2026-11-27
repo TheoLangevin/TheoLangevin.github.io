@@ -15,6 +15,7 @@ rules_version = '2';
 //   duels/{id}           a duel between two players, seen and changed by them only.
 //   teams/{id}           a poulailler (team). Public; members join and leave themselves.
 //   feed/{id}            the public activity feed: big moments, posted by their player.
+//   suggestions/{id}     the idea box: public ideas, votes, and the admin's answers.
 //
 // Saves are computed in the player's browser, so a determined player can
 // still fake their own numbers; these rules keep the data well formed, private
@@ -271,6 +272,39 @@ service cloud.firestore {
 
       // The last member leaving deletes it.
       allow delete: if signedIn() && resource.data.members == [request.auth.uid];
+    }
+
+    // The idea box: public; a player with a pseudo posts up to 3 ideas a day
+    // (the id holds the day and a number), votes once per idea; the admin answers.
+    match /suggestions/{id} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && id.matches(request.auth.uid + '_[0-9]{8}_[1-3]')
+        && request.resource.data.keys().hasOnly(['uid', 'pseudo', 'text', 'createdAt', 'votes', 'status', 'reply'])
+        && request.resource.data.uid == request.auth.uid
+        && ownsPseudo(request.resource.data.pseudo)
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 5 && request.resource.data.text.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.votes == []
+        && request.resource.data.status == 'new'
+        && request.resource.data.reply == null;
+
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reply'])
+          && request.resource.data.status in ['new', 'planned', 'done', 'declined']
+          && (request.resource.data.reply == null
+            || (request.resource.data.reply is string && request.resource.data.reply.size() <= 300)))
+        || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+          && !(request.auth.uid in resource.data.votes)
+          && request.resource.data.votes.size() == resource.data.votes.size() + 1
+          && request.resource.data.votes.hasAll(resource.data.votes)
+          && request.auth.uid in request.resource.data.votes
+          && request.resource.data.votes.size() <= 5000);
+
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     match /feed/{id} {

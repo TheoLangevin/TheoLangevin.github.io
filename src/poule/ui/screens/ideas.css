@@ -1,0 +1,124 @@
+.screen--ideas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.screen--ideas > * {
+  flex-shrink: 0;
+}
+.screen--ideas .screen__title {
+  margin-bottom: 0;
+}
+.ideas__form {
+  display: grid;
+  gap: 8px;
+}
+.ideas__form textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--ink);
+  font: inherit;
+}
+.ideas__send {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ideas__message {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ideas__message.is-error {
+  color: #d23b2a;
+}
+.ideas__message.is-ok {
+  color: #1d9a52;
+}
+.ideas__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.idea {
+  display: grid;
+  gap: 6px;
+}
+.idea__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.idea__status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--soft);
+}
+.idea__status.is-planned {
+  background: #7c5cff;
+  color: #fff;
+}
+.idea__status.is-done {
+  background: #1d9a52;
+  color: #fff;
+}
+.idea__status.is-declined {
+  opacity: 0.6;
+}
+.idea__text {
+  margin: 0;
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.idea__reply {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 13px;
+}
+.idea__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.idea__vote {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 800;
+}
+.idea__vote.is-on {
+  background: #ffd6dc;
+}
+.idea__admin {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+.idea__admin input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--ink);
+}
+.idea__admin select {
+  border-radius: 10px;
+}

@@ -278,6 +278,8 @@ function CoopSection({ coop }) {
           .filter((b) => b.owners > 0)
           .map((b) => ({ label: b.label, value: b.owners, note: `${count(b.total)} au total` }))}
       />
+      <h3>Mondes ouverts</h3>
+      <Rows rows={(coop.worlds ?? []).map((world) => ({ label: world.label, value: world.count }))} />
       <h3>Poules spéciales</h3>
       <Rows rows={coop.hens.map((hen) => ({ label: hen.label, value: hen.owners, note: `${count(hen.equipped)} installées` }))} />
       <h3>Looks achetés</h3>

@@ -62,6 +62,7 @@ export function createMemoryCloud() {
   const duels = new Map()
   const teams = new Map()
   const feedItems = []
+  const ideas = new Map()
   let nextTeam = 1
   let nextDuel = 1
   const copy = (value) => structuredClone(value)
@@ -178,6 +179,24 @@ export function createMemoryCloud() {
     },
     async postFeed(item) {
       feedItems.push(copy(item))
+    },
+    async suggestions(size = 50) {
+      return [...ideas.entries()].map(([id, idea]) => ({ ...copy(idea), id })).sort((a, b) => b.createdAt - a.createdAt).slice(0, size)
+    },
+    async suggestionExists(id) {
+      return ideas.has(id)
+    },
+    async postSuggestion(id, idea) {
+      if (ideas.has(id)) throw new Error('exists')
+      ideas.set(id, { ...copy(idea), createdAt: Date.now() })
+    },
+    async voteSuggestion(id, uid) {
+      const idea = ideas.get(id)
+      if (idea && !idea.votes.includes(uid)) idea.votes.push(uid)
+    },
+    async answerSuggestion(id, { status, reply }) {
+      const idea = ideas.get(id)
+      if (idea) Object.assign(idea, { status, reply })
     },
     async feed(size = 15) {
       return [...feedItems].sort((a, b) => b.at - a.at).slice(0, size)

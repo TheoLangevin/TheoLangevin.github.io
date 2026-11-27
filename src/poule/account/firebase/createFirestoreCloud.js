@@ -177,6 +177,27 @@ export function createFirestoreCloud({ db, firestoreSdk }) {
       await addDoc(collection(db, 'feed'), item)
     },
 
+    /** The idea box, newest first (public). */
+    async suggestions(size = 50) {
+      const snap = await getDocs(query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'), limit(size)))
+      return snap.docs.map((entry) => {
+        const data = entry.data()
+        return { ...data, id: entry.id, createdAt: data.createdAt?.toMillis?.() ?? 0 }
+      })
+    },
+    async suggestionExists(id) {
+      return (await getDoc(doc(db, 'suggestions', id))).exists()
+    },
+    async postSuggestion(id, idea) {
+      await setDoc(doc(db, 'suggestions', id), { ...idea, createdAt: serverTimestamp() })
+    },
+    async voteSuggestion(id, uid) {
+      await updateDoc(doc(db, 'suggestions', id), { votes: firestoreSdk.arrayUnion(uid) })
+    },
+    async answerSuggestion(id, { status, reply }) {
+      await updateDoc(doc(db, 'suggestions', id), { status, reply })
+    },
+
     async feed(size = 15) {
       return (await getDocs(query(collection(db, 'feed'), orderBy('at', 'desc'), limit(size)))).docs.map((entry) => ({
         ...entry.data(),

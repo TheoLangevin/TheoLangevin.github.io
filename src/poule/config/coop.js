@@ -89,6 +89,7 @@ export const SPECIAL_HENS = Object.freeze(
     { id: 'disco', icon: '🪩', label: 'Poule Disco', rarity: 'epic', bonus: { tap: 1 }, detail: '+100 % par toucher' },
     { id: 'savante', icon: '🎓', label: 'Poule Savante', rarity: 'epic', bonus: { production: 0.25 }, detail: '+25 % de production' },
     { id: 'doree', icon: '👑', label: 'Poule Dorée', rarity: 'legendary', bonus: { goldenTap: 0.01, production: 0.3 }, detail: '+30 % de production, 1 % de touchers en or (×50)' },
+    { id: 'neige', icon: '☃️', label: 'Poule des Neiges', rarity: 'epic', event: 'noel', bonus: { production: 0.15, golden: 0.25 }, detail: '+15 % de production, œuf doré 25 % plus fréquent' },
   ].map((hen) => Object.freeze(hen)),
 )
 
@@ -199,6 +200,7 @@ export const COOP_SKINS = Object.freeze(
     { id: 'farm', kind: 'decor', label: 'La ferme', cost: 0 },
     { id: 'barn-night', kind: 'decor', label: 'Grange de nuit', cost: 200000 },
     { id: 'station', kind: 'decor', label: 'Station spatiale', cost: 20000000 },
+    { id: 'snow', kind: 'decor', label: 'Ferme enneigée', cost: 1000, event: 'noel' },
   ].map((skin) => Object.freeze(skin)),
 )
 
@@ -236,3 +238,56 @@ export const MARKET_FLOOR = 100
 
 /** Most taps one call may count (the screen sends taps in small batches). */
 export const MAX_TAPS_PER_CALL = 200
+
+/* ---------- Coming back every day ---------- */
+
+/**
+ * Orders of the farmer: three a day (UTC), the same kinds for everyone that
+ * day. Goals scale with the coop. Each pays eggs; all three add an
+ * incubator ticket (a free hatch).
+ */
+export const ORDERS_PER_DAY = 3
+export const ORDER_KINDS = Object.freeze([
+  { id: 'eggs', label: (goal) => `Pondre ${goal} œufs`, stat: 'lifetime', seconds: 1800, floor: 1000 },
+  { id: 'taps', label: (goal) => `Toucher la poule ${goal} fois`, stat: 'taps', goal: 400 },
+  { id: 'golden', label: (goal) => `Attraper ${goal} œufs dorés`, stat: 'golden', goal: 2, needs: 'golden' },
+  { id: 'hatch', label: (goal) => `Faire éclore ${goal} œufs`, stat: 'hatched', goal: 2, needs: 'hens' },
+  { id: 'buy', label: (goal) => `Acheter ${goal} bâtiments`, stat: 'bought', goal: 30 },
+])
+/** An order pays this many seconds of production (at least the floor). */
+export const ORDER_REWARD_SECONDS = 900
+export const ORDER_REWARD_FLOOR = 500
+
+/** The farm calendar: come back each day; day 7 is the big one, then it starts over. */
+export const CALENDAR = Object.freeze([
+  { day: 1, seconds: 300 },
+  { day: 2, seconds: 600 },
+  { day: 3, seconds: 900, tickets: 1 },
+  { day: 4, seconds: 1200 },
+  { day: 5, seconds: 1500 },
+  { day: 6, seconds: 1800 },
+  { day: 7, seconds: 3600, tickets: 2 },
+])
+export const CALENDAR_FLOOR = 300
+
+/** Every hen of a rarity collected adds this share to production (event hens aside). */
+export const COLLECTION_BONUS = Object.freeze({ common: 0.05, rare: 0.1, epic: 0.15, legendary: 0.2 })
+
+/** Family goal: the eggs laid this week by the family's members; each step pays tickets once a week. */
+export const FAMILY_TIERS = Object.freeze([
+  { label: 'Bronze', eggs: 1e6, tickets: 1 },
+  { label: 'Argent', eggs: 1e8, tickets: 1 },
+  { label: 'Or', eggs: 1e10, tickets: 2 },
+  { label: 'Platine', eggs: 1e12, tickets: 2 },
+  { label: 'Diamant', eggs: 1e14, tickets: 3 },
+])
+
+/** Winning a road round at this multiplier or more charges the coop's frenzy (outside challenge, tournament, duel). */
+export const BOOST_MULTIPLIER = 3
+export const BOOST_SECONDS = 20
+export const BOOST_CAP = 120
+
+/** Limited events: their hen and decor can only be won (or bought) between these days (UTC, inclusive). */
+export const COOP_EVENTS = Object.freeze([
+  { id: 'noel', label: 'Noël à la ferme', from: '2026-12-01', to: '2026-12-31', hen: 'neige', decor: 'snow' },
+])

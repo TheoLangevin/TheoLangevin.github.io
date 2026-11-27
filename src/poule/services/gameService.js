@@ -23,8 +23,8 @@ import { refillCheck } from '../domain/money.js'
 import { dailyReward, dailyStatus, dayId, isDayId, tournamentSeed, validDaily, validDailyClaims } from '../domain/daily.js'
 import { talentById } from '../config/talents.js'
 import { freshPass, passStatus, validPass } from '../domain/pass.js'
-import { freshCoop, offlineCap, offlineGain, refresh as refreshCoop, sellEggs, validCoop } from '../domain/coop.js'
-import { ONLINE_GAP } from '../config/coop.js'
+import { freshCoop, offlineCap, offlineGain, refresh as refreshCoop, rollDay, sellEggs, upgradeCoop, validCoop } from '../domain/coop.js'
+import { BOOST_CAP, BOOST_MULTIPLIER, BOOST_SECONDS, ONLINE_GAP } from '../config/coop.js'
 import { nextTalentCost, talentEffects, validTalents } from '../domain/talents.js'
 import { activeEvents, isEventActive, xpMultiplier } from '../domain/calendar.js'
 import { BOX_PRICE, collectionStatus, drawBox } from '../domain/collection.js'
@@ -120,7 +120,7 @@ export function createGameService({
   const nowMs = () => Date.parse(clock())
   /** The coop as saved, or null. `coop_stamp` changes when a save from the account replaces it. */
   const storedCoop = () => {
-    const value = readJson('coop')
+    const value = upgradeCoop(readJson('coop'))
     return validCoop(value) ? value : null
   }
   const coopStamp = () => Number(store.settings.get('coop_stamp', 0))
@@ -270,9 +270,16 @@ export function createGameService({
     if (levelCents > 0) store.wallet.credit(levelCents)
     store.settings.set('level_paid', Math.max(paidBefore, levelAfter))
     const achievements = unlockAchievements()
+    let coopBoost = 0
+    if (!special && round.status === ROUND_STATUS.won && round.multiplier >= BOOST_MULTIPLIER && storedCoop()) {
+      const before = Number(store.settings.get('coop_boost', 0)) || 0
+      coopBoost = Math.min(BOOST_CAP, before + BOOST_SECONDS) - before
+      if (coopBoost > 0) store.settings.set('coop_boost', before + coopBoost)
+    }
     return {
       xp,
       doubled,
+      coopBoost,
       bonusCents,
       talentCents,
       levelCents,
@@ -629,12 +636,16 @@ export function createGameService({
       const now = nowMs()
       const stored = storedCoop()
       const stamp = coopStamp()
-      if (!stored) return { coop: freshCoop(now), away: null, stamp }
+      // Road wins at ×3 or more charged a frenzy for the coop.
+      const boost = Number(store.settings.get('coop_boost', 0)) || 0
+      if (boost > 0) store.transaction(() => store.settings.set('coop_boost', 0))
+      const boosted = (coop) => (boost > 0 ? { ...coop, frenzyUntil: Math.max(coop.frenzyUntil, now) + boost * 1000 } : coop)
+      if (!stored) return { coop: boosted(rollDay(freshCoop(now), now)), away: null, stamp, boost }
       const seconds = (now - stored.seen) / 1000
-      if (!(seconds > ONLINE_GAP)) return { coop: { ...stored, seen: now }, away: null, stamp }
+      if (!(seconds > ONLINE_GAP)) return { coop: boosted(rollDay({ ...stored, seen: now }, now)), away: null, stamp, boost }
       const eggs = offlineGain(stored, seconds)
       const grown = { ...stored, eggs: stored.eggs + eggs, total: stored.total + eggs, lifetime: stored.lifetime + eggs, seen: now }
-      return { coop: refreshCoop(grown).coop, away: { seconds: Math.min(seconds, offlineCap(stored)), eggs }, stamp }
+      return { coop: boosted(rollDay(refreshCoop(grown).coop, now)), away: { seconds: Math.min(seconds, offlineCap(stored)), eggs }, stamp, boost }
     },
 
     /**

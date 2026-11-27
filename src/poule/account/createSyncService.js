@@ -1,3 +1,4 @@
+import { weekOf } from '../domain/coop.js'
 import {
   decideSync,
   describeSave,
@@ -238,7 +239,8 @@ export function createSyncService({
       return enqueue(async () => {
         // The leaderboard line may not claim more than the account's save holds.
         const { dirty, syncedRev, linkedUid } = game.syncState()
-        if (dirty && !game.round && linkedUid === uid) await upload(syncedRev)
+        // The coop keeps itself between syncs: send it too, so its public numbers match.
+        if ((dirty || game.exportSave().coop) && !game.round && linkedUid === uid) await upload(syncedRev)
         const save = game.exportSave()
         await cloud.claimPseudo(
           uid,
@@ -409,10 +411,13 @@ export function createSyncService({
     async teamBoard() {
       const [teams, lines] = await Promise.all([cloud.teams(), cloud.teamLines()])
       const lp = new Map(lines.map((line) => [line.uid, line.lp ?? 0]))
+      const week = weekOf(now().getTime())
+      const coopWeek = new Map(lines.map((line) => [line.uid, line.coopWeek?.week === week ? (line.coopWeek.eggs ?? 0) : 0]))
       const board = teams
         .map((team) => ({
           ...team,
           lp: team.members.reduce((sum, member) => sum + (lp.get(member) ?? 0), 0),
+          coopWeek: team.members.reduce((sum, member) => sum + (coopWeek.get(member) ?? 0), 0),
           size: team.members.length,
         }))
         .sort((a, b) => b.lp - a.lp)

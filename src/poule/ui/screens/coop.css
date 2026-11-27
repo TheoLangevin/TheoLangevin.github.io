@@ -545,3 +545,115 @@
 .coop-estate__plot.is-mystery > small {
   opacity: 0.7;
 }
+
+/* Buy quantity, goals, collections, events */
+.coop-modes button {
+  min-height: 36px;
+}
+.coop-buy small {
+  display: block;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.coop-goal h2 {
+  margin: 0 0 6px;
+  font: 400 20px/1.1 var(--display);
+}
+.coop-goal > p {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.coop-goal .coop-row {
+  background: var(--soft);
+  box-shadow: none;
+}
+.coop-progress {
+  display: block;
+  height: 6px;
+  margin: 3px 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold) calc(var(--ratio) * 100%), #0000001a 0);
+}
+.coop-calendar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.coop-calendar li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 12px;
+}
+.coop-calendar li.is-done {
+  background: var(--gold);
+  color: #2b1f00;
+}
+.coop-calendar li.is-today {
+  box-shadow: inset 0 0 0 2px var(--gold);
+  animation: coop-shine-box 1s ease-in-out infinite alternate;
+}
+@keyframes coop-shine-box {
+  to {
+    box-shadow: inset 0 0 0 2px var(--gold), 0 0 10px #ffc21a99;
+  }
+}
+.coop-collections {
+  display: grid;
+  gap: 6px;
+}
+.coop-collections ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.coop-collections li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 13px;
+  border-left: 4px solid var(--rarity);
+  opacity: 0.7;
+}
+.coop-collections li.is-done {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--rarity);
+}
+.coop-event {
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 12px;
+}
+.coop-decor--snow {
+  background: linear-gradient(#cfe3f2 0 52%, #f4f8fb 52% 100%);
+  color: #1d1a12;
+}
+.coop-snow {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background-image: radial-gradient(#fff 0 2px, transparent 3px), radial-gradient(#ffffffcc 0 1.5px, transparent 2.5px);
+  background-size: 60px 60px, 37px 37px;
+  animation: coop-snow 9s linear infinite;
+  opacity: 0.8;
+}
+@keyframes coop-snow {
+  to {
+    background-position: 30px 600px, -20px 370px;
+  }
+}

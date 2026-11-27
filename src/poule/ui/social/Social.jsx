@@ -1,3 +1,4 @@
+import { eggs } from '../coop/format.js'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { modeById } from '../../config/modes.js'
@@ -85,6 +86,7 @@ export function TeamsPanel({ openPlayer }) {
             <div>
               <small className="muted">Ma famille poule</small>
               <h2>{mine.name}</h2>
+              {mine.coopWeek > 0 && <small className="muted">🥚 {eggs(mine.coopWeek)} œufs pondus ensemble cette semaine</small>}
             </div>
             <b className="team__lp">{count(mine.lp)} PL</b>
           </div>

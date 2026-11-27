@@ -11,7 +11,7 @@ import { divisionFor, freshLeague, validLeague } from './leagues.js'
 import { validMissions, validStreak } from './missions.js'
 import { validPass } from './pass.js'
 import { validTalents } from './talents.js'
-import { validCoop } from './coop.js'
+import { upgradeCoop, validCoop } from './coop.js'
 import { isSeasonId, seasonId, weeklyStats } from './seasons.js'
 
 /**
@@ -141,7 +141,7 @@ export function validateSave(raw) {
     team: typeof raw.team === 'string' && /^[A-Za-z0-9]{6,40}$/.test(raw.team) ? raw.team : null,
     talents: validTalents(raw.talents),
     pass: validPass(raw.pass),
-    coop: validCoop(raw.coop) ? raw.coop : null,
+    coop: validCoop(upgradeCoop(raw.coop)) ? upgradeCoop(raw.coop) : null,
   }
   return save.epoch < CURRENT_SEASON.id ? seasonReset(save) : save
 }
@@ -229,6 +229,11 @@ export function leaderboardEntry(save, pseudo) {
     bestMultiplier: won.reduce((best, round) => Math.max(best, round.mult), 0),
     bestLanes: save.rounds.reduce((best, round) => Math.max(best, round.crossed), 0),
     team: save.team ?? null,
+    coopEggs: Math.floor(save.coop?.lifetime ?? 0),
+    coopWeek: {
+      week: save.coop?.week?.id ?? '',
+      eggs: Math.floor(save.coop ? Math.max(0, save.coop.lifetime - save.coop.week.start) : 0),
+    },
   }
 }
 

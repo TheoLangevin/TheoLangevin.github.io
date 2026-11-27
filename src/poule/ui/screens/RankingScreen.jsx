@@ -13,6 +13,7 @@ import { CoinIcon } from '../icons.jsx'
 import { DuelsCard } from '../duels/Duels.jsx'
 import { LiveFeed, TeamsPanel } from '../social/Social.jsx'
 import LeagueBadge from '../league/LeagueBadge.jsx'
+import { eggs } from '../coop/format.js'
 import './ranking.css'
 
 /** "2026-11-25" → "25/11". */
@@ -26,6 +27,7 @@ const BOARDS = [
   { id: 'tokens', label: 'Jetons' },
   { id: 'xp', label: 'Niveau' },
   { id: 'bestMultiplier', label: 'Record' },
+  { id: 'coopEggs', label: 'Poulailler' },
 ]
 
 const valueOf = (kind, entry) => {
@@ -34,6 +36,7 @@ const valueOf = (kind, entry) => {
   if (kind === 'lp') return `${count(entry.lp ?? 0)} PL`
   if (kind === 'tokens') return tokens(entry.tokens ?? 0)
   if (kind === 'xp') return `Niv. ${count(entry.level)}`
+  if (kind === 'coopEggs') return `${eggs(entry.coopEggs ?? 0)} œufs`
   return multiplierLabel(entry.bestMultiplier ?? 0)
 }
 

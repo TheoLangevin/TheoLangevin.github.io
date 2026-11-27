@@ -14,6 +14,7 @@ import {
   FEATHER_BONUS,
   CALENDAR,
   MARKET_DAILY_CAP,
+  SETTLE_SHARE,
   UNLOCKS,
 } from '../../config/coop.js'
 import * as rules from '../../domain/coop.js'
@@ -148,6 +149,9 @@ function Stage({ coop }) {
         <b>{eggs(coop.eggs)}</b> œufs
         <small>{pps > 0 ? `${eggs(pps)} par seconde` : 'Touche la poule pour pondre !'}</small>
         {event && <span className="coop-event">🎄 {event.label}</span>}
+        {rules.settling(coop) < 1 && (
+          <span className="coop-settle">🚚 Les poules s’installent : {Math.floor(rules.settling(coop) * 100)} %</span>
+        )}
         {frenzy && <span className="coop-frenzy">Frénésie ×7 · {Math.ceil((coop.frenzyUntil - now) / 1000)} s</span>}
       </div>
       <button
@@ -309,6 +313,13 @@ function Hens({ coop }) {
           ))}
         </ul>
       </section>
+      {rules.settling(coop) < 1 && (
+        <p className="note">
+          🚚 Après le déménagement, tes poules s’installent : leurs bonus (et ceux des collections) sont à{' '}
+          {Math.floor(rules.settling(coop) * 100)} %. Ils reviennent en entier quand le nouveau poulailler aura pondu{' '}
+          {eggs(coop.lastRun * SETTLE_SHARE)} œufs.
+        </p>
+      )}
       <p className="note">
         Places au perchoir : {coop.equipped.length}/{slots}. Touche une poule pour l’installer ou la retirer. Les poules
         n’agissent que sur le poulailler.
@@ -547,6 +558,8 @@ function Prestige({ coop }) {
         >
           <p>
             Tu perds {eggs(coop.eggs)} œufs et tous tes bâtiments, et tu gagnes {gain} plume{gain > 1 ? 's' : ''} d’or.
+            Tes poules spéciales devront s’installer : leurs bonus repartent de 0 et reviennent quand le nouveau
+            poulailler aura pondu {eggs(coop.total * SETTLE_SHARE)} œufs.
           </p>
         </Dialog>
       )}

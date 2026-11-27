@@ -192,3 +192,33 @@ test('mondes : portail, monnaie, usine, bonus pour la ferme, hors ligne', async 
   expect(c.validCoop({ ...s, world: 'island' })).toBe(true)
   expect(c.validCoop({ ...s, world: 'pole' })).toBe(false)
 })
+
+test('une vraie session reste toujours sauvegardable (ticks fractionnaires, achats, déménagement)', async () => {
+  const w = await import('./worlds.js')
+  let s = c.rollDay(c.freshCoop(NOW), NOW)
+  let now = NOW
+  for (let step = 0; step < 4000; step++) {
+    now += 250
+    s = c.tick(s, 0.25 + (step % 7) * 0.013, now)
+    s = c.tap(s, 1 + (step % 3), now, [0.5])
+    if (step % 10 === 0) for (const id of ['nest', 'straw', 'perch', 'waterer']) s = c.buyBuildings(s, id, 'max')
+    if (step === 2000) s = { ...s, eggs: s.eggs + 2e9, lifetime: s.lifetime + 9e9, total: s.total + 9e9 }
+    if (step === 2001) s = w.openPortal(s, 'island') ?? s
+    if (step === 2500) s = c.moveHouse(s).coop
+    s = c.refresh(c.rollDay(s, now)).coop
+    expect(c.validCoop(s)).toBe(true)
+  }
+  expect(s.moves).toBe(1)
+})
+
+test('déménagement : les poules s’installent, leurs bonus reviennent peu à peu', () => {
+  const base = { ...c.freshCoop(NOW), buildings: { perch: 10 }, hens: { fermiere: 5 }, equipped: ['fermiere'] }
+  const full = c.production(base)
+  const moved = c.moveHouse({ ...base, lifetime: 8e9, total: 8e9 }).coop
+  expect(c.settling(moved)).toBe(0)
+  const plain = c.production({ ...moved, buildings: { perch: 10 }, equipped: [] })
+  expect(c.production({ ...moved, buildings: { perch: 10 } })).toBe(plain)
+  expect(c.settling({ ...moved, total: 4e8 })).toBe(0.5)
+  expect(c.settling({ ...moved, total: 8e8 })).toBe(1)
+  expect(full > 0).toBe(true)
+})

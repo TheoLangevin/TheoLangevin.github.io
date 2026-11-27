@@ -33,6 +33,7 @@ import {
   OFFLINE_SHARE,
   PERKS,
   RAIN_SECONDS,
+  SETTLE_SHARE,
   SPECIAL_HENS,
   TROPHIES,
   TROPHY_BONUS,
@@ -99,6 +100,7 @@ const LATER_FIELDS = () => ({
   family: { week: '', claimed: [] },
   worlds: {},
   world: 'farm',
+  lastRun: 0,
 })
 
 /** A saved coop from an older version, with the fields added since. */
@@ -133,7 +135,8 @@ export function validCoop(value) {
   const m = value.market
   const day = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)
   if (!(isMap(m) && day(m.day) && int(m.sold, MARKET_DAILY_CAP))) return false
-  if (![value.hatched, value.bought, value.played, value.tickets].every((n) => int(n, 1e12)) || !num(value.bestPps)) return false
+  if (![value.hatched, value.bought, value.tickets].every((n) => int(n, 1e12))) return false
+  if (![value.played, value.bestPps, value.lastRun].every(num)) return false
   const cal = value.calendar
   if (!isMap(cal) || !(cal.last === null || day(cal.last)) || !int(cal.streak, 1e6)) return false
   const week = value.week
@@ -170,10 +173,17 @@ export function visibleBuildings(coop) {
 
 /* ---------- Bonuses ---------- */
 
-/** Bonuses of equipped hens, scaled by their level. */
+/** How settled the hens are after a move: 0 right after it, 1 once the coop laid SETTLE_SHARE of the last one. */
+export function settling(coop) {
+  if (!(coop.lastRun > 0)) return 1
+  return Math.min(1, coop.total / (coop.lastRun * SETTLE_SHARE))
+}
+
+/** Bonuses of equipped hens, scaled by their level and by how settled they are. */
 function henBonuses(coop) {
+  const settled = settling(coop)
   return coop.equipped.map((id) => {
-    const scale = 1 + HEN_LEVEL_STEP * ((coop.hens[id] ?? 1) - 1)
+    const scale = (1 + HEN_LEVEL_STEP * ((coop.hens[id] ?? 1) - 1)) * settled
     const bonus = {}
     for (const [key, value] of Object.entries(HEN.get(id).bonus)) {
       bonus[key] = typeof value === 'number' ? value * scale : Object.fromEntries(Object.entries(value).map(([k, v]) => [k, v * scale]))
@@ -220,7 +230,7 @@ export function collections(coop) {
     return { ...rarity, got, total: hens.length, done: got === hens.length, bonus: COLLECTION_BONUS[rarity.id] }
   })
 }
-export const collectionBonus = (coop) => collections(coop).reduce((acc, c) => acc + (c.done ? c.bonus : 0), 0)
+export const collectionBonus = (coop) => collections(coop).reduce((acc, c) => acc + (c.done ? c.bonus : 0), 0) * settling(coop)
 
 /** Production per second, without the temporary frenzy. */
 export function production(coop) {
@@ -444,7 +454,7 @@ export function moveHouse(coop) {
   const gained = featherGain(coop)
   if (gained < 1) return null
   const feathers = coop.feathers + gained
-  const moved = { ...coop, ...freshRun(coop.perks), feathers, moves: coop.moves + 1 }
+  const moved = { ...coop, ...freshRun(coop.perks), feathers, moves: coop.moves + 1, lastRun: coop.total }
   return { coop: refresh(moved).coop, gained }
 }
 

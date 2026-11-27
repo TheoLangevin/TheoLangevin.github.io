@@ -5,6 +5,16 @@
  */
 export const PATCH_NOTES = Object.freeze([
   {
+    id: '2026-11-27-move',
+    date: '27 nov. 2026',
+    title: 'Déménagement réparé',
+    items: [
+      'Corrigé : le Poulailler ne se sauvegardait plus depuis ce matin, ce qui annulait les déménagements et bloquait le marché.',
+      'Après un déménagement, tes poules spéciales doivent s’installer : leurs bonus (et ceux des collections) repartent de 0.',
+      'Ils reviennent peu à peu, en entier quand le nouveau poulailler a pondu 10 % des œufs de l’ancien.',
+    ],
+  },
+  {
     id: '2026-11-27-worlds',
     date: '27 nov. 2026',
     title: '5 nouveaux mondes',

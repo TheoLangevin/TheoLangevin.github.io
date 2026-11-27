@@ -75,7 +75,13 @@ export function createSyncService({
     const save = game.exportSave()
     const rev = await cloud.pushSave(uid, save, expectedRev)
     game.markSynced(uid, rev, { clean: game.changeCount() === before })
-    await publish(save)
+    // The save is safe in the account: a refused leaderboard line (rules not
+    // published yet, for instance) must not show the sync as failed.
+    try {
+      await publish(save)
+    } catch (error) {
+      console.warn('[poule] leaderboard line refused:', error)
+    }
     return rev
   }
 

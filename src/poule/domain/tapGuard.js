@@ -5,7 +5,7 @@
  * REST, each tap lays less (down to FATIGUE_FLOOR), and a pause resets it.
  * Pure: give it the time of each tap.
  */
-export const MAX_PER_SECOND = 12
+export const MAX_PER_SECOND = 20
 export const FATIGUE_AFTER = 120
 export const FATIGUE_SPAN = 240
 export const FATIGUE_FLOOR = 0.1

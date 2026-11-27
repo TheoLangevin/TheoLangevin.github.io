@@ -332,7 +332,7 @@ function CoopSection({ coop }) {
         </table>
       )}
       <p className="muted admin__note">
-        D’après la dernière sauvegarde envoyée par chaque joueur connecté. Plus de 10 touchers par seconde de jeu en
+        D’après la dernière sauvegarde envoyée par chaque joueur connecté. Plus de 15 touchers par seconde de jeu en
         moyenne, ou plus d’œufs que la meilleure production ne permet : à vérifier.
       </p>
     </Section>

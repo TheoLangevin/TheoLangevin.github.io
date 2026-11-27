@@ -299,7 +299,7 @@ function coopStats(players, named, now) {
         // Eggs cannot exceed the best production over the time played, plus a month away at most, with room to spare.
         const ceiling = Math.max(1e6, coop.bestPps * (coop.played + 30 * 86_400) * 5)
         const reasons = []
-        if (tapRate > 10) reasons.push(`${tapRate.toFixed(1).replace('.', ',')} touchers/s`)
+        if (tapRate > 15) reasons.push(`${tapRate.toFixed(1).replace('.', ',')} touchers/s`)
         if (coop.lifetime > ceiling) reasons.push('œufs au-delà du possible')
         return { uid: player.uid, pseudo: player.pseudo ?? 'Sans pseudo', eggs: coop.lifetime, reasons }
       })

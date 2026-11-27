@@ -10,10 +10,10 @@ test('un humain : rythme irrégulier, tout compte', () => {
   }
 })
 
-test('au-delà de 12 touchers par seconde, le surplus est refusé', () => {
+test('au-delà de 20 touchers par seconde, le surplus est refusé', () => {
   const guard = createTapGuard()
-  const counted = Array.from({ length: 30 }, (_, i) => guard.accept(1000 + i * 30 + (i % 3))).filter((f) => f > 0)
-  expect(counted.length <= 12).toBe(true)
+  const counted = Array.from({ length: 40 }, (_, i) => guard.accept(1000 + i * 20 + (i % 3))).filter((f) => f > 0)
+  expect(counted.length <= 20).toBe(true)
 })
 
 test('un auto-clicker parfaitement régulier est ignoré', () => {

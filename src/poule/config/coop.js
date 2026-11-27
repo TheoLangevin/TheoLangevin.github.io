@@ -70,7 +70,9 @@ export const HEN_RARITIES = Object.freeze([
 ])
 
 /**
- * Special hens: three can be placed in the coop at a time. Bonuses:
+ * Special hens: three can be placed in the coop at a time. Bonuses (also:
+ * worlds { id | all: share }, hatch, orders, calendar, rain, pack per hen
+ * placed, settle (faster settling), feathers, trophies — shares):
  * tap / production / buildings ({ id: share }) / golden (golden egg more
  * often) / frenzy (seconds added) / offline (share kept while away) /
  * market (fewer eggs per token) / goldenTap (chance a tap is worth ×50).
@@ -82,13 +84,34 @@ export const SPECIAL_HENS = Object.freeze(
     { id: 'grisette', icon: '🪶', label: 'Grisette', rarity: 'common', bonus: { production: 0.05 }, detail: '+5 % de production' },
     { id: 'rousse', icon: '🦊', label: 'La Rousse', rarity: 'common', bonus: { golden: 0.15 }, detail: 'Œuf doré 15 % plus fréquent' },
     { id: 'mecanique', icon: '🤖', label: 'Poule Mécanique', rarity: 'rare', bonus: { buildings: { feeder: 0.3, incubator: 0.3 } }, detail: 'Mangeoires et couveuses +30 %' },
-    { id: 'fermiere', icon: '👩‍🌾', label: 'Poule Fermière', rarity: 'rare', bonus: { production: 0.12 }, detail: '+12 % de production' },
-    { id: 'pressee', icon: '⚡', label: 'Poule Pressée', rarity: 'rare', bonus: { frenzy: 10 }, detail: 'Frénésie +10 s' },
+    { id: 'fermiere', icon: '👩‍🌾', label: 'Poule Fermière', rarity: 'rare', bonus: { production: 0.1 }, detail: '+10 % de production' },
+    { id: 'pressee', icon: '⚡', label: 'Poule Pressée', rarity: 'rare', bonus: { frenzy: 8 }, detail: 'Frénésie +8 s' },
     { id: 'marchande', icon: '💼', label: 'Poule Marchande', rarity: 'rare', bonus: { market: 0.2 }, detail: 'Marché : 20 % d’œufs en moins par jeton' },
     { id: 'fantome', icon: '👻', label: 'Poule Fantôme', rarity: 'epic', bonus: { offline: 0.15 }, detail: 'Hors ligne : +15 % de la production' },
-    { id: 'disco', icon: '🪩', label: 'Poule Disco', rarity: 'epic', bonus: { tap: 1 }, detail: '+100 % par toucher' },
-    { id: 'savante', icon: '🎓', label: 'Poule Savante', rarity: 'epic', bonus: { production: 0.25 }, detail: '+25 % de production' },
-    { id: 'doree', icon: '👑', label: 'Poule Dorée', rarity: 'legendary', bonus: { goldenTap: 0.01, production: 0.3 }, detail: '+30 % de production, 1 % de touchers en or (×50)' },
+    { id: 'disco', icon: '🪩', label: 'Poule Disco', rarity: 'epic', bonus: { tap: 0.6 }, detail: '+60 % par toucher' },
+    { id: 'savante', icon: '🎓', label: 'Poule Savante', rarity: 'epic', bonus: { production: 0.18 }, detail: '+18 % de production' },
+    { id: 'doree', icon: '👑', label: 'Poule Dorée', rarity: 'legendary', bonus: { goldenTap: 0.01, production: 0.2 }, detail: '+20 % de production, 1 % de touchers en or (×20)' },
+    // Added in the second batch: more ways to play.
+    { id: 'picoreuse', icon: '🌱', label: 'Picoreuse', rarity: 'common', bonus: { buildings: { straw: 0.5, waterer: 0.5 } }, detail: 'Paille et abreuvoirs +50 %' },
+    { id: 'bavarde', icon: '🗣️', label: 'La Bavarde', rarity: 'common', bonus: { orders: 0.25 }, detail: 'Commandes du fermier +25 % d’œufs' },
+    { id: 'matinale', icon: '⏰', label: 'La Matinale', rarity: 'common', bonus: { calendar: 0.25 }, detail: 'Calendrier de la ferme +25 %' },
+    { id: 'cabaniere', icon: '🛖', label: 'Cabanière', rarity: 'common', bonus: { buildings: { shed: 0.4, feeder: 0.4 } }, detail: 'Cabanes et mangeoires +40 %' },
+    { id: 'rondelette', icon: '🍞', label: 'Rondelette', rarity: 'common', bonus: { tap: 0.15, production: 0.02 }, detail: '+15 % par toucher, +2 % de production' },
+    { id: 'plongeuse', icon: '🤿', label: 'Plongeuse', rarity: 'rare', bonus: { worlds: { island: 0.25 } }, detail: 'Île aux Coquillages +25 %' },
+    { id: 'skieuse', icon: '⛷️', label: 'Skieuse', rarity: 'rare', bonus: { worlds: { pole: 0.25 } }, detail: 'Pôle Plumé +25 %' },
+    { id: 'jardiniere', icon: '🧺', label: 'Jardinière', rarity: 'rare', bonus: { buildings: { orchard: 0.3, greenhouse: 0.3 } }, detail: 'Vergers et serres +30 %' },
+    { id: 'meuniere', icon: '🌬️', label: 'Meunière', rarity: 'rare', bonus: { buildings: { mill: 0.3, silo: 0.3 } }, detail: 'Moulins et silos +30 %' },
+    { id: 'mere', icon: '🪺', label: 'Mère Couveuse', rarity: 'rare', bonus: { hatch: 0.15 }, detail: 'Éclosions 15 % moins chères' },
+    { id: 'pluie', icon: '🌧️', label: 'Faiseuse de pluie', rarity: 'rare', bonus: { rain: 0.4 }, detail: 'Pluie d’œufs dorés +40 %' },
+    { id: 'chercheuse', icon: '🤠', label: 'Chercheuse d’or', rarity: 'epic', bonus: { worlds: { desert: 0.25 } }, detail: 'Désert d’Or +25 %' },
+    { id: 'ingenieuse', icon: '🔧', label: 'Ingénieuse', rarity: 'epic', bonus: { worlds: { city: 0.25 } }, detail: 'Cité Mécanique +25 %' },
+    { id: 'astronome', icon: '🔭', label: 'Astronome', rarity: 'epic', bonus: { worlds: { nebula: 0.25 } }, detail: 'Nébuleuse +25 %' },
+    { id: 'meneuse', icon: '📣', label: 'Meneuse', rarity: 'epic', bonus: { pack: 0.03 }, detail: '+3 % de production par poule installée' },
+    { id: 'demenageuse', icon: '📦', label: 'Déménageuse', rarity: 'epic', bonus: { settle: 0.5 }, detail: 'Les poules s’installent 2× plus vite après un déménagement' },
+    { id: 'phenix', icon: '🔥', label: 'Phénix', rarity: 'legendary', bonus: { feathers: 0.25 }, detail: 'Plumes d’or 25 % plus efficaces' },
+    { id: 'licorne', icon: '🦄', label: 'Licorne', rarity: 'legendary', bonus: { trophies: 0.5 }, detail: 'Trophées 50 % plus efficaces' },
+    { id: 'reine', icon: '🐝', label: 'Reine des mondes', rarity: 'legendary', bonus: { worlds: { all: 0.15 } }, detail: 'Tous les mondes +15 %' },
+    { id: 'oracle', icon: '🔮', label: 'Oracle', rarity: 'legendary', bonus: { golden: 0.3, frenzy: 5, rain: 0.2 }, detail: 'Œuf doré +30 % fréquent, frénésie +5 s, pluie +20 %' },
     { id: 'neige', icon: '☃️', label: 'Poule des Neiges', rarity: 'epic', event: 'noel', bonus: { production: 0.15, golden: 0.25 }, detail: '+15 % de production, œuf doré 25 % plus fréquent' },
   ].map((hen) => Object.freeze(hen)),
 )
@@ -96,7 +119,7 @@ export const SPECIAL_HENS = Object.freeze(
 export const HEN_SLOTS = 3
 /** A duplicate hen levels up the one owned (up to HEN_MAX_LEVEL); each level adds half the base bonus. */
 export const HEN_MAX_LEVEL = 5
-export const HEN_LEVEL_STEP = 0.5
+export const HEN_LEVEL_STEP = 0.25
 
 /**
  * The coop starts bare: only the hen to tap. Each part shows up once the
@@ -151,7 +174,9 @@ export const TROPHIES = Object.freeze(
     ...[
       [3, 'Basse-cour'],
       [6, 'Collectionneur'],
-      [12, 'Toutes les poules !'],
+      [12, 'Grande basse-cour'],
+      [24, 'Éleveuse de renom'],
+      [32, 'Toutes les poules !'],
     ].map(([n, label]) => ({ id: `hens-${n}`, icon: '🐔', label, detail: `${n} poules spéciales`, stat: 'hens', at: n })),
     { id: 'hen-max', icon: '⭐', label: 'Poule étoilée', detail: `Une poule au niveau ${5}`, stat: 'henMax', at: 1 },
     ...[
@@ -221,21 +246,23 @@ export const COOP_SKINS = Object.freeze(
 /** A rare egg drops on a tap with this chance; it hatches a special hen. */
 export const RARE_EGG_CHANCE = 1 / 500
 /** The incubator sells an egg to hatch for this many seconds of production (at least the floor). */
-export const HATCH_SECONDS = 600
+export const HATCH_SECONDS = 900
+/** Each level of special hen owned makes the incubator this much dearer. */
+export const HATCH_GROWTH = 0.12
 export const HATCH_FLOOR = 2000
 /** A hen already at its top level gives this many seconds of production instead. */
-export const DUPLICATE_SECONDS = 600
+export const DUPLICATE_SECONDS = 300
 
 /** The golden egg: crosses the screen every so often; caught, it gives one of these. */
-export const GOLDEN_EVERY = Object.freeze({ min: 60, max: 180 })
+export const GOLDEN_EVERY = Object.freeze({ min: 120, max: 300 })
 export const GOLDEN_STAYS = 8
-export const FRENZY_MULTIPLIER = 7
-export const FRENZY_SECONDS = 30
-export const RAIN_SECONDS = 900
+export const FRENZY_MULTIPLIER = 3
+export const FRENZY_SECONDS = 20
+export const RAIN_SECONDS = 180
 export const GOLDEN_REWARDS = Object.freeze([
   { id: 'frenzy', weight: 0.5 },
-  { id: 'rain', weight: 0.42 },
-  { id: 'hen', weight: 0.08 },
+  { id: 'rain', weight: 0.46 },
+  { id: 'hen', weight: 0.04 },
 ])
 
 /** While the game is closed the coop lays this share of its production, for at most OFFLINE_CAP seconds. */
@@ -285,7 +312,7 @@ export const CALENDAR = Object.freeze([
 export const CALENDAR_FLOOR = 300
 
 /** Every hen of a rarity collected adds this share to production (event hens aside). */
-export const COLLECTION_BONUS = Object.freeze({ common: 0.05, rare: 0.1, epic: 0.15, legendary: 0.2 })
+export const COLLECTION_BONUS = Object.freeze({ common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 })
 
 /** Family goal: the eggs laid this week by the family's members; each step pays tickets once a week. */
 export const FAMILY_TIERS = Object.freeze([

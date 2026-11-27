@@ -20,6 +20,7 @@ import {
   FRENZY_SECONDS,
   GOLDEN_REWARDS,
   HATCH_FLOOR,
+  HATCH_GROWTH,
   HATCH_SECONDS,
   HEN_LEVEL_STEP,
   HEN_MAX_LEVEL,
@@ -176,8 +177,22 @@ export function visibleBuildings(coop) {
 /** How settled the hens are after a move: 0 right after it, 1 once the coop laid SETTLE_SHARE of the last one. */
 export function settling(coop) {
   if (!(coop.lastRun > 0)) return 1
-  return Math.min(1, coop.total / (coop.lastRun * SETTLE_SHARE))
+  // The Déménageuse speeds it up (read without settling, which it changes).
+  const faster = Math.min(0.75, rawHenSum(coop, 'settle'))
+  return Math.min(1, coop.total / (coop.lastRun * SETTLE_SHARE * (1 - faster)))
 }
+
+/** Sum of one bonus of the equipped hens, by level, not settled. */
+function rawHenSum(coop, key) {
+  return coop.equipped.reduce((acc, id) => acc + (HEN.get(id).bonus[key] ?? 0) * (1 + HEN_LEVEL_STEP * ((coop.hens[id] ?? 1) - 1)), 0)
+}
+
+/** A bonus of the equipped hens (settled), e.g. 'orders' or 'rain'. */
+export const henSum = (coop, key) => sum(henBonuses(coop), key)
+
+/** What the equipped hens add to a world: its own share plus the share for all worlds. */
+export const worldHenBonus = (coop, id) =>
+  henBonuses(coop).reduce((acc, bonus) => acc + (bonus.worlds?.[id] ?? 0) + (bonus.worlds?.all ?? 0), 0)
 
 /** Bonuses of equipped hens, scaled by their level and by how settled they are. */
 function henBonuses(coop) {
@@ -214,9 +229,9 @@ export function buildingPps(coop, id) {
 /** Global multiplier: hens, trophies and golden feathers. */
 export function globalMultiplier(coop) {
   return (
-    (1 + sum(henBonuses(coop), 'production')) *
-    (1 + TROPHY_BONUS * coop.trophies.length) *
-    (1 + FEATHER_BONUS * coop.feathers) *
+    (1 + sum(henBonuses(coop), 'production') + sum(henBonuses(coop), 'pack') * coop.equipped.length) *
+    (1 + TROPHY_BONUS * (1 + henSum(coop, 'trophies')) * coop.trophies.length) *
+    (1 + FEATHER_BONUS * (1 + henSum(coop, 'feathers')) * coop.feathers) *
     (1 + collectionBonus(coop)) *
     (1 + worldsFarmBonus(coop))
   )
@@ -249,7 +264,7 @@ export function tapValue(coop, now = 0, { lucky = false } = {}) {
   }
   mult *= 1 + sum(henBonuses(coop), 'tap')
   const value = (mult + production(coop) * share) * eventMultiplier(coop, now)
-  return lucky ? value * 50 : value
+  return lucky ? value * 20 : value
 }
 
 export const goldenTapChance = (coop) => sum(henBonuses(coop), 'goldenTap')
@@ -384,8 +399,16 @@ export function receiveHen(coop, hen) {
   return { coop: gain(coop, eggs), fresh: false, level, eggs }
 }
 
+/** Levels of special hens owned in all: the incubator gets dearer with each. */
+export const henLevels = (coop) => Object.values(coop.hens).reduce((acc, level) => acc + level, 0)
+
 export const hatchCost = (coop) =>
-  Math.ceil(Math.max(HATCH_FLOOR, production(coop) * HATCH_SECONDS) * (has(coop, 'cheap-hatch') ? 0.7 : 1))
+  Math.ceil(
+    Math.max(HATCH_FLOOR, production(coop) * HATCH_SECONDS) *
+      (1 + HATCH_GROWTH * henLevels(coop)) *
+      (has(coop, 'cheap-hatch') ? 0.7 : 1) *
+      (1 - Math.min(0.5, henSum(coop, 'hatch'))),
+  )
 
 /** Hatches an egg: with a ticket when there is one, else for eggs. */
 export function hatch(coop, rollRarity, rollHen) {
@@ -404,7 +427,7 @@ export function caughtGolden(coop, now, roll, rollRarity, rollHen) {
     return { coop: { ...counted, frenzyUntil: Math.max(coop.frenzyUntil, now) + frenzySeconds(coop) * 1000 }, reward: 'frenzy' }
   }
   if (reward.id === 'rain') {
-    const eggs = production(coop) * RAIN_SECONDS + tapValue(coop) * 100
+    const eggs = (production(coop) * RAIN_SECONDS + tapValue(coop) * 30) * (1 + henSum(coop, 'rain'))
     return { coop: gain(counted, eggs), reward: 'rain', eggs }
   }
   const event = activeEvent(now)
@@ -541,7 +564,7 @@ export function orderProgress(coop, order) {
   return { label: kind.label(order.goal), done: Math.min(order.goal, Math.max(0, done)), goal: order.goal }
 }
 
-export const orderReward = (coop) => Math.max(ORDER_REWARD_FLOOR, production(coop) * ORDER_REWARD_SECONDS)
+export const orderReward = (coop) => Math.max(ORDER_REWARD_FLOOR, production(coop) * ORDER_REWARD_SECONDS) * (1 + henSum(coop, 'orders'))
 
 /** Collects a finished order. The third one adds a ticket (and, during an event, its hen). */
 export function claimOrder(coop, index, now) {
@@ -576,7 +599,7 @@ export function calendarToday(coop, now) {
 export function claimCalendar(coop, now) {
   const step = calendarToday(coop, now)
   if (!step) return null
-  const eggs = Math.max(CALENDAR_FLOOR * step.day, production(coop) * step.seconds)
+  const eggs = Math.max(CALENDAR_FLOOR * step.day, production(coop) * step.seconds) * (1 + henSum(coop, 'calendar'))
   const next = gain({ ...coop, calendar: { last: dayOf(now), streak: step.streak }, tickets: coop.tickets + (step.tickets ?? 0) }, eggs)
   return { coop: next, eggs, day: step.day, tickets: step.tickets ?? 0 }
 }

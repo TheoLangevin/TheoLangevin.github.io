@@ -8,6 +8,7 @@ import {
   WORLDS,
   worldById,
 } from '../config/worlds.js'
+import { worldHenBonus } from './coop.js'
 
 /** Pure rules of the worlds beyond the farm. `coop.worlds` maps an opened world to { amount, lifetime, buildings }. */
 
@@ -56,7 +57,7 @@ export function worldBuildingPps(coop, id, building) {
   const count = worldOwned(coop, id, building.id)
   if (!count || building.factory) return 0
   const milestones = MILESTONES.filter((m) => count >= m).length
-  return building.pps * count * 2 ** milestones * (1 + factoryBoost(coop, id)) * (1 + FEATHER_BONUS * coop.feathers)
+  return building.pps * count * 2 ** milestones * (1 + factoryBoost(coop, id) + worldHenBonus(coop, id)) * (1 + FEATHER_BONUS * coop.feathers)
 }
 
 export const worldPps = (coop, id) =>

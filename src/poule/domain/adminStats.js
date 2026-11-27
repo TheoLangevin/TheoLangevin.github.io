@@ -6,6 +6,8 @@ import { TIERS } from '../config/seasons.js'
 import { divisionFor } from './leagues.js'
 import { levelFromXp } from './progression.js'
 import { validateSave } from './save.js'
+import { BUILDINGS, COOP_SKINS, SPECIAL_HENS, TROPHIES, UNLOCKS } from '../config/coop.js'
+import { production, unlocked } from './coop.js'
 
 /**
  * The numbers of the admin screen, computed from every player's save (the
@@ -180,6 +182,7 @@ export function computeAdminStats({ users, profiles = [], now }) {
 
   return {
     generatedAt: now,
+    coop: coopStats(players, named, now),
     unreadable,
     players: {
       total: players.length,
@@ -236,5 +239,63 @@ export function computeAdminStats({ users, profiles = [], now }) {
       .sort((a, b) => (a.season < b.season ? 1 : -1))
       .slice(0, 8),
     flagged,
+  }
+}
+
+const UNLOCK_LABELS = {
+  upgrades: 'Améliorations',
+  trophies: 'Trophées',
+  golden: 'Œuf doré',
+  hens: 'Poules spéciales',
+  market: 'Marché',
+  skins: 'Looks',
+  prestige: 'Déménagement',
+}
+
+/** The coop (clicker): who plays it, how far they got, what they own. */
+function coopStats(players, named, now) {
+  const coops = players.filter((player) => player.save.coop?.lifetime > 0)
+  const list = coops.map((player) => player.save.coop)
+  const today = dayKey(now)
+  const kinds = (coop) => BUILDINGS.filter((b) => (coop.buildings[b.id] ?? 0) > 0).length
+  return {
+    players: coops.length,
+    share: ratio(coops.length, players.length),
+    eggs: sum(list.map((coop) => coop.lifetime)),
+    taps: sum(list.map((coop) => coop.taps)),
+    golden: sum(list.map((coop) => coop.golden)),
+    moved: list.filter((coop) => coop.moves > 0).length,
+    moves: sum(list.map((coop) => coop.moves)),
+    feathers: sum(list.map((coop) => coop.feathers)),
+    trophiesAvg: list.length ? sum(list.map((coop) => coop.trophies.length)) / list.length : 0,
+    trophiesTotal: TROPHIES.length,
+    soldToday: sum(list.filter((coop) => coop.market.day === today).map((coop) => coop.market.sold)),
+    sellersToday: list.filter((coop) => coop.market.day === today && coop.market.sold > 0).length,
+    funnel: Object.keys(UNLOCKS).map((id) => ({ label: UNLOCK_LABELS[id], count: list.filter((coop) => unlocked(coop, id)).length })),
+    kinds: histogram(list.map(kinds), [2, 5, 9, 14, 20, 25], ['0-1', '2-4', '5-8', '9-13', '14-19', '20-24', '25 (tous)']),
+    buildings: BUILDINGS.map((b) => ({
+      label: `${b.icon} ${b.label}`,
+      owners: list.filter((coop) => (coop.buildings[b.id] ?? 0) > 0).length,
+      total: sum(list.map((coop) => coop.buildings[b.id] ?? 0)),
+    })),
+    hens: SPECIAL_HENS.map((hen) => ({
+      label: `${hen.icon} ${hen.label}`,
+      owners: list.filter((coop) => coop.hens[hen.id]).length,
+      equipped: list.filter((coop) => coop.equipped.includes(hen.id)).length,
+    })),
+    skins: COOP_SKINS.filter((skin) => skin.cost > 0).map((skin) => ({
+      label: skin.label,
+      owners: list.filter((coop) => coop.skins.includes(skin.id)).length,
+    })),
+    top: [...coops]
+      .sort((a, b) => b.save.coop.lifetime - a.save.coop.lifetime)
+      .slice(0, 5)
+      .map((player) => ({
+        ...named(player),
+        eggs: player.save.coop.lifetime,
+        pps: production(player.save.coop),
+        kinds: kinds(player.save.coop),
+        moves: player.save.coop.moves,
+      })),
   }
 }

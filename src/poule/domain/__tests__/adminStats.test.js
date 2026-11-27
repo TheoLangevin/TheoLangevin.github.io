@@ -106,3 +106,27 @@ describe('admin stats', () => {
     expect(empty.economy.median).toBe(0)
   })
 })
+
+describe('coop stats', () => {
+  it('counts the coop players, their eggs, buildings and market sales', async () => {
+    const { freshCoop } = await import('../coop.js')
+    const coop = {
+      ...freshCoop(NOW),
+      eggs: 10,
+      total: 5000,
+      lifetime: 5000,
+      taps: 120,
+      buildings: { nest: 3, perch: 1 },
+      hens: { cocotte: 1 },
+      equipped: ['cocotte'],
+      market: { day: '2026-11-24', sold: 5000 },
+    }
+    const stats = computeAdminStats({ users: [user('a', { coop }), user('b')], now: NOW })
+    expect(stats.coop.players).toBe(1)
+    expect(stats.coop.eggs).toBe(5000)
+    expect(stats.coop.soldToday).toBe(5000)
+    expect(stats.coop.buildings.find((b) => b.label.includes('Nid')).total).toBe(3)
+    expect(stats.coop.hens.find((h) => h.label.includes('Cocotte')).equipped).toBe(1)
+    expect(stats.coop.top[0].kinds).toBe(2)
+  })
+})

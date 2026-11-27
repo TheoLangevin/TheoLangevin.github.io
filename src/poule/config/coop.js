@@ -181,6 +181,13 @@ export const TROPHIES = Object.freeze(
  * production, and they are also spent on permanent perks (spending keeps the bonus).
  * Feathers never change the egg market's daily cap.
  */
+/**
+ * After a move the special hens settle in: their bonuses (and the hen
+ * collections') start at 0 and come back as the new coop lays eggs, in full
+ * once it has laid SETTLE_SHARE of what the last coop laid.
+ */
+export const SETTLE_SHARE = 0.1
+
 export const FEATHER_BASE = 1e9
 export const FEATHER_BONUS = 0.03
 export const PERKS = Object.freeze(
